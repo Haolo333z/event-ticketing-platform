@@ -28,7 +28,7 @@ public class RequestPolicyFilter extends OncePerRequestFilter {
             if(!valid){errors.write(req,res,403,"FORBIDDEN","Origin hoặc preflight không được phép");return;}
             res.setHeader("Access-Control-Allow-Methods","GET, POST, PATCH, OPTIONS");res.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type, Idempotency-Key, X-Correlation-Id");res.setHeader("Access-Control-Max-Age","600");res.setStatus(204);return;
         }
-        boolean bodyMethod=req.getMethod().equals("POST")||req.getMethod().equals("PATCH");
+        boolean bodyMethod=(req.getMethod().equals("POST")||req.getMethod().equals("PATCH"))&&!req.getRequestURI().matches("/api/bookings/[^/]+/cancel");
         if(!bodyMethod){if(req.getInputStream().read()!=-1){errors.write(req,res,400,"VALIDATION_ERROR","Endpoint không nhận body");return;}chain.doFilter(req,res);return;}
         String encoding=req.getHeader("Content-Encoding");
         String contentType=req.getContentType();

@@ -3,7 +3,7 @@
   "info": {
     "title": "Event Ticketing API",
     "version": "0.1.0",
-    "description": "Contract v0. Part 5 implements GA and seated booking, owner/history, catalog/admin and expiry. Payment, tickets, cancel and Kafka remain planned."
+    "description": "Part 6 implements GA/seated booking, expiry, local/test payment simulation, cancellation and ticket viewing. No real money, Kafka or public provider callbacks."
   },
   "servers": [
     {
@@ -650,7 +650,7 @@
       "post": {
         "operationId": "cancelBooking",
         "summary": "cancelBooking",
-        "description": "Contract v0; implementation follows TASKS. Only CUSTOMER owner; other owners get 404.",
+        "description": "Implemented in Part 6. Only CUSTOMER owner; other owners get 404. No request body, even {}. Repeating CANCELLED returns200. Durable timely success is processed and committed before returning409 to reject cancellation.",
         "tags": [
           "Bookings"
         ],
@@ -778,19 +778,19 @@
                   "type": "integer",
                   "const": 1
                 },
-                "description": "Seconds before retry with the SAME Idempotency-Key"
+                "description": "Seconds before retrying cancellation for the same booking."
               }
             }
           }
         },
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/bookings/{id}/simulate-payment": {
       "post": {
         "operationId": "simulatePayment",
         "summary": "simulatePayment",
-        "description": "Contract v0; implementation follows TASKS. Only CUSTOMER owner; other owners get 404. requestId dedup scoped by booking; changed scenario with same requestId => IDEMPOTENCY_KEY_REUSED. DELAY_TIMEOUT records result at expiresAt + 1 second using DB scheduler, never sleeps holding locks.",
+        "description": "Implemented in Part 6. Only CUSTOMER owner; other owners get 404. requestId dedup scoped by booking; changed scenario with same requestId => IDEMPOTENCY_KEY_REUSED. DELAY_TIMEOUT records result at expiresAt + 1 second using DB scheduler, never sleeps holding locks. Only scenario/requestId are accepted; status, recordedAt, amount and identity are server-owned. The result and result outbox commit before the local processor runs. Retry the same requestId/scenario after network/503/500; processing failures leave the durable result available for recovery.",
         "tags": [
           "Bookings"
         ],
@@ -945,7 +945,7 @@
                   "type": "integer",
                   "const": 1
                 },
-                "description": "Seconds before retry with the SAME Idempotency-Key"
+                "description": "Seconds before retrying the same booking/requestId/scenario."
               }
             }
           }
@@ -965,14 +965,14 @@
           "local",
           "test"
         ],
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/bookings/{id}/tickets": {
       "get": {
         "operationId": "getTickets",
         "summary": "getTickets",
-        "description": "Contract v0; implementation follows TASKS. CUSTOMER owner or ADMIN; other owners get 404. Return [] unless booking is CONFIRMED; no tickets for EXPIRED/REFUND_REQUIRED.",
+        "description": "Implemented in Part 6. CUSTOMER owner or ADMIN; other owners get 404. Return [] unless booking is CONFIRMED; no tickets for EXPIRED/REFUND_REQUIRED. The opaque EF-UUID code identifies a demo ticket; it is not an offline signature or production QR. Nullable seatId/seatLabel describe seat allocation; GA uses ticketOrdinal.",
         "tags": [
           "Bookings"
         ],
@@ -1075,7 +1075,7 @@
             ]
           }
         },
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/admin/events": {
@@ -2602,7 +2602,31 @@
           "code": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 128
+            "maxLength": 128,
+            "pattern": "^EF-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "seatId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seatLabel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2610,7 +2634,34 @@
           "bookingId",
           "bookingItemId",
           "ticketOrdinal",
-          "code"
+          "code",
+          "seatId",
+          "seatLabel"
+        ],
+        "oneOf": [
+          {
+            "properties": {
+              "seatId": {
+                "type": "null"
+              },
+              "seatLabel": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "properties": {
+              "seatId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "seatLabel": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            }
+          }
         ]
       },
       "Outbox": {

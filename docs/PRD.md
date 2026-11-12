@@ -55,7 +55,7 @@ Xây dựng hệ thống đặt vé hỗ trợ ghế ngồi chỉ định và v�
 
 ### 4.3 Ghi nhận payment và phân xử đúng hạn
 
-Ranh giới triển khai Phần5/T4: chưa có payment API/processor. Worker gặp bất kỳ result bền (recorded_at khác NULL) sẽ giữ nguyên booking/inventory và báo DEFERRED_PAYMENT, không nhả nhầm. T5.2 mới thay nhánh chờ bằng PaymentResultProcessor dùng chung theo quy tắc dưới đây. SCHEDULED chưa ghi result bền không chặn expiry; xem ADR0005.
+Ranh giới Phần6/T5 chốt tại ADR0006: thay DEFERRED_PAYMENT của T4 bằng processor dùng chung với expiry. Ghi result bền/outbox trước, xử lý bằng transaction riêng để phục hồi sau lỗi/lag. Nếu còn pending và có success đúng hạn bền thì ưu tiên trước failure chưa xử lý; terminal đã commit không đảo ngược. Compensation ở T5 chỉ là nghĩa vụ PENDING, refund worker thuộc T6. SCHEDULED chưa có recorded_at không chặn expiry.
 
 - Payment simulator chỉ chạy local/test qua API demo. Transaction ghi payments.recorded_at bằng đồng hồ PostgreSQL và outbox PaymentResultRecorded; requestId chống ghi result lặp.
 - Một success được ghi bền trước hoặc đúng expires_at là đúng hạn. Consumer xử lý chậm không đổi recorded_at. Expiry Worker, sau khi khóa booking, kiểm tra payment result đã commit; nếu có success đúng hạn, dùng cùng PaymentResultProcessor để CONFIRMED thay vì nhả inventory.

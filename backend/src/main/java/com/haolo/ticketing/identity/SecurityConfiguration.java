@@ -21,6 +21,8 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/error").permitAll()
                 .requestMatchers(HttpMethod.GET,"/api/events","/api/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/bookings").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.POST,"/api/bookings/*/simulate-payment","/api/bookings/*/cancel").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.GET,"/api/bookings/*/tickets").hasAnyRole("CUSTOMER","ADMIN")
                 .requestMatchers(HttpMethod.GET,"/api/me/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET,"/api/bookings/*").hasAnyRole("CUSTOMER","ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN").anyRequest().denyAll())

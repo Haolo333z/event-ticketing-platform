@@ -1,6 +1,6 @@
 # Hạ tầng local
 
-PostgreSQL17.11 chạy Compose, backend JDK25 trên host. Đến hết Phần5 có V1–V7, booking GA/SEATED/idempotency/history và expiry worker/BookingExpired. Chưa có payment/Kafka.
+PostgreSQL17.11 chạy Compose,backend JDK25 trên host. Phần6 có V1–V8,GA/ghế/expiry và payment simulator/processor/cancel/tickets/compensationPENDING. Chưa có Kafka/inbox/refund worker; ghi chú ở từng mục Phần4/5 là lịch sử của các phần đó.
 
 Từ thư mục gốc trên Windows:
 
@@ -75,3 +75,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part5.ps1 -Wait
 test-part5.ps1 tái sử dụng runner DB UUID độc lập, toàn suite58test. test-part5-ui tạo DB/cổng riêng, TTL4s/worker1s, kiểm tra22response contract, chọn/giữ ghế trong React DOM qua HTTP thật, chờ schedulerEXPIRED/nhả/rebook, cả GA expiry; query invariant và restart JVM test cùng DB kiểm tra không migrate lại. Cuối cùng chỉ dọn process/JAR/DB do script tạo. Không reset demo hoặc stop runtime8080.
 
 Scheduler tắt trong test profile để test tự điều khiển, nhưng test-part5-ui bật bằng CLI. Local scheduler mặc định bật; EXPIRY_ENABLED=false chỉ để điều tra/test có kiểm soát, hold sẽ chưa nhả khi tắt. Mỗi booking một transaction; log pass có candidates/expired/deferredPayment/busy/failed. Result payment bền giữ inventory chờ T5.2; chưa có simulator/confirm/refund. V7 thêm composite owner FK; event payload/schemaVersion không đổi. verify-part4 vẫn kiểm tra replay GA gốc, GET sau expiry có thể làEXPIRED. Các ghi chú “chưa worker” trong mục Phần4 bên trên là phạm vi lịch sử, không phải hiện trạng Phần5.
+
+## Phần6 — Thanh toán mô phỏng và vé
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6.ps1
+# Chỉ30test mới: thêm -Tests PostgresPaymentTest
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1
+# Demo nhanh, terminal backend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
+# Terminal khác:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part6.ps1 -WaitSeconds 45
+```
+
+test-part6 tạo DB riêng và chạy88test backend, không reset demo. test-part6-ui dùng DB/cổng/JAR riêng,TTL4s/worker1s,40response HTTP contract và checkout React+API thật; kiểm tra GA3/ghế2vé,duplicate,failure/cancel,delayed refund0vé. Tạo paymentSCHEDULED rồi restart đúng JVM test,cùng DB; ledger phục hồi và không migrate lại. SQL kiểm tra state/ordinal/owner/inventory/compensation và8version migration. finally chỉ dọn DB/JAR/process do script tạo.
+
+Scheduler hiện tại gọi PaymentMaintenance trước ExpiryService; logPaymentPass có candidates/processed/failed,ExpiryPass có expired/processedPayments/busy/failed. T5 không cònDEFERRED_PAYMENT. Test properties/CLI chốt lịch tắt hoặc bật từng ca, kể cảenvEXPIRY_ENABLED=true. Nếu tắt scheduler thì delayed result/expiry/recovery chưa tự chạy; immediate simulator vẫn gọi local processor sau record. Không có refund worker: compensation giữPENDING.
+
+verify-part6 tạo catalog riêng trên demo và giữ dữ liệu/vé để bạn xem, không xóa seed. Vé cócodeEF-UUID để tra cứu demo qua API có owner/admin,không thêm check-in/QRproduction. README gốc có ví dụPOSTsimulate/GETtickets/cancel khôngbody và giải thích retryrequestId. Chưa commit/push hay chạy GitHub CI mới.

@@ -1,6 +1,7 @@
 import {createElement as h,useEffect,useRef,useState} from 'react';
 import type {ChangeEvent,FormEvent} from 'react';
-import {ApiError,readAttempt,saveAttempt,unknownOutcome} from '../api/client.ts';
+import {ApiError,readAttempt,saveAttempt,unknownOutcome,readPaymentAttempt} from '../api/client.ts';
+import {Checkout} from './Checkout.ts';
 import type {Api,Attempt,Availability,Booking,Event,Store} from '../api/client.ts';
 
 const vnd=(value:number)=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(value);
@@ -22,6 +23,7 @@ export function App({api,store}:{api:Api;store:Store}){
   async function historyRefresh(){try{setHistory((await api.mine()).items);}catch(value){fail(value);}}
   useEffect(()=>{let active=true;setLoading(true);api.events().then(data=>{if(active){setEvents(data.items);setError(null);}}).catch(value=>{if(active)fail(value);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[api,catalogVersion]);
   useEffect(()=>{void historyRefresh();},[api]);
+  useEffect(()=>{let active=true;const payment=readPaymentAttempt(store);if(payment)api.booking(payment.bookingId).then(value=>{if(active)setBooking(value);}).catch(value=>{if(active)fail(value);});return()=>{active=false;};},[api,store]);
   useEffect(()=>{
     let active=true;setDetail(null);setAvailability(null);
     if(selected)Promise.all([api.detail(selected),api.availability(selected)]).then(([event,snapshot])=>{
@@ -36,8 +38,9 @@ export function App({api,store}:{api:Api;store:Store}){
     return()=>{active=false;clearInterval(timer);};
   },[api,selected]);
   useEffect(()=>{
-    if(!booking||booking.status!=='PENDING_PAYMENT')return;let active=true;const id=booking.bookingId;
-    const timer=setInterval(()=>{api.booking(id).then(value=>{if(active){setBooking(value);if(value.status!=='PENDING_PAYMENT'){void historyRefresh();if(selected)void api.availability(selected).then(snapshot=>{if(active)setAvailability(snapshot);}).catch(()=>{});}}}).catch(()=>{if(active)setNotice('Chưa cập nhật được trạng thái. Bạn có thể tải lại booking.');});},3000);
+    if(!booking||!['PENDING_PAYMENT','EXPIRED'].includes(booking.status))return;let active=true;const id=booking.bookingId;
+    const started=Date.now(),budget=booking.status==='EXPIRED'?90000:Math.max(90000,Date.parse(booking.expiresAt)-started+90000);
+    const timer=setInterval(()=>{if(Date.now()-started>budget){clearInterval(timer);if(active)setNotice('Đã dừng tự cập nhật. Bạn có thể bấm Cập nhật booking.');return;}api.booking(id).then(value=>{if(active){setBooking(value);if(value.status!=='PENDING_PAYMENT'){void historyRefresh();if(selected)void api.availability(selected).then(snapshot=>{if(active)setAvailability(snapshot);}).catch(()=>{});}}}).catch(()=>{if(active)setNotice('Chưa cập nhật được trạng thái. Bạn có thể tải lại booking.');});},3000);
     return()=>{active=false;clearInterval(timer);};
   },[api,booking?.bookingId,booking?.status,selected]);
   async function submit(event:FormEvent){
@@ -84,11 +87,12 @@ export function App({api,store}:{api:Api;store:Store}){
               h('p',{'aria-live':'polite',className:available===0?'sold-out':'availability'},available===null?'Chưa có tồn kho tham khảo':available===0?'Hết vé':'Còn '+available+' vé tham khảo'),
               h('label',{htmlFor:'quantity'},'Số lượng vé'),h('input',{id:'quantity',type:'number',min:1,max:6,step:1,value:quantity,disabled:busy||!!pending,onChange:(event:ChangeEvent<HTMLInputElement>)=>setQuantity(Number(event.target.value))})),
             h('small',{className:'muted'},'Tối đa 6 vé mỗi booking. Tồn kho được kiểm tra lại khi gửi.'),h('button',{type:'submit',className:'primary',disabled:busy||!canBook},busy?'Đang gửi…':pending?'Thử lại cùng yêu cầu':type?.mode==='SEATED'?'Giữ ghế đã chọn':'Giữ vé GA')),
-          h('p',{className:'footnote'},'Bản demo chưa hỗ trợ thanh toán. Ghế chỉ trống trở lại sau khi máy chủ xác nhận hết hạn và nhả giữ chỗ.'))),
+          h('p',{className:'footnote'},'Thanh toán chỉ mô phỏng, không thu tiền thật. Ghế chỉ trống trở lại sau khi máy chủ nhả giữ chỗ.'))),
       booking&&h('section',{className:'result','aria-label':'Kết quả booking'},h('div',{className:'section-heading'},h('h2',null,'Booking của bạn'),h('span',{className:'status-pill'},labels[booking.status]??booking.status)),
         h('dl',null,h('dt',null,'Mã booking'),h('dd',{className:'booking-id'},booking.bookingId),h('dt',null,'Trạng thái máy chủ'),h('dd',null,booking.status),h('dt',null,'Tổng tiền máy chủ'),h('dd',null,vnd(booking.totalAmountVnd)),h('dt',null,'Hạn giữ chỗ'),h('dd',null,date(booking.expiresAt))),
         booking.status==='PENDING_PAYMENT'&&h('p',{className:'hold-countdown','data-countdown':true},remaining>0?'Còn '+remaining+' giây giữ chỗ':'Đã đến hạn. Đang chờ máy chủ xác nhận và nhả vé.'),
-        h('button',{type:'button',className:'quiet',onClick:()=>void openBooking(booking.bookingId)},'Cập nhật booking'),h('button',{type:'button',className:'quiet',disabled:busy||!!pending,onClick:()=>{setCompleted('');setBooking(null);setNotice('');}},'Đặt thêm vé'),booking.history&&h('ul',{className:'timeline'},...booking.history.map((item,i)=>h('li',{key:i},date(item.occurredAt)+' · '+item.toStatus)))),
+        h('button',{type:'button',className:'quiet',onClick:()=>void openBooking(booking.bookingId)},'Cập nhật booking'),h('button',{type:'button',className:'quiet',disabled:busy||!!pending,onClick:()=>{setCompleted('');setBooking(null);setNotice('');}},'Đặt thêm vé'),booking.history&&h('ul',{className:'timeline'},...booking.history.map((item,i)=>h('li',{key:i},date(item.occurredAt)+' · '+item.toStatus))),
+        h(Checkout,{key:booking.bookingId,api,store,booking,onChange:(value:Booking)=>{setBooking(value);void historyRefresh();if(selected)void api.availability(selected).then(setAvailability).catch(()=>{});}})),
       h('section',{className:'history','aria-labelledby':'history-heading'},h('div',{className:'section-heading'},h('h2',{id:'history-heading'},'Lịch sử của tôi'),h('button',{type:'button',className:'quiet',onClick:()=>void historyRefresh()},'Tải lại lịch sử')),
         history.length===0?h('p',{className:'muted'},'Chưa có booking nào.'):h('ul',{className:'history-list'},...history.map(item=>h('li',{key:item.bookingId},h('button',{type:'button',onClick:()=>void openBooking(item.bookingId)},h('span',{className:'booking-id'},item.bookingId),h('span',null,labels[item.status]??item.status),h('strong',null,vnd(item.totalAmountVnd)))))))));
 }

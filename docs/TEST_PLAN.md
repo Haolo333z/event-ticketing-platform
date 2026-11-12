@@ -1,8 +1,10 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
-> Gồm kế hoạch toàn dự án và kết quả đến Phần5. Ghế/expiry đã có bằng chứng bên dưới; payment/Kafka vẫn là kế hoạch. Kết quả thực tại PROGRESS và evidence/part5-2026-11-12.json. Các số liệu trong gate Phần4 là lịch sử lần chạy đó.
+> Kế hoạch toàn dự án và kết quả đến Phần6. Payment/ghế/expiry/vé đã có bằng chứng dưới đây;Kafka/inbox/refund worker vẫn là kế hoạch. Kết quả thực tại PROGRESS/evidence/part6-2026-11-12.json. Các gate Phần4/5 giữ số liệu lịch sử của chúng.
 
 ## Nguyên tắc
+
+Phần6:88test backend (87PostgreSQL+1H2),30test mới PostgresPaymentTest;26frontend (7client/storage+12App+7Checkout),buildbackend/frontend,44ca contract/40response HTTP live. Không mockDB hoặc HTTPresponse trong ca live. Scheduler kiểm soát bằng test properties/CLI; đầy đủ suite chạy với envEXPIRY_ENABLED=true mà không chen vào fixture. Các artifacttarget được tạo lại,không commit dữ liệu test.
 
 Phần5: infra/test-part5.ps1 chạy58test/0fail/0error/0skip (57PostgreSQL+1H2); PostgresSeatExpiryTest có23test mới. Frontend16test (5client/storage +11SSR/DOM), buildTypeScript/Vite; contract32ca/22response HTTP live. Test-part4-ui kiểm tra GA cũ, test-part5-ui kiểm tra ghế/scheduler/GA expiry/restart trên DB riêng sạch, không dùng mock DB hoặc mock HTTP response trong live tests. Test properties/CLI chốt scheduler tắt hoặc bật theo từng ca. Không nhận test skipped là pass.
 
@@ -72,3 +74,18 @@ Máy chạy: Windows, Intel i5-11400H 6core/12logical, RAM16948453376byte (~15,7
 - UI:16test đạt, gồm seat states/selection, stable key sau503+reload, conflictrefresh, countdown0 không tựEXPIRED. Live UI DB sạch TTL4s/worker1s:202 choA1+A2/tổng400000,replay,clash409,schedulerEXPIRED/ghếAVAILABLE,rebook mới,expire lần2;GA2vé hết hạn trả capacity2. SQL không orphanhold/ownerEXPIRED/oversell/duplicateBookingExpired. GA UI Phần4 cũng chạy lại đạt. Manual Windows launcher TTL20/worker1 và verify-part5 đã chạy đạt tương tự trên demo, không sửa `.env`.
 
 Máy/pool giống gatePhần4; baseHEAD cf6852568cc9a4da427ea7874fb9921c284f0d52 +working tree chưa commit. Scheduler mặc định5s/batch50; test gọi worker trực tiếp và force expiry.enabled=false qua test properties, đã chạy đủ58test ngay cả khi env EXPIRY_ENABLED=true. GA UI CLI false cũng đạt dưới env true. LiveTTL4/interval1/CLItrue và demoTTL20/interval1 ghi riêng, không gọi là số đo production. Chưa có browser visual QA, benchmark latency/p95/TPS, pool exhaustion/statement cancellation độc lập hoặc mất mạng đúng COMMIT; payment processing/Kafka thuộc phần sau. GitHub CI mới chưa chạy vì chưa commit/push.
+
+## Gate Phần6 đã chạy ngày 2026-11-12
+
+- T5.1: HTTP202 intent/ACCEPTED;20HTTP cùng requestId và20callback nội bộ →1ledger/1PaymentResultRecorded/1BookingConfirmed/3ticket/held0/sold3. Changedscenario409,fieldlạ/status/recordedAt/requestId sai400,token401/admin403/owner404;service ngoài profile403. Không có unsignedprovidercallback mới.
+- T5.2 PAY-01: record result trước nhưng cố tình chưa gọi adapter,fixture deadline đến hạn/recorded_at trước1ms;expiry gọi cùngprocessor→CONFIRMED/2vé/0Expired,version đã tăng không làm bỏ result. Boundary fixture recorded_at==expires_at đượcconfirm;+1microsecond thìREFUND_REQUIRED/0vé. Fixtures chỉnh DB chỉ trong test,không nhận timestamp client.
+- PAY-02: expirycommit trước success,ghế được cấp owner mới;oldbooking→REFUND_REQUIRED/1comp/0vé,newowner vẫn2HELD. Successmuộn trướcworker khi cònpending ghi đủ2transition EXPIRED/REFUND_REQUIRED cùngrelease/comp/history/outbox;processedcallbacklặpno-op.
+- PAY-03: successsaucancel/fail chỉcomp/stategiữ;failure sauEXPIRED hoặcCONFIRMED khôngrelease lại;multiplelatepayments mỗipayment1comp. Pending cótimelysuccess vàfailurechưa xử lý thìsuccessưu tiên,terminal đãcommit không đảo.
+- Race thời gian thật:8vòng payment chờ80ms,expiry chờ110ms với deadlineDB100ms; đọc storedrecorded_at đối chiếu kết quả,không bịa latency/TPS. Sốconfirm/refund theo lần chạy lưu artifact. Racecancel/success8vòng:chỉCONFIRMED+vé/sold hoặcCANCELLED+comp/0vé,held0. Chưa coi8vòng là chứng minh mọi tải.
+- TICKET-01: GA3vé/ordinal1..3,seat2vé/ordinal1/đúngseatId/label vàSOLDowner;unique code/ordinal/FK sai bị chặn. Khôngvé choREFUND_REQUIRED,processedcallback/BookingConfirmed không là lệnh issue lại. Compensation chỉPENDING/attempt0 ở T5.
+- Fault PostgreSQL: recordingoutboxlỗi rollbackledger/version;ticketinsertlỗi rollbackconfirm/inventory/history/confirmoutbox nhưngresultbền giữđểretry;failurehistorylỗi rollbackrelease;compensationlỗi rollbacklateexpiry+refund;seat thứ2bịlock→503/rollbackkhôngpartialsale. Retry cóđúngmột confirm/phátvé.
+- Deadline chung cho record/process: test budget rút ngắn, trigger recording chậm0,8s khiến processor hết ngân sách trước khi bắt đầu. API service trả503,ledger vẫn bền/booking pending/held2/0vé; retry cùng requestId xác nhận đúng2vé/1confirm. Simulator và maintenance không cộng hai budget10s riêng.
+- T5.5:cancelbodyrỗng/repeat200;body{}400;confirmed409;cancel gặp timelyresult phảicommitconfirm/vé trước409. Admincapacity2 dướiheld/sold3 chạyđồngthờipayment trả409/rollbackprice;price/activechange đua với paidseat vẫnitemsnapshot200000/tổng400000,SOLDkhông bịexpiryrelease.
+- T5.4/Live:26unit/DOM,không tựCONFIRMEDsau202,stable requestId/scenarioqua503/reload,noautoPOST,trảcancelconflictrefreshticket. Reactjsdom+API/PostgreSQL thật TTL4/interval1:GA3+seat2CONFIRMED/5mãunique,replayunchanged,failure/cancelrelease,DELAY→EXPIRED→REFUND_REQUIRED/0vé. Restart ledgerSCHEDULED cùngDB phục hồi/intentcũ/no migration necessary; SQL0vé saistate/ordinal/booking,0oversell,0SOLDowner sai,0duplicatecomp,V1–V8. CảGAUI vàSeatUIPhần4/5 cũng chạy lại đạt.
+
+MáyWindows/i5-11400H6core12logical/RAM16948453376byte,JDK25.0.5,PostgreSQL17.11,pool10/2/2s,lock1500ms/statement5s/attempt5s/total10s. BaseHEAD ca08aaf5b67a1666063d442600bb86c4ad4d16c7 +workingtree chưa commit. ManualWindows TTL20/interval1 cũng đạt,catalog riêng để xem vé. Chưabrowservisual/remoteCI/benchmark/pool exhaustion/statementcancel độc lập/mất mạng đúngCOMMIT;provider thật/Kafka/inbox/refundworker ngoài phạm vi.

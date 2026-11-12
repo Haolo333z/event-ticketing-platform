@@ -4,6 +4,8 @@
 
 T2.5 có OutboxWriter bắt buộc transaction, envelope v1/index pending. Đến hết Phần5, booking GA/SEATED ghi BookingHeld aggregateVersion=1 cùng booking/item/inventory/key/history; worker expiry tăng version và ghi BookingExpired cùng release/state/history. expiredAt lấy DB clock và khớp booking/history; cause_event_id tham chiếu logic event đã ghi. Worker lặp không tạo thêm event hoặc release. Fault sau append rollback cả expiry và inventory. Không đổi schemaVersion hoặc payload; outbox vẫn PENDING, chưa có Kafka publisher/consumer hoặc payment producer. Catalog không phát event booking giả.
 
+Đến Phần6 đã có producer7type v1: simulator record terminal+PaymentResultRecorded cùng commit,BookingLifecycle ghi confirmed/failed/cancelled/expired/refund cùng state/inventory/history/tickets/compensation. Row payments.processed_at là dedup local callback dưới booking lock; không thêm inbox T6. Scheduled result giữcorrelation_id đến lúc ghi result. Nếu processing lỗi,recordedresult/outboxgốc vẫn bền còn state/history/ticket/outboxxử lý rollback; maintenance retry. Success sauCANCELLED/PAYMENT_FAILED chỉ tạo obligationPENDING,không phát eventrefund khi không đổi state theo hợp đồng. Outbox vẫnPENDING,chưa gửiKafka/hoàn tiền.
+
 ## Envelope
 
     {

@@ -8,7 +8,7 @@ const ajv=new Ajv({strict:false,allErrors:true});addFormats(ajv);
 const base=process.env.API_BASE_URL??'http://127.0.0.1:8080';let checks=0;
 async function check(path,schema,status=200,options={}){
     const response=await fetch(base+path,options);const body=await response.json();assert.equal(response.status,status,JSON.stringify(body));
-    const validate=ajv.compile(api.components.schemas[schema]);assert(validate(body),JSON.stringify(validate.errors));
+    const validate=ajv.compile(typeof schema==='string'?api.components.schemas[schema]:schema);assert(validate(body),JSON.stringify(validate.errors));
     if(schema==='BookingAccepted')assert.equal(response.headers.get('Location'),'/api/bookings/'+body.bookingId);
     checks++;return body;
 }
@@ -43,4 +43,23 @@ await check('/api/bookings/'+seatBooking.bookingId,'Booking',200,{headers:auth})
 const held=await check('/api/events/'+event.id+'/availability','Availability');assert(held.ticketTypes[0].seats.every(s=>s.status==='HELD'));
 const clash=await check('/api/bookings','Error',409,{method:'POST',headers:{...auth,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(seatCommand)});assert.equal(clash.code,'INVENTORY_UNAVAILABLE');
 await check('/api/bookings','Error',400,{method:'POST',headers:{...auth,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({...seatCommand,seatIds:[seats[0].id,seats[0].id]})});
-console.log(`PASS: ${checks} live HTTP responses match OpenAPI schemas (GA + seats).`);
+const simulation={scenario:'SUCCESS',requestId:crypto.randomUUID()};
+const paymentPath='/api/bookings/'+seatBooking.bookingId+'/simulate-payment';
+const payment=await check(paymentPath,'PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify(simulation)});
+assert.deepEqual(await check(paymentPath,'PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify(simulation)}),payment);
+await check(paymentPath,'Error',409,{method:'POST',headers:auth,body:JSON.stringify({...simulation,scenario:'FAILURE'})});
+await check(paymentPath,'Error',400,{method:'POST',headers:auth,body:JSON.stringify({...simulation,recordedAt:'2020-01-01T00:00:00Z'})});
+await check(paymentPath,'Error',403,{method:'POST',headers:admin,body:JSON.stringify(simulation)});
+const confirmed=await check('/api/bookings/'+seatBooking.bookingId,'Booking',200,{headers:auth});assert.equal(confirmed.status,'CONFIRMED');
+const ticketSchema=api.paths['/api/bookings/{id}/tickets'].get.responses['200'].content['application/json'].schema;
+const issued=await check('/api/bookings/'+seatBooking.bookingId+'/tickets',ticketSchema,200,{headers:auth});assert.equal(issued.length,2);assert.equal(new Set(issued.map(t=>t.code)).size,2);assert(issued.every(t=>t.seatId&&t.seatLabel));
+await check('/api/bookings/'+seatBooking.bookingId+'/cancel','Error',409,{method:'POST',headers:auth});
+const gaCreated=await fetch(base+'/api/admin/events',{method:'POST',headers:admin,body:JSON.stringify({title:'Contract payment '+crypto.randomUUID(),description:'Payment contract fixture',venue:'Local',saleStartAt:'2020-01-01T00:00:00Z',saleEndAt:'2099-01-01T00:00:00Z',startsAt:'2099-01-02T00:00:00Z',status:'PUBLISHED',ticketTypes:[{name:'GA',mode:'GA',priceVnd:100000,capacity:6}]})});assert.equal(gaCreated.status,201);const gaEvent=await gaCreated.json();
+async function holdGa(){return check('/api/bookings','BookingAccepted',202,{method:'POST',headers:{...auth,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({eventId:gaEvent.id,ticketTypeId:gaEvent.ticketTypes[0].id,quantity:2})});}
+const failed=await holdGa();await check('/api/bookings/'+failed.bookingId+'/simulate-payment','PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify({scenario:'FAILURE',requestId:crypto.randomUUID()})});
+assert.equal((await check('/api/bookings/'+failed.bookingId,'Booking',200,{headers:auth})).status,'PAYMENT_FAILED');assert.equal((await check('/api/bookings/'+failed.bookingId+'/tickets',ticketSchema,200,{headers:auth})).length,0);
+const cancellable=await holdGa();assert.equal((await check('/api/bookings/'+cancellable.bookingId+'/cancel','Booking',200,{method:'POST',headers:auth})).status,'CANCELLED');
+await check('/api/bookings/'+cancellable.bookingId+'/cancel','Booking',200,{method:'POST',headers:auth});
+await check('/api/bookings/'+cancellable.bookingId+'/cancel','Error',400,{method:'POST',headers:auth,body:'{}'});
+const delayed=await holdGa();await check('/api/bookings/'+delayed.bookingId+'/simulate-payment','PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify({scenario:'DELAY_TIMEOUT',requestId:crypto.randomUUID()})});
+console.log(`PASS: ${checks} live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).`);

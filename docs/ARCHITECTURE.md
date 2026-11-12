@@ -21,7 +21,7 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
-Đến hết Phần5 đã có catalog/admin/auth demo, booking GA/SEATED, owner/history, UI API thật và expiry worker. Migration V1–V7 có11bảng; V7 siết owner ghế cùng event/type. Chưa có payment processing hoặc Kafka. Triển khai/test tại ADR0003/0004/[ADR0005](adr/0005-seats-and-expiry.md) và PROGRESS.
+Đến Phần6 có catalog/admin/auth demo,bookingGA/SEATED,expiry,payment simulator/shared processor,cancel,ticket/compensation vàUI thật. V1–V8 có13bảng/11API. Chưa có Kafka/inbox/refund worker. Triển khai/test tại ADR0003–0006 và PROGRESS.
 
 BookingTransactions quản lý ranh giới transaction/retry chung cho command và expiry; controller chỉ chuyển HTTP. CatalogBookingAccess khóa SHARE event/type theo thứ tự admin; GaInventory conditional update hoặc SeatInventory khóa từng UUID rồi giữ tất cả/rollback. Item/history/BookingHeld/key/response cùng commit trước202. ExpiryService mỗi booking một transaction, kiểm tra state/due/payment trước InventoryRelease/history/BookingExpired. Isolation command/expiry READ COMMITTED; GET booking/mine REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key giữ qua network/503/reload.
 
@@ -78,7 +78,7 @@ Nếu Expiry Worker chưa commit việc nhả, API có thể trả 409 HOLD_EXPI
 
 Expiry Worker tách biệt với lệnh tạo booking:
 
-Phần5 triển khai theo [ADR0005](adr/0005-seats-and-expiry.md): mỗi booking REQUIRES_NEW, lock booking SKIP LOCKED/recheck DB clock; khóa từng ghế tăng dần UUID hoặc GA trước release; state/history/outbox cùng commit. Scheduler5s/batch50; test profile tắt scheduler để gọi worker trực tiếp. Cho đến T5.2, result terminal đã recorded làm worker defer và giữ inventory; không thực hiện payment processing trước task. Quy tắc xử lý payment trong danh sách dưới là đích T5.
+Phần5 đặt nền REQUIRES_NEW/booking SKIP LOCKED/DBclock/khóa inventory tăng dần. Phần6 thay defer bằng shared PaymentResultProcessor theo ADR0006: xử lý result bền trước release,maintenance trướcexpiry trên scheduler5s/batch50. Tests tắt lịch tự động và gọi có kiểm soát; live tests bật scheduler thật. State/history/outbox/tickets/compensation cùng transaction xử lý.
 
 1. Chọn batch booking PENDING_PAYMENT đến hạn theo đồng hồ PostgreSQL; worker song song dùng khóa/skip-locked phù hợp.
 2. Khóa booking, kiểm tra lại trạng thái, expires_at và payment result đã commit. Nếu có success với payments.recorded_at <= expires_at, dùng PaymentResultProcessor để confirm; không nhả.
@@ -96,6 +96,8 @@ Lệnh tạo booking chỉ nhận ghế AVAILABLE hoặc GA còn capacity theo b
 - Transaction ngắn, không gọi mạng ngoài khi giữ khóa; deadlock chỉ retry hữu hạn.
 
 ## 7. Payment, state machine và event muộn
+
+Phần6 triển khai theo [ADR0006](adr/0006-payment-results-and-tickets.md): simulator record+PaymentResultRecorded commit trước local adapter gọi processor. Shared processor chạy cùng transaction expiry/cancel khi cần, recheck booking/result dưới lock. Maintenance ghi delayed result đến hạn và xử lý ledger chưa processed; scheduler hiện có gọi maintenance trước expiry. Không Kafka/inbox/refund worker ở T5. Vé/compensation cùng transaction chuyển state; đọc vé owner/ADMIN. Khi nhiều result pending đã bền, ưu tiên timely success trước failure chưa xử lý, sau đó recorded_at/id; terminal không đảo ngược.
 
 PRD mục 5 là nguồn state machine duy nhất. Payment simulator API local/test ghi payment result và recorded_at bằng DB clock, cùng outbox, dưới khóa booking. Khi result được xử lý, PaymentResultProcessor khóa booking rồi inventory theo ID; tuần 5 gọi processor từ adapter cục bộ, tuần 6 Kafka consumer gọi cùng processor. Worker expiry cũng gọi processor nếu có result đúng hạn bền chưa được xử lý. Không có hai bản logic.
 
@@ -136,7 +138,7 @@ sequenceDiagram
 
 ## 9. Dữ liệu và API
 
-T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Mục tiêu14bảng, đến hết Phần4 đã migrate11bảng; bookings giữ payment_intent_id, payments có storage nền cho result/request mô phỏng. Catalog/booking đã enforce body/CORS/timeout/auth; replay audit API, inbox và payment processing thuộc giai đoạn sau. Migration đã chạy được giữ nguyên.
+Hợp đồng tại OpenAPI/event schema/DATA_MODEL/ADR0002/TRACEABILITY. Đến Phần6 migrate13/14bảng; payment_intent_id nhóm request, payments.id là result, request_id là dedup client. Body/CORS/auth/timeout áp dụng cho booking/payment; replay audit API,inbox,Kafka/refund worker thuộc T6 trở đi. Migration đã chạy giữ nguyên.
 
 Bảng dự kiến: users, events, ticket_types, seats cho ghế định danh, inventory_ga cho vé không ghế, bookings, booking_items, idempotency_keys, payments, payment_compensations, tickets, outbox_events, inbox_events, booking_status_history. Seed mock token bằng cấu hình local/test. Chi tiết PK/FK/check/index ở [DATA_MODEL](DATA_MODEL.md).
 

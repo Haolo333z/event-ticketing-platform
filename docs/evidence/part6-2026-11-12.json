@@ -1,0 +1,174 @@
+{
+  "date": "2026-11-12",
+  "baseHead": "ca08aaf5b67a1666063d442600bb86c4ad4d16c7",
+  "scope": "Uncommitted Part6,T5.1-T5.5",
+  "environment": {
+    "os": "Windows",
+    "cpu": "Intel i5-11400H,6cores/12logical",
+    "ramBytes": 16948453376,
+    "jdk": "Temurin25.0.5",
+    "postgres": "17.11",
+    "poolMax": 10,
+    "poolMinIdle": 2,
+    "acquisitionMs": 2000,
+    "lockMs": 1500,
+    "statementMs": 5000,
+    "attemptMs": 5000,
+    "totalBudgetMs": 10000
+  },
+  "backend": {
+    "tests": 88,
+    "postgresTests": 87,
+    "h2Tests": 1,
+    "newPaymentTests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "finishedUtc": "2026-11-12T15:40:53Z",
+    "adverseEnvironment": "EXPIRY_ENABLED=true; controlled tests force scheduler off"
+  },
+  "frontend": {
+    "tests": 26,
+    "clientStorageTests": 7,
+    "appTests": 12,
+    "checkoutTests": 7,
+    "failures": 0,
+    "build": "passed"
+  },
+  "contracts": {
+    "staticCases": 44,
+    "liveHttpResponses": 40,
+    "operations": 14,
+    "implementedOperations": 11,
+    "eventTypes": 7,
+    "schemaVersion": 1
+  },
+  "migration": {
+    "versions": "V1-V8",
+    "businessTables": 13,
+    "newTables": [
+      "tickets",
+      "payment_compensations"
+    ],
+    "unchangedPreviousMigrations": true
+  },
+  "concurrency": [
+    {
+      "recordedBeforeExpiry": true,
+      "processedByExpiry": true,
+      "tickets": 2,
+      "expiredEvents": 0,
+      "status": "CONFIRMED",
+      "scenario": "PAY-01-lag"
+    },
+    {
+      "oldTickets": 0,
+      "compensations": 1,
+      "newOwnerHeldSeats": 2,
+      "scenario": "PAY-02-reallocated-seats",
+      "oldStatus": "REFUND_REQUIRED"
+    },
+    {
+      "confirmed": 3,
+      "iterations": 8,
+      "sold": 3,
+      "held": 0,
+      "cancelled": 5,
+      "scenario": "cancel-success-race"
+    },
+    {
+      "confirmed": 7,
+      "iterations": 8,
+      "sold": 7,
+      "held": 0,
+      "refundRequired": 1,
+      "scenario": "deadline-race"
+    },
+    {
+      "sold": 3,
+      "duplicateCallbacks": 20,
+      "scenario": "duplicate-payment",
+      "payments": 1,
+      "httpRequests": 20,
+      "confirmedEvents": 1,
+      "tickets": 3,
+      "held": 0
+    }
+  ],
+  "deadlineBoundary": {
+    "source": "PostgreSQL fixtures,not client timestamps or a latency benchmark",
+    "equalDeadline": "CONFIRMED",
+    "oneMicrosecondLate": "REFUND_REQUIRED,0tickets"
+  },
+  "rollback": {
+    "recordingOutbox": "ledger/version rollback",
+    "ticketInsert": "confirmation/inventory/history/confirm-outbox/tickets rollback; durable result retained",
+    "failureHistory": "release rollback",
+    "compensation": "late expiry/refund/release rollback",
+    "secondSeatLock": "503, no partial sale; retry succeeds"
+  },
+  "liveUi": {
+    "runtime": "React jsdom + real HTTP/PostgreSQL",
+    "holdSeconds": 4,
+    "workerSeconds": 1,
+    "gaTickets": 3,
+    "seatedTickets": 2,
+    "uniqueCodes": 5,
+    "replay": "unchanged",
+    "failure": "PAYMENT_FAILED,release",
+    "cancel": "CANCELLED,release once",
+    "delayedHistory": [
+      "PENDING_PAYMENT",
+      "EXPIRED",
+      "REFUND_REQUIRED"
+    ],
+    "lateTickets": 0,
+    "gaCapacity": 12,
+    "gaAvailable": 9,
+    "seats": "SOLD",
+    "oldGaUiRegression": "passed",
+    "oldSeatUiRegression": "passed"
+  },
+  "restart": {
+    "scheduledResultPersisted": true,
+    "afterRestart": "REFUND_REQUIRED,0tickets",
+    "replayIntentUnchanged": true,
+    "flyway": "No migration necessary"
+  },
+  "liveSqlViolations": {
+    "ticketState": 0,
+    "ticketOrdinalOrBooking": 0,
+    "gaOversell": 0,
+    "soldOwnerState": 0,
+    "duplicateCompensation": 0
+  },
+  "windowsSmoke": {
+    "holdSeconds": 20,
+    "workerSeconds": 1,
+    "script": "infra/verify-part6.ps1 -WaitSeconds 45",
+    "eventId": "cd62daa6-5d0f-4cdb-918c-4b610d99f6dc",
+    "gaBookingId": "87cc9e20-0a95-4008-9931-23dc5ca903c4",
+    "seatBookingId": "e445f2a6-a583-4837-b7cd-33b5d922d4fe",
+    "delayedBookingId": "b441664a-675d-45ea-97f3-7a710a5d9e6c",
+    "result": "passed;keeps its dedicated demo catalog and tickets for review"
+  },
+  "limits": [
+    "No real money or public provider callback",
+    "Opaque ticket code,no offline signature/production QR/check-in",
+    "Compensation PENDING only;refund worker/Kafka/inbox remain T6",
+    "No native browser visual QA or remote GitHub CI run",
+    "No latency/p95/TPS benchmark,pool exhaustion,independent statement cancellation,or lost connection at COMMIT fault injection"
+  ],
+  "scans": {
+    "gitleaksCandidateFiles": 156,
+    "gitleaksHistoryCommits": 8,
+    "gitleaks": "no leaks found",
+    "npmAuditFrontend": 0,
+    "npmAuditContracts": 0,
+    "osvPackages": 69,
+    "osv": "No issues found",
+    "actionlint": "exit0",
+    "gitDiffCheck": "exit0"
+  },
+  "sharedDeadline": "record+process share one business deadline;exhausted after durable record gives503;retry same request succeeds without duplicate tickets"
+}

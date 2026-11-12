@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần5 — Ghế, expiry worker và concurrency đã hoàn thành
-- **Tiến độ:** T1.1–T4.5 Done; GA/ghế/idempotency/expiry/rollback/concurrency/UI kiểm chứng PostgreSQL thật
+- **Giai đoạn:** Phần6 — Thanh toán mô phỏng, state machine và vé đã hoàn thành
+- **Tiến độ:** T1.1–T5.5 Done; GA/ghế/expiry/payment/cancel/ticket/compensation vàUI kiểm chứng PostgreSQL thật
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T5.1 — Payment simulator (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker chức năng Phần5. Chưa browser visual QA hoặc GitHub CI cho thay đổi mới; chưa commit/push. Restart local/test đã chạy được bằng launcher an toàn trong Phần5, giới hạn restart Phần4 là lịch sử.
+- **Task tiếp theo:** T6.1 — Inbox/event contract (Todo, chưa bắt đầu)
+- **Blocker:** Không có blocker chức năng Phần6. Chưa browser visual QA/remote CI/benchmark hoặc một số fault mạng; chưa commit/push. Không triển khai Kafka/inbox/refund worker thuộc phần sau.
 
-- **Task trong TASKS:** 19/45 Done.11bảng/V1–V7,8API,UI GA/ghế và expiry worker. Chưa có thanh toán/phát vé/compensation hoặc Kafka.
+- **Task trong TASKS:** 24/45 Done.13bảng/V1–V8,11API,UI GA/ghế/checkout/vé;worker payment/expiry. Chưa Kafka/inbox/refund worker.
 
 ## Đã hoàn thành
 
@@ -37,11 +37,38 @@
 
 - TTL mặc định600s, worker5s/batch50 đã hoạt động, max6vé, pool10/2/acquisition2s. BookingPolicy lock1500ms/statement5s/attempt5s/total10s, frontend abort15s. Demo hiện chạy TTL20s/worker1s bằng override process, không sửa `.env`.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
-- Lock order/multi-seat rollback/expiry retry/race booking mới và release commit đã có PostgreSQL tests. Race payment processing đầy đủ vẫn thuộc T5.
-- Catalog/booking GA/ghế/expiry đã kiểm chứng; availability không hold vé. Worker defer result bền giữ nguyên inventory cho đến T5.2; không coi đây là payment processing đã hoàn thành. Không tự lấy lại hold quá hạn trong command.
-- Lock timeout1500ms đã kiểm tra riêng inventory GA và unique idempotency key; HTTP503/Retry-After1 sau rollback, retry cùng key đạt. CORS/body policy có test HTTP, chưa thay toàn bộ security review T7. Pool exhaustion/statement cancel độc lập/mất kết nối lúc COMMIT/40P01 thật chưa fault-inject.
+- Lock order/partial rollback/expiry/payment/cancel/admin race đã có PostgreSQL tests;Kafka lag thật vẫn thuộcT6,local lag được test bằng durable result chưa gọiadapter.
+- Availability khônghold;không tự lấy lại inventory đã quáhạn. T5 thay DEFERRED_PAYMENT bằng processor chung. Mỗi transaction giữ invariant riêng:recordresult/outbox commit trước;processing inventory/state/history/tickets/outbox/processed_at cùng commit/rollback.
+- Lock timeout vàdeadlock40P01 thật đã kiểm tra;CORS/body/auth tests không thay security reviewT7. Chưa fault pool exhaustion/statementcancel độc lập/mất kết nối lúcCOMMIT. Compensation mớiPENDING,chưa hoàn tiền mô phỏng/T6.
 
 ## Nhật ký
+
+### 2026-11-12 — Phần6 hoàn tất: T5.1–T5.5
+
+- **Đầu vào:** HEAD ca08aaf5b67a1666063d442600bb86c4ad4d16c7, working tree sạch. Đã đọc các tài liệu bắt buộc, ADR0002/0005 và source/test GA, ghế, expiry. ADR0006 ghi quyết định trước code: ghi result bền trước khi xử lý; processor dùng chung với expiry/cancel; ưu tiên timely success khi còn pending; vé có mã tra cứu demo; compensation chỉ PENDING. Không đổi stack, thêm Kafka/inbox hoặc tự commit/push.
+- **T5.1 — Simulator:** mở POST simulate-payment cho CUSTOMER owner trong local/test. Chỉ nhận scenario/requestId; server quyết định status, recorded_at, giá và danh tính. Ledger và PaymentResultRecorded cùng commit dưới booking lock. Cùng requestId/scenario replay202/intent cũ; đổi scenario409. DELAY_TIMEOUT lưu SCHEDULED, recorded_at NULL, due=expiresAt+1s. Maintenance ghi result khi đến hạn và phục hồi result chưa processed. Correlation ID được lưu để delayed result giữ trace. Service ngoài profile hợp lệ bị từ chối403 trước khi truy cập DB.
+- **T5.2 — Processor:** adapter, expiry và cancel gọi cùng PaymentResultProcessor. Khóa booking trước inventory theo thứ tự UUID; kiểm tra paymentResultId thuộc booking và có terminal result bền. Callback sai liên kết, unknown hoặc SCHEDULED bị từ chối. processed_at cùng state/owner chống xử lý lặp; không bỏ result vì aggregateVersion đã tăng. Success đúng hạn còn hold thì confirm; booking đã EXPIRED hoặc mất hold không được confirm lại. Failure sau CONFIRMED chỉ ghi ledger/log đối soát, không release.
+- **T5.3 — Vé/bù trừ:** V8 thêm tickets và payment_compensations, PK/FK tổng hợp/unique/check/index; thêm correlation_id cho payments. V1–V7 giữ nguyên. Confirm tạo đúng3vé GA ordinal1..3 hoặc2vé ghế ordinal1 đúng seatId/label, mã EF-UUID unique. GET tickets chỉ owner/ADMIN, trả[] nếu chưa CONFIRMED. Success muộn khi pending ghi cả EXPIRED và REFUND_REQUIRED cùng release/history/outbox/compensation. Success sau CANCELLED/PAYMENT_FAILED chỉ tạo nghĩa vụ bù trừ và giữ state. Unique(payment_id) bảo đảm mỗi payment một nghĩa vụ PENDING; chưa có refund worker T6.
+- **T5.4 — UI:** Checkout có3scenario và cancel, ghi rõ không thu tiền thật. Vé, mã, GA ordinal và nhãn ghế lấy từ API.26test frontend gồm7client/storage,12App và7Checkout đều đạt; TypeScript/Vite build đạt. Network/503/500 giữ nguyên bookingId/scenario/requestId qua reload, không tự POST khi mở lại; double-click chỉ gửi1request. Countdown không tự đổi state. Poll pending đến expiresAt+90s; sau EXPIRED poll thêm90s để nhận REFUND_REQUIRED, sau đó dùng nút cập nhật thủ công.
+- **T5.5 — Cancel/admin:** cancel không nhận body; repeat CANCELLED trả200, body{}400, owner sai404, role sai403, state không hợp lệ409. Nếu cancel gặp timely result bền, processor commit confirm/vé trước khi trả409; không rollback confirm hợp lệ chỉ vì cancel bị từ chối. Failure/cancel chỉ nhả một lần. Admin giảm capacity2 dưới held/sold3 trong lúc payment xử lý bị409 và rollback cả price; đổi price/active đồng thời với paid seat vẫn giữ snapshot200000/tổng400000, ghế SOLD không bị expiry nhả.
+- **Chống lặp:**20HTTP cùng requestId/scenario cộng20callback nội bộ lặp chỉ có1payment,1PaymentResultRecorded,1BookingConfirmed,3vé GA, held0/sold3. Đổi scenario bằng requestId cũ409. Không thêm unsigned provider callback HTTP; callback trong test là adapter nội bộ xác minh liên kết với ledger.
+- **Tranh chấp thời hạn:** PAY-01 ghi result đúng hạn nhưng trì hoãn adapter; expiry gọi processor và nhận CONFIRMED/2vé/0BookingExpired. Fixture DB tại đúng deadline được confirm; muộn1microsecond phải REFUND_REQUIRED/0vé. PAY-02 expiry commit trước rồi2ghế được người khác giữ: booking cũ REFUND_REQUIRED/1compensation/0vé, owner mới vẫn giữ2ghế. Late success khi pending ghi đủ2transition EXPIRED/REFUND_REQUIRED.8race gần deadline lần cuối có7CONFIRMED và1REFUND_REQUIRED, đều khớp stored recorded_at; không suy thành bảo đảm mọi tải.8race cancel/payment có3CONFIRMED và5CANCELLED, held0/sold3. Các ca late riêng đều đạt.
+- **Rollback:** fault PostgreSQL khi ghi result outbox rollback ledger/version. Fault ticket insert rollback confirm/inventory/history/confirm-outbox/vé, nhưng result gốc vẫn bền để retry cùng requestId. Fault failure history rollback release; fault compensation rollback cả late expiry/refund; khóa ghế thứ2 gây503 và không có partial sale. Bỏ fault rồi retry chỉ phát vé/chuyển trạng thái một lần. Lỗi biên dịch tạm trong test (var compound declaration) đã sửa và chạy lại đủ suite.
+- **Ngân sách chung:** rà soát cuối phát hiện record/process không được cấp lại10s cho từng transaction. Đã dùng cùng deadline nghiệp vụ10s cho simulator và mỗi maintenance candidate; hết ngân sách sau khi record trả503 và giữ result bền. Test PostgreSQL với budget rút ngắn và trigger chậm0,8s xác nhận chưa bán/phát vé khi503; retry cùng requestId xử lý result cũ, đúng2vé/1confirm. Không coi đây là benchmark latency.
+- **Backend cuối:** infra/test-part6.ps1 với EXPIRY_ENABLED=true đạt BUILD SUCCESS lúc2026-11-12T15:40:53Z:88test,0failure,0error,0skip;87test PostgreSQL thật và1context H2. Chi tiết: Payment30/Admin9/Booking16/Catalog2/Outbox4/ProductionProfile1/Schema1/SeatExpiry23/Seed1/Context1. DB UUID sạch mỗi lần, V1–V8; migrate lần2=0. Test properties tắt scheduler có kiểm soát. Test guard T4 được nâng từ defer sang confirm/SOLD/ticket, không bị xóa. Artifact tại backend/target/part6-evidence.json và surefire-reports; bản lưu tại [evidence/part6-2026-11-12.json](evidence/part6-2026-11-12.json).
+- **Hợp đồng:** OpenAPI3.1 có14operation,11đã hiện thực;44ca kiểm tra dương/âm và40response HTTP live đúng schema. Ticket thêm seatId/seatLabel nullable; cancel không có body. Giữ7event type/schemaVersion1, không tạo thêm callback/check-in endpoint.
+- **UI tích hợp thật:** GA UI Phần4 và Seat UI Phần5 chạy lại đều đạt. Checkout React trong jsdom gọi HTTP/PostgreSQL thật với TTL4s/worker1s: GA3+seat2 CONFIRMED với5code unique, replay không đổi; failure/cancel release; delayed EXPIRED→REFUND_REQUIRED/0vé. Cuối ca GA available9/capacity12, ghế SOLD. Không mock response/DB trong ca live.
+- **Restart:** tạo payment SCHEDULED rồi restart đúng JVM test trên cùng DB. Ledger được phục hồi, booking REFUND_REQUIRED/0vé, replay giữ intent cũ; healthUP và Flyway No migration necessary. SQL có0ticket sai state/ordinal/booking,0oversell,0SOLD owner sai,0duplicate compensation,8version migration. Script PowerShell ban đầu đếm sai JSON[] rỗng; đã sửa đọc raw response và chạy lại đạt, không che giấu lỗi dữ liệu vé.
+- **Windows demo:** launcher đã build/restart đúng runtime workspace, backend8080/healthUP áp dụng V8 không reset DB. TTL20s/worker1s chỉ override process, .env giữ nguyên. verify-part6.ps1 -WaitSeconds45 đạt trên catalog riêng cd62daa6-5d0f-4cdb-918c-4b610d99f6dc. GA booking87cc9e20-0a95-4008-9931-23dc5ca903c4 có3vé; seated booking e445f2a6-a583-4837-b7cd-33b5d922d4fe có2vé. Failure/cancel đúng; delayed b441664a-675d-45ea-97f3-7a710a5d9e6c là REFUND_REQUIRED/0vé. Giữ dữ liệu demo để xem, không đưa Git; frontend5173 đang chạy.
+- **CI local/scan:** npm audit frontend/tools0vulnerabilities. CycloneDX BUILD SUCCESS, OSV2.7.1 scan69packages không có vấn đề. actionlint1.7.12 exit0; workflow thêm checkout live trên DB riêng/cổng8082. Gitleaks8.30.1 quét156file bàn giao (tập file không ignored) và8commit lịch sử, no leaks found. .env được git check-ignore xác nhận, không có trong tập bàn giao. git diff --check exit0. Chưa có GitHub Actions run cho working tree chưa commit.
+- **Chưa kiểm chứng/ngoài phạm vi:** không có công cụ native browser nên chưa visual QA/screenshot; DOM/API tests không thay kiểm tra layout. Chưa benchmark latency/p95/TPS, pool exhaustion, statement cancellation độc lập hoặc mất mạng đúng lúc COMMIT. Provider/QR production/check-in ngoài MVP/task; Kafka/inbox/refund worker thuộc T6, vẫn Todo. Compensation mới PENDING, chưa báo hoàn tiền thành công.
+
+T5.1–T5.5 Done,24/45task; không có phần chức năng T5 còn thiếu theo acceptance đã chạy. README, ADR0006, OpenAPI, DATA_MODEL, EVENT_CATALOG, TEST_PLAN và TRACEABILITY đã đồng bộ. T6.1 chưa bắt đầu; chưa commit/push.
+
+### 2026-11-12 — Bắt đầu Phần6, quyết định trước code
+
+- Đọc RULES/PROGRESS/TASKS/PRD/ARCHITECTURE/DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN, ADR0002/0005, kiểm tra GA/seat/expiry/migration/auth/UI/test. HEAD ca08aaf5b67a1666063d442600bb86c4ad4d16c7, working tree sạch; Docker Server29.9.1 chạy.
+- ADR0006 chốt durable-result/processor transaction riêng, shared processor với expiry/cancel, nhiều result ưu tiên timely success khi pending, delayed scheduler, ticket code/seat fields, compensation chỉPENDING, callback nội bộ không thêm provider endpoint. PRD/ARCHITECTURE/API đồng bộ trước code phụ thuộc. T5 chưa Done, chưa commit/push.
 
 ### 2026-11-12 — Phần5 hoàn tất: T4.1–T4.5
 

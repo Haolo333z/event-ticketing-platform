@@ -2,6 +2,9 @@ export type TicketType={id:string;name:string;mode:'GA'|'SEATED';priceVnd:number
 export type Event={id:string;title:string;description:string;venue:string;startsAt:string;ticketTypes:TicketType[]};
 export type Status='PENDING_PAYMENT'|'CONFIRMED'|'PAYMENT_FAILED'|'CANCELLED'|'EXPIRED'|'REFUND_REQUIRED';
 export type Booking={bookingId:string;status:Status;expiresAt:string;totalAmountVnd:number;history?:{fromStatus:Status|null;toStatus:Status;occurredAt:string}[]};
+export type Scenario='SUCCESS'|'FAILURE'|'DELAY_TIMEOUT';
+export type PaymentAttempt={bookingId:string;scenario:Scenario;requestId:string};
+export type Ticket={id:string;bookingId:string;bookingItemId:string;ticketOrdinal:number;code:string;seatId:string|null;seatLabel:string|null};
 export type Command={eventId:string;ticketTypeId:string}&({quantity:number;seatIds?:never}|{seatIds:string[];quantity?:never});
 export type Attempt={key:string;payload:Command};
 export type Seat={id:string;label:string;status:'AVAILABLE'|'HELD'|'SOLD'};
@@ -13,6 +16,7 @@ export class ApiError extends Error{
 export interface Api{
   events():Promise<{items:Event[]}>;detail(id:string):Promise<Event>;availability(id:string):Promise<Availability>;
   create(attempt:Attempt):Promise<Booking>;booking(id:string):Promise<Booking>;mine():Promise<{items:Booking[]}>;
+  simulate(attempt:PaymentAttempt):Promise<{paymentIntentId:string;status:'ACCEPTED'}>;cancel(id:string):Promise<Booking>;tickets(id:string):Promise<Ticket[]>;
 }
 export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):Api{
   async function call<T>(path:string,init:RequestInit={}):Promise<T>{
@@ -28,7 +32,9 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
   }
   return{events:()=>call('/api/events?size=100'),detail:id=>call('/api/events/'+encodeURIComponent(id)),availability:id=>call('/api/events/'+encodeURIComponent(id)+'/availability'),
     create:attempt=>call('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':attempt.key},body:JSON.stringify(attempt.payload)}),
-    booking:id=>call('/api/bookings/'+encodeURIComponent(id)),mine:()=>call('/api/me/bookings?size=100')};
+    booking:id=>call('/api/bookings/'+encodeURIComponent(id)),mine:()=>call('/api/me/bookings?size=100'),
+    simulate:attempt=>call('/api/bookings/'+encodeURIComponent(attempt.bookingId)+'/simulate-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:attempt.scenario,requestId:attempt.requestId})}),
+    cancel:id=>call('/api/bookings/'+encodeURIComponent(id)+'/cancel',{method:'POST'}),tickets:id=>call('/api/bookings/'+encodeURIComponent(id)+'/tickets')};
 }
 const STORAGE_KEY='eventflow.pending-ga.v1';
 export type Store=Pick<Storage,'getItem'|'setItem'|'removeItem'>;
@@ -46,3 +52,11 @@ export function readAttempt(store:Store):Attempt|null{
 }
 export function saveAttempt(store:Store,value:Attempt|null){if(value)store.setItem(STORAGE_KEY,JSON.stringify(value));else store.removeItem(STORAGE_KEY);}
 export function unknownOutcome(error:ApiError){return error.status===0||error.status>=500||error.code==='IDEMPOTENCY_KEY_REUSED';}
+
+const PAYMENT_KEY='eventflow.pending-payment.v1';
+export function readPaymentAttempt(store:Store):PaymentAttempt|null{
+  try{const value=JSON.parse(store.getItem(PAYMENT_KEY)??'null');const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if(value&&uuid.test(value.bookingId)&&uuid.test(value.requestId)&&['SUCCESS','FAILURE','DELAY_TIMEOUT'].includes(value.scenario))return{bookingId:value.bookingId,scenario:value.scenario,requestId:value.requestId};
+  }catch{/* No automatic new payment if session data is unavailable. */}return null;
+}
+export function savePaymentAttempt(store:Store,value:PaymentAttempt|null){if(value)store.setItem(PAYMENT_KEY,JSON.stringify(value));else store.removeItem(PAYMENT_KEY);}

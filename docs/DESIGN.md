@@ -71,3 +71,5 @@ Transition late payment là EXPIRED -> REFUND_REQUIRED. Nếu cả hai transitio
 
 
 Phần5 đã có lưới ghế theo label API, nhãn Trống/Đang giữ/Không khả dụng và aria-pressed cho ghế đang chọn. Không bịa tọa độ venue; public map không lộ owner. Countdown đến0 chờ GET/availability thật; poll3s cập nhật EXPIRED và ghế trống sau worker commit. Có DOM interaction và UI HTTP/PostgreSQL integration, chưa kiểm tra layout trực quan trên browser thật. Các màn payment/admin/recovery chưa hoàn thiện. Schema/transaction tại DATA_MODEL, event tại EVENT_CATALOG.
+
+Phần6 có Checkout với ba scenario/cancel và vé từ API. UI nói rõ không thu tiền thật/không nhập thẻ. requestId/scenario/bookingId được giữ khi network/503/500 và reload; không tự gửi payment khi mở lại. Poll pending đến expiresAt+90s, poll EXPIRED thêm90s để nhận REFUND_REQUIRED, sau đó dùng nút cập nhật thủ công. ChỉCONFIRMED hiển thị ticket code/GAordinal/seatLabel do server trả;REFUND_REQUIRED giải thích nghĩa vụ bù trừ đangPENDING,không hiển thị vé. Browser visual QA chưa chạy; admin/recovery còn thuộc phần sau.

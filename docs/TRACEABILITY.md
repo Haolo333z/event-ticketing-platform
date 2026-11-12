@@ -29,3 +29,11 @@ T1.4 đã kiểm tra cú pháp OpenAPI/$ref, fixture GA/seat và payload sai,7 e
 - T4.2/T4.4 SEAT-01: khóa từng UUID, đảo thứ tự và overlap,50lệnh/2customer và50HTTP chỉ1booking thắng;20duplicate chỉ1booking/1outbox. Input sai, multi-seat conflict và lỗi sau outbox không giữ một phần.
 - T4.3/T4.4 EXP-01/SEAT-02:20worker/1transition; GA release/rebook; worker chưa commit thì command mới đợi và chỉ nhận ghế sau commit, worker cũ không nhả owner mới. RunOnce batch50+1, một lỗi không rollback booking khác. Result SUCCESS ghi trước hạn được defer/giữ tồn kho (T5.2 chưa triển khai).
 - T4.5: lock timeout ghế/expiry rollback;40P01 thật retry (2transaction/3attempt tổng), SQLSTATE40P01 lỗi liên tục dừng3attempt/503; không partial hold. UI/live scheduler, restart DB test cùng FlywayV7 đạt; bằng chứng tại TEST_PLAN/PROGRESS/evidence.
+
+## Bằng chứng triển khai Phần6
+
+- T5.1: simulator owner/local-test,strict scenario/requestId,20request đồng thời1ledger/result-event; changed scenario409,input timestamp/status/UUID sai400,401/403/404;profileprod từ chối trước DB. SCHEDULED đến expiresAt+1s/restart/recovery kiểm tra DB thật.
+- T5.2 PAY-01/02/03: result bền và lag do expiry xử lý;deadline bằngrecorded_at được confirm,+1microsecond phải refund;8racegần deadline;expired/reallocated không lấy lại ghế,success saucancel/fail chỉcomp,failure sauconfirmed không release. Callbackinternal kiểm tra result/booking liên kết,unknown/scheduled bị từ chối;20callback trùng không phát lại.
+- T5.3 TICKET-01: GA3ordinal1..3/ghế2ordinal1 đúngseat,unique mã/item+ordinal/FK;REFUND_REQUIRED0vé/compensationunique(payment_id). Fault ticket/failure/compensation rollback processor,ledgerresult vẫn bền đểretry. Không làmrefundworker T6.
+- T5.4:26test frontend,countdown+pollserver,stable paymentcommand/reload,doubleclick/cancelconflict,ticketdata thật;live checkout5ticket/DELAY_TIMEOUTrefund0vé.
+- T5.5 ADMIN-01:8cancel/successrace,capacitybelowheld+sold409,price/activechangeđồng thời vẫn giữsnapshot/paidseat. Full GA/ghế/expiry và3UIintegration đạt. Xem evidence/part6-2026-11-12.json;Kafka/inbox/COMP-01 hoàn tiền thuộc T6.

@@ -48,6 +48,8 @@ class PostgresSeatExpiryTest {
         for(int i=0;i<4;i++)jdbc.update("INSERT INTO ticketing.seats(id,event_id,ticket_type_id,label) VALUES (?,?,?,?)",seats.get(i),event,type,"A"+(i+1));
     }
     @AfterEach void cleanup(){
+        jdbc.update("DELETE FROM ticketing.payment_compensations WHERE booking_id IN (SELECT id FROM ticketing.bookings WHERE event_id=?)",event);
+        jdbc.update("DELETE FROM ticketing.tickets WHERE booking_id IN (SELECT id FROM ticketing.bookings WHERE event_id=?)",event);
         jdbc.update("DELETE FROM ticketing.payments WHERE booking_id IN (SELECT id FROM ticketing.bookings WHERE event_id=?)",event);
         for(String table:List.of("idempotency_keys","booking_status_history","outbox_events")){
             String col=table.equals("outbox_events")?"aggregate_id":"booking_id";
@@ -182,11 +184,12 @@ class PostgresSeatExpiryTest {
         commands.create(customer,"ga-next-"+event,new GaBookingRequest(event,ga,4),UUID.randomUUID());
         assertEquals(4,jdbc.queryForObject("SELECT held_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",Integer.class,ga));
     }
-    @Test void durableTimelyPaymentDefersWithoutReleasingOrConfirming(){
+    @Test void durableTimelyPaymentConfirmsInsteadOfReleasing(){
         var result=book("payment-"+event,seats.get(0));due(result.bookingId());
         jdbc.update("INSERT INTO ticketing.payments(id,booking_id,request_id,scenario,status,recorded_at) SELECT ?,id,?,'SUCCESS','SUCCESS',expires_at-interval '1ms' FROM ticketing.bookings WHERE id=?",UUID.randomUUID(),UUID.randomUUID(),result.bookingId());
-        assertEquals(ExpiryService.Outcome.DEFERRED_PAYMENT,expiry.expire(result.bookingId()));
-        assertEquals("PENDING_PAYMENT",status(result.bookingId()));assertEquals(1,heldSeats());assertEquals(1,count("outbox_events"));
+        assertEquals(ExpiryService.Outcome.PROCESSED_PAYMENT,expiry.expire(result.bookingId()));
+        assertEquals("CONFIRMED",status(result.bookingId()));assertEquals(0,heldSeats());assertEquals(2,count("outbox_events"));assertEquals(1,count("tickets"));
+        assertEquals("SOLD",jdbc.queryForObject("SELECT status FROM ticketing.seats WHERE id=?",String.class,seats.get(0)));
     }
     @Test void scheduledPaymentHasNoDurableResultAndDoesNotBlockExpiry(){
         var result=book("scheduled-"+event,seats.get(0));due(result.bookingId());

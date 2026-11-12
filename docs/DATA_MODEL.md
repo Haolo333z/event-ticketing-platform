@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Đến hết Phần5 đã triển khai V1–V7,11bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events/idempotency_keys/booking_status_history. Booking GA/SEATED và worker expiry đã chạy; tickets/payment_compensations/inbox_events thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
+> Đến hết Phần6 đã có V1–V8/13bảng, thêm tickets/payment_compensations vào11bảng Phần5. Payments có correlation_id để giữ trace cho delayed result. Inbox thuộc T6, chưa migrate. PRD là nguồn nghiệp vụ, ARCHITECTURE là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -84,17 +84,19 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 ## Migration và seed
 
-V1 tạo schema ticketing, history public. V2 catalog/users/inventory và bookings/items nền; V3 payments/outbox; V4 siết check JSON bookingId. V5 thêm idempotency/history, unique bookings(id,account_id) và FK tổng hợp để key không trỏ booking người khác. V6 siết initial history NULL→PENDING_PAYMENT. Các bảng tickets/compensation/inbox sẽ có migration tiếp theo đúng task. Seed persona/sự kiện nằm ngoài migration, chỉ local/test; admin token không hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
+V1 schema, V2 catalog/booking nền, V3 payments/outbox, V4 check JSON bookingId, V5 idempotency/history, V6 initial history, V7 composite seat owner FK. V8 tickets/compensations/correlation payment; inbox thuộc T6. Seed persona/sự kiện nằm ngoài migration, chỉ local/test. Migration đã chạy không sửa lại.
 
 V5 cho booking_id/response_status/response_body NULL trong transaction đang reserve key. Deferred constraint trigger kiểm tra row cuối tại COMMIT: bắt buộc booking và response202/PENDING_PAYMENT với bookingId khớp. Vì vậy không có row STARTED hoặc response chưa hoàn chỉnh được commit. Hash GA chuẩn hóa UUID lowercase và quantity nguyên (2 và 2.0 cùng nội dung), giữ tương thích Phần4. Hash SEATED có prefix và danh sách UUID sắp thứ tự, đảo thứ tự ghế replay cùng key. V7 bổ sung FK seats(held_by_booking_id,event_id,ticket_type_id)→bookings(id,event_id,ticket_type_id), bảo vệ owner cùng event/type. Xem ADR0004/0005. Không có unique seat_id xuyên lịch sử vì ghế có thể đặt lại sau expiry.
 
 ## Dữ liệu giữ lại
 
+V8: tickets FK(booking_item_id,booking_id),unique(item,ordinal)/code,ordinal1..6; domain bảo đảm ordinal<=quantity và chỉCONFIRMED mới issue cùng transaction state/inventory/history/outbox. SeatId/seatLabel của response lấy join booking_item/seats, không tạo allocation khác. payment_compensations FK(payment_id,booking_id),unique(payment_id),statusPENDING/COMPLETED/FAILED và attempt_count; T5 chỉ tạoPENDING,không refund worker. Payments correlation_id NOTNULL/defaultUUID cho legacy fixture,index terminal chưaprocessed hỗ trợmaintenance. Không sửa V1–V7.
+
 MVP không xóa idempotency key/outbox/inbox trong 10 tuần để replay an toàn và dễ audit. Khi vận hành lâu dài cần chính sách retention dựa trên thời hạn khiếu nại, bản sao lưu và version, chốt bằng ADR trước khi bật cleanup. Không coi chỉ mục hoặc check constraint là bằng chứng đủ cho concurrency nếu chưa chạy test.
 
 ## Chốt mô hình v0 tại T1.4
 
-Đây là đặc tả mục tiêu; 11 bảng đã chạy được ghi trong phần mở đầu, 3 bảng còn lại chưa migrate. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL, ngoại lệ ba cột idempotency tạm NULL được ràng buộc tại COMMIT như trên. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
+Đây là đặc tả mục tiêu;13bảng đã chạy,1bảng inbox còn lại chưa migrate. Tất cả bảng nghiệp vụ ở ticketing,history Flyway ởpublic. UUIDserver sinh,tiền bigint VND0..10^12,thời gian timestamptzUTC. FK mặc định RESTRICT/NO ACTION,không cascade lịch sử. Ba cột idempotency có NULL tạm nhưng guard tạiCOMMIT; created_at/recorded_at do DB,không nhận timestamp client.
 
 | Bảng | Bổ sung kiểu/cột và ràng buộc đã chốt |
 |---|---|

@@ -16,8 +16,9 @@ public class BookingTransactions {
     private final BookingPolicy policy;
     private final JdbcTemplate jdbc;
     public BookingTransactions(PlatformTransactionManager manager,BookingPolicy policy,JdbcTemplate jdbc){this.manager=manager;this.policy=policy;this.jdbc=jdbc;}
-    public <T> T run(Supplier<T> command){
-        long deadline=System.nanoTime()+policy.totalMs()*1_000_000L;
+    public long newDeadline(){return System.nanoTime()+policy.totalMs()*1_000_000L;}
+    public <T> T run(Supplier<T> command){return runUntil(command,newDeadline());}
+    public <T> T runUntil(Supplier<T> command,long deadline){
         for(int attempt=0;attempt<3;attempt++){
             long remaining=(deadline-System.nanoTime())/1_000_000L;
             if(remaining<policy.poolMs()+1000)throw busy();

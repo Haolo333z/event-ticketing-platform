@@ -22,6 +22,9 @@ class PostgresProductionProfileTest {
         assertFalse(settings.enabled);assertFalse(settings.safeProfile);
         assertTrue(settings.customerToken.isBlank());assertTrue(settings.adminToken.isBlank());
         assertTrue(context.getBeansOfType(DemoSeedRunner.class).isEmpty());
+        var simulator=context.getBean(com.haolo.ticketing.payments.PaymentSimulatorService.class);
+        var forbidden=assertThrows(com.haolo.ticketing.shared.ApiException.class,()->simulator.simulate(new DemoPrincipal(java.util.UUID.randomUUID(),"CUSTOMER"),java.util.UUID.randomUUID(),new com.haolo.ticketing.payments.SimulationInput("SUCCESS",java.util.UUID.randomUUID()),java.util.UUID.randomUUID()));
+        assertEquals(403,forbidden.status);
         var req=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/events"))
             .header("Authorization","Bearer demo-admin-token").GET().build();
         assertEquals(401,HttpClient.newHttpClient().send(req,HttpResponse.BodyHandlers.ofString()).statusCode());

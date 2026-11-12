@@ -3,7 +3,7 @@ import {test,afterEach} from 'node:test';
 import {createElement,act} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {JSDOM} from 'jsdom';
-import {ApiError,readAttempt} from '../api/client.ts';
+import {ApiError,readAttempt,savePaymentAttempt} from '../api/client.ts';
 import type {Api,Attempt,Booking,Event,Store} from '../api/client.ts';
 
 const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'http://127.0.0.1:5173'});
@@ -14,7 +14,7 @@ const event:Event={id:eventId,title:'Ngày hội GA',description:'Dữ liệu te
 const accepted:Booking={bookingId:'50000000-0000-4000-8000-000000000001',status:'PENDING_PAYMENT',expiresAt:'2020-01-01T00:00:00Z',totalAmountVnd:499999};
 const roots:ReturnType<typeof createRoot>[]=[];
 function storage():Store{const values=new Map<string,string>();return{getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);},removeItem:key=>{values.delete(key);}};}
-function fixture(overrides:Partial<Api>={}):Api{return{events:async()=>({items:[event]}),detail:async()=>event,availability:async()=>({eventId,asOf:'2026-11-12T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'GA',available:10}]}),create:async()=>accepted,booking:async()=>accepted,mine:async()=>({items:[]}),...overrides};}
+function fixture(overrides:Partial<Api>={}):Api{return{events:async()=>({items:[event]}),detail:async()=>event,availability:async()=>({eventId,asOf:'2026-11-12T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'GA',available:10}]}),create:async()=>accepted,booking:async()=>accepted,mine:async()=>({items:[]}),simulate:async()=>({paymentIntentId:'00000000-0000-4000-8000-000000000001',status:'ACCEPTED'}),cancel:async()=>({...accepted,status:'CANCELLED'}),tickets:async()=>[],...overrides};}
 async function settle(action:()=>void=()=>{}){await act(async()=>{action();await new Promise(resolve=>setTimeout(resolve,0));});}
 async function mount(api:Api,store=storage()){const container=document.createElement('div');document.body.append(container);const root=createRoot(container);roots.push(root);await settle(()=>root.render(createElement(App,{api,store})));return{container,root,store};}
 function button(text:string){const found=[...document.querySelectorAll('button')].find(b=>b.textContent===text);assert(found,`Missing button ${text}`);return found;}
@@ -93,4 +93,9 @@ test('countdown at zero never invents EXPIRED before a server response',async()=
   await mount(seated({booking:async()=>({...accepted,status:'EXPIRED'})}));await selectGa();await settle(()=>seat('A1').click());await settle(()=>button('Giữ ghế đã chọn').click());
   assert.match(document.querySelector('.hold-countdown')?.textContent??'',/Đang chờ máy chủ/);assert.match(document.querySelector('.result')?.textContent??'',/PENDING_PAYMENT/);
   await settle(()=>button('Cập nhật booking').click());assert.match(document.querySelector('.result')?.textContent??'',/EXPIRED/);assert.equal(document.querySelector('.hold-countdown'),null);
+});
+test('reload restores the booking for an uncertain payment without automatically sending it again',async()=>{
+  const store=storage();savePaymentAttempt(store,{bookingId:accepted.bookingId,requestId:'00000000-0000-4000-8000-000000000001',scenario:'SUCCESS'});let requests=0;
+  await mount(fixture({simulate:async()=>{requests++;return{paymentIntentId:accepted.bookingId,status:'ACCEPTED'};}}),store);
+  assert.match(document.querySelector('.result')?.textContent??'',/50000000/);assert.equal(requests,0);assert.equal(button('Thử lại thanh toán cùng yêu cầu').disabled,false);
 });

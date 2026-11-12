@@ -2,9 +2,11 @@
 
 > T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
-Đến hết Phần5 đã triển khai8operation (x-implemented=true trong OpenAPI):5catalog/admin và POST booking GA/SEATED, GET booking, GET mine. Worker expiry là nội bộ, không thêm route. Payment/cancel/tickets/admin bookings/replay endpoints vẫn là thiết kế cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003/0004/0005 và README.
+Đến hết Phần6 có11operation đã chạy:5catalog/admin,POST booking GA/SEATED,GET booking/mine,simulate-payment/cancel/tickets. Worker expiry/payment maintenance là nội bộ. Admin bookings/replay/outbox3route còn là thiết kế T6/T7. Không thêm provider callback hoặc check-in ngoài task; xem ADR0006/README.
 
 ## Quy tắc chung
+
+Phần6 mở simulate-payment/cancel/tickets theo ADR0006. Cancel không nhận body (kể cả{}); repeat CANCELLED trả200, state khác không hợp lệ409. Ticket thêm seatId/seatLabel nullable, code opaque dùng tra cứu demo, không phải QR/chữ ký offline. Không thêm callback HTTP ngoài; local callback kiểm tra paymentResultId/booking/result bền, simulator chỉ nhận scenario/requestId và bearer owner local/test. Mọi timestamp/giá/trạng thái kết quả lấy server/DB.
 
 T4 mở POST theo CreateBooking oneOf đã chốt: GA quantity hoặc SEATED seatIds1..6 khác nhau, cùng event/type; không nhận cả hai. Hash GA giữ tương thích, seat hash chuẩn hóa UUID/sắp thứ tự. Public availability giữ schema cũ id/label/status, không công khai owner. HELD quá hạn chưa nhả trả409 HOLD_EXPIRY_PROCESSING hoặc INVENTORY_UNAVAILABLE; scheduler riêng nhả rồi GET trả EXPIRED. Replay sau expiry vẫn202/body gốc. Chi tiết tại ADR0005; không thêm endpoint expiry công khai.
 
@@ -45,9 +47,9 @@ T4 mở POST theo CreateBooking oneOf đã chốt: GA quantity hoặc SEATED sea
 
 POST hiện nhận GA quantity nguyên1..6 hoặc SEATED seatIds1..6UUID khác nhau. Ví dụ ghế: {"eventId":"uuid","ticketTypeId":"uuid","seatIds":["seat-uuid-1","seat-uuid-2"]}. Schema POST trỏ CreateBooking oneOf; mode phải khớp type và mọi ghế cùng event/type. Không nhận cả quantity/seatIds, field lạ hoặc ghế trùng. Hash chuẩn hóa thứ tự field, UUID hoa/thường, số nguyên GA (2.0 tương đương2); seatIds sắp theo UUID string. Hash GA cũ không đổi. Key chỉ gồm [A-Za-z0-9._:-].
 
-GET booking trả bookingId/eventId/status/expiresAt/expiredAt/totalAmountVnd/history; customer khác trả404, ADMIN có thể xem. GET mine chỉ CUSTOMER, page0/size20/max100, sắp createdAt DESC/id DESC. Trạng thái lịch sử ban đầu NULL→PENDING_PAYMENT. expiresAt từ đồng hồ DB +TTL mặc định600s. Worker mặc định5s/batch50 chuyển EXPIRED và nhả inventory cùng commit; GET/UI không tự expiry. Ghế HELD quá hạn vẫn không được lấy lại trước commit release. Worker defer mọi result bền cho đến T5 processor, không confirm/fail/refund trước phạm vi. Replay vẫn trả response202 gốc; trạng thái hiện tại lấy từ GET theo Location.
+GET booking trả bookingId/eventId/status/expiresAt/expiredAt/totalAmountVnd/history; customer khác404,ADMIN xem được. GET mine chỉCUSTOMER,page0/size20/max100. Worker5s/batch50 gọi chung processor để phân xử result bền trước release; không còn defer ở T5. GET/UI không tự expiry. Replay booking vẫnresponse202gốc; trạng thái hiện tại lấy GET theo Location.
 
-Phần dưới là hợp đồng payment dự kiến, chưa có endpoint chạy:
+Payment đã chạy trong local/test:
 
     POST /api/bookings/booking-uuid/simulate-payment
     {"scenario":"SUCCESS","requestId":"uuid"}
@@ -55,6 +57,10 @@ Phần dưới là hợp đồng payment dự kiến, chưa có endpoint chạy:
     {"paymentIntentId":"uuid","status":"ACCEPTED"}
 
 DELAY_TIMEOUT nghĩa là kết quả được ghi sau hạn để kiểm thử bù trừ; định nghĩa chính xác thời gian phải ghi trong test fixture.
+
+DELAY_TIMEOUT lưu SCHEDULED,recorded_atNULL,result_due_at=expiresAt+1s; scheduler ghi SUCCESS bằng DB clock khi đến hạn. Cùng requestId/scenario replay202; khác scenario409 dù booking terminal. Sau khi record+PaymentResultRecorded commit, adapter xử lý bằng transaction riêng;500/503/network có thể để ledger bền chưa processed, client retry cùng requestId/scenario,maintenance/expiry phục hồi. Không tin status/timestamp/amount client. Terminal simulation sau expiry/cancel/failure được phép để test late success và compensation; không tự confirm lại.
+
+GET tickets chỉ owner/ADMIN,[] nếu chưaCONFIRMED. Ticket gồm id/bookingId/bookingItemId/ticketOrdinal/code/seatId/seatLabel; hai field ghế NULL choGA,khôngNULL khi vé ghế. codeEF-UUID opaque, unique; không phải proof offline. Ticket quantity/allocation do booking_item server quyết định. Cancel khôngbody,repeatCANCELLED200;due pending hoặcstatekhác409. Nếu cancel gặp timely success bền thì commit confirm/vé trước khi trả409; không rollback confirm hợp lệ vì cancel bị từ chối.
 
 ## Lỗi chính
 

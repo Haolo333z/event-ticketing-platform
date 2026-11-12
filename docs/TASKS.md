@@ -123,28 +123,28 @@
 
 ## Tuần 5 — Payment và state machine
 
-- [ ] **T5.1 — Payment simulator:** endpoint local/test success/failure/delay, ghi payments.recorded_at DB clock + outbox; không thu tiền thật.
+- [x] **T5.1 — Payment simulator (Done, 2026-11-12):** simulate-payment owner local/test,strict scenario/requestId,SUCCESS/FAILURE/DELAY_TIMEOUT. Ledger/result outbox bền,DB clock,requestId dedup/replay/changedscenario409.20HTTP đồng thời chỉ1result;auth/input/profile/delay/restart đạt. Xem ADR0006/PROGRESS.
   - **Mục tiêu/phạm vi:** Payment simulator: endpoint local/test success/failure/delay, ghi payments.recorded_at DB clock + outbox; không thu tiền thật.
   - **Phụ thuộc:** T4.5. **Module/file:** payments/tickets/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** scenario được ghi một lần theo requestId; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T5.2 — PaymentResultProcessor:** dùng recorded_at để phân xử, worker/adapter gọi cùng processor, cùng thứ tự khóa booking/inventory; test Kafka lag giả lập.
+- [x] **T5.2 — PaymentResultProcessor (Done, 2026-11-12):** processor dùng chung local adapter/expiry/cancel,booking lock trước inventory;recorded_at quyết định,processed_at dedup callback. PAY-01/02/03,lag fixture,deadline/+1microsecond,8race deadline và20callback lặp đạt. Không Kafka/inbox;không có publicprovidercallback ngoài contract.
   - **Mục tiêu/phạm vi:** PaymentResultProcessor: dùng recorded_at để phân xử, worker/adapter gọi cùng processor, cùng thứ tự khóa booking/inventory; test Kafka lag giả lập.
   - **Phụ thuộc:** T5.1. **Module/file:** payments/tickets/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** PAY-01/02/03 và race worker/consumer; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T5.3 — Vé/bù trừ:** confirm tạo đúng quantity vé GA theo ticket_ordinal, một vé cho ghế; late success tạo EXPIRED -> REFUND_REQUIRED và một nghĩa vụ payment_compensations trên mỗi payment, không nhận lại inventory.
+- [x] **T5.3 — Vé/bù trừ (Done, 2026-11-12):** V8 tickets/payment_compensations/correlation payment. Confirm GA3vé ordinal1..3/ghế2vé ordinal1 đúngallocation,mãunique;GETtickets owner/ADMIN. Late success REFUND_REQUIRED/0vé/1comp mỗipayment,không chiếm inventory mới. Fault/replay không phát trùng. CompensationPENDING,refundworker vẫn thuộcT6.
   - **Mục tiêu/phạm vi:** Vé/bù trừ: tạo vé trong transaction confirm; unique(booking_item_id,ticket_ordinal) và unique(code); payment_compensations unique(payment_id), retry cập nhật cùng nghĩa vụ.
   - **Phụ thuộc:** T5.2. **Module/file:** payments/tickets/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** TICKET-01 tuần 5: quantity N phát N vé duy nhất, replay processor không phát thêm; no ticket khi REFUND_REQUIRED; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T5.4 — UI checkout/trạng thái:** countdown expiresAt, expired và refund required.
+- [x] **T5.4 — UI checkout/trạng thái (Done, 2026-11-12):** Checkout mô phỏng3scenario/cancel,ticketcode/seatlabel từAPI,countdown vàpoll kểcảEXPIRED→REFUND_REQUIRED,requestId giữ qua503/network/reload.26test frontend/build vàcheckoutHTTP/PostgreSQL thật đạt,không mockresponse tronglive. Chưa browser visual QA;đã ghi giới hạn.
   - **Mục tiêu/phạm vi:** UI checkout/trạng thái: countdown expiresAt, expired và refund required.
   - **Phụ thuộc:** T5.3. **Module/file:** payments/tickets/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** countdown server, state polling; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
 
-- [ ] **T5.5 — Cancel, failure, admin race:** API cancel pending, failure nhả đúng một lần; admin sửa capacity/giá giữ snapshot và constraint.
+- [x] **T5.5 — Cancel, failure, admin race (Done, 2026-11-12):** bodyless cancel/repeat200;timelysuccess chặn cancel sau khi confirmcommit;failure/cancel release một lần.8cancel/payment race,admincapacity/price/active race vàsnapshot đạt. Full88backend/26frontend/44contract/40live,GA/seatUI cũ,checkout/restart/Windows smoke đạt. [Bằng chứng](evidence/part6-2026-11-12.json). T6.1 vẫnTodo.
   - **Mục tiêu/phạm vi:** Cancel, failure, admin race: API cancel pending, failure nhả đúng một lần; admin sửa capacity/giá giữ snapshot và constraint.
   - **Phụ thuộc:** T5.4. **Module/file:** payments/tickets/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
