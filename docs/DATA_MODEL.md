@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Bản thiết kế v0.4; T1.3 đã triển khai V1 tạo schema nền ticketing, chưa tạo bảng nghiệp vụ. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
+> Phần3 đã triển khai V1–V4,9bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events. Bookings/items chỉ là storage nền, chưa có booking API;5bảng còn lại thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -84,7 +84,7 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 ## Migration và seed
 
-Migration phải thêm outbox schema và event envelope trước booking tuần 3. V1 đã tạo schema ticketing ở T1.3; Flyway history cố định ở public. Catalog/users và các bảng nghiệp vụ bắt đầu từ V2 trở đi; số thứ tự cuối chốt sau T1.4. Seed persona và sự kiện ở local/test riêng, không cho admin token hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
+V1 tạo schema ticketing, history public. V2 catalog/users/inventory và bookings/items nền; V3 payments/outbox; V4 siết check JSON bookingId. Các bảng idempotency/history/tickets/compensation/inbox sẽ có migration tiếp theo đúng task. Seed persona/sự kiện nằm ngoài migration, chỉ local/test; admin token không hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
 
 ## Dữ liệu giữ lại
 
@@ -92,7 +92,7 @@ MVP không xóa idempotency key/outbox/inbox trong 10 tuần để replay an to�
 
 ## Chốt mô hình v0 tại T1.4
 
-Đây là đặc tả đầu vào migration, không phải SQL đã chạy. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
+Đây là đặc tả mục tiêu;9bảng đã chạy ở Phần3 được ghi trong phần mở đầu, các bảng còn lại chưa migrate. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
 
 | Bảng | Bổ sung kiểu/cột và ràng buộc đã chốt |
 |---|---|

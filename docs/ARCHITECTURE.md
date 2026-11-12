@@ -21,6 +21,8 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
+Phần3 đã hiện thực catalog read/admin, seed và identity mock local/test, error/CORS/body policy, cùng outbox writer nền. Migration V1–V4 có9bảng; bookings/items chưa có use case/API đặt vé. Triển khai và test tại [ADR0003](adr/0003-catalog-implementation.md) và PROGRESS.
+
 - Identity & Access: principal demo/seed, role CUSTOMER/ADMIN.
 - Event Catalog: sự kiện, mở bán, địa điểm, khu vực/giá.
 - Inventory: ghế và sức chứa GA; giữ, xác nhận, nhả.
@@ -130,7 +132,7 @@ sequenceDiagram
 
 ## 9. Dữ liệu và API
 
-T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Có14 bảng nghiệp vụ; bookings giữ payment_intent_id, payments lưu mỗi result/request mô phỏng. Giới hạn/CORS/timeout ở ADR là yêu cầu triển khai, chưa cấu hình cho endpoint nghiệp vụ trong task này. Outbox replay audit giới hạn3 lần/event; không xóa inbox. Không sửa V1 đã chạy.
+T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Mục tiêu14bảng, Phần3 đã migrate9bảng; bookings giữ payment_intent_id, payments lưu mỗi result/request mô phỏng. Catalog đã enforce body/CORS/timeout và auth; API booking/deadline tổng, replay audit giới hạn3 lần/event và inbox thuộc giai đoạn sau. Không sửa V1 đã chạy.
 
 Bảng dự kiến: users, events, ticket_types, seats cho ghế định danh, inventory_ga cho vé không ghế, bookings, booking_items, idempotency_keys, payments, payment_compensations, tickets, outbox_events, inbox_events, booking_status_history. Seed mock token bằng cấu hình local/test. Chi tiết PK/FK/check/index ở [DATA_MODEL](DATA_MODEL.md).
 

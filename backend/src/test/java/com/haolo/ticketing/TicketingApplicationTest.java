@@ -7,7 +7,9 @@ import org.springframework.boot.test.context.SpringBootTest;
     "spring.datasource.url=jdbc:h2:mem:scaffold",
     "spring.datasource.username=sa",
     "spring.datasource.password=",
-    "spring.flyway.enabled=false"
+    "spring.flyway.enabled=false",
+    "demo.seed.enabled=false",
+    "demo.auth.enabled=false"
 })
 class TicketingApplicationTest {
     @Test

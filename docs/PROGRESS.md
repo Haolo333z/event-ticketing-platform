@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Chốt hợp đồng API/domain trước migration nghiệp vụ
-- **Tiến độ:** T1.1–T1.4 Done; OpenAPI/event/state/ER và quyết định HTTP đã chốt; chưa có nghiệp vụ
+- **Giai đoạn:** Phần3 — Sự kiện và dữ liệu mẫu đã hoàn thành
+- **Tiến độ:** T1.1–T2.5 Done; catalog/seed/auth/admin/outbox nền đã kiểm chứng PostgreSQL thật
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T2.1 — Schema/migration (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker T1.4. CI job contracts mới kiểm tra local, chưa chạy trên GitHub cho thay đổi lần này.
+- **Task tiếp theo:** T3.1 — Contract booking (Todo, chưa bắt đầu)
+- **Blocker:** Không có blocker Phần3. Thay đổi lần này chưa commit/push, chưa có GitHub Actions run cho commit mới.
 
-- **Task trong TASKS:** 4/45 Done. Có scaffold, health/PostgreSQL/V1 và hợp đồng; chưa có bảng/nghiệp vụ booking.
+- **Task trong TASKS:** 9/45 Done. Có9bảng nghiệp vụ/nền và5API catalog; chưa có booking command, Kafka publisher hoặc giao diện đặt vé.
 
 ## Đã hoàn thành
 
@@ -38,10 +38,36 @@
 - T1.1 đã chốt version, TTL 600s, worker 5s/batch50, max6 vé, pool10/2. T1.4 chốt body/CORS/deadline tại ADR0002; pool acquisition2s thay cho scaffold30s là yêu cầu triển khai, chưa đổi runtime.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
 - Lock order, rollback nhiều ghế, race worker/payment và aggregate version cần được chứng minh bằng integration/concurrency tests.
-- Có scaffold source và test mẫu, ER và OpenAPI đã chốt; chưa có schema nghiệp vụ được migrate hoặc test booking/integration/concurrency. Kiểm tra hợp đồng không chứng minh endpoint nghiệp vụ đã enforce.
-- Lock timeout1500ms đã thử bằng advisory lock; chưa kiểm chứng unique-key/inventory contention thực. Phải rollback trước503 và không suy loại lock từ SQLSTATE. CORS/body/error mapping cần integration test khi triển khai endpoint.
+- Catalog đã có migration và HTTP/integration tests; schema/API booking, expiry/payment processing/Kafka và concurrency booking vẫn thuộc giai đoạn sau. Availability không hold vé.
+- Lock timeout1500ms đã kiểm tra cả advisory và row inventory admin; HTTP503/Retry-After1 và rollback đã đạt. Unique-key/idempotency booking contention chưa triển khai. CORS/body limits catalog đã có test HTTP, chưa thay cho toàn bộ security review T7.
 
 ## Nhật ký
+
+### 2026-11-12 — Phần3 hoàn tất: T2.1 → T2.5
+
+- Thực hiện tuần tự theo các gate bên dưới, không sang task sau trước khi gate trước đạt. Không sửa V1, không tạo repo mới, không thêm booking API/T3.1 hoặc UI đặt vé.
+- Migrations: V2 tạo users/events/ticket_types/seats/inventory_ga và bookings/booking_items nền; V3 tạo payments/outbox_events; V4 chặn JSON null bookingId trong outbox. PK/FK tổng hợp/unique/check/index, Flyway history public.5bảng mục tiêu còn lại không thuộc Phần3. ADR0003 giải thích trước code các ranh giới và điểm contract về ghế/mode.
+- Seed:2persona,2event published (ghế4 A1–A4 giá200000;GA100 giá100000), INSERT ON CONFLICT DO NOTHING chỉ local/test. Không overwrite dữ liệu admin đã sửa. Token public fixture chỉ có trong profile local/test, không lưu DB/log; prod không có seed runner/token mặc định, bật mock trên profile ngoài local/test gây startup failure.
+- API đã chạy: GET /api/events, GET /api/events/{id}, GET /api/events/{id}/availability; POST /api/admin/events, PATCH /api/admin/events/{id}. Controller chỉ delegate, transaction/lock/validation ở service. Public chỉ published; lỗi có code/message/correlationId; capacity update khóa/recheck counts; giá item snapshot bất biến. Không có DELETE/mode/seat update trong v0.
+- HTTP policy:body128KiB catalog,8KiB command; UTF-8/identity JSON, depth10, field lạ/null/sai kiểu bị từ chối; reject chunked quá limit; CORS allowlist5173, preflight204; principal từ token/DB, header X-Role/X-User-Id không đổi danh tính. SQLSTATE55P03/57014/40P01/40001/08 sau rollback trả503+Retry-After1; không suy timeout là idempotency conflict.
+- **Build/test cuối:** powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part3.ps1 → BUILD SUCCESS,19tests/0fail/0error/0skip. DB test mới UUID, migrate V1–V4 từ sạch, Flyway migrate lại0; không reset DB/volume demo. Test report backend/target/surefire-reports: Admin9, Catalog2, Outbox4, ProductionProfile1, Schema1, Seed1, Context1. Context H2 chỉ là1test;18test còn lại chạy với PostgreSQL17.11 thật.
+- **Nội dung tests:** FK/PK/unique/check/index, ghế HELD thiếu owner bị chặn, FK event/type lệch bị chặn; seed idempotent;2mode/detail/availability và400/404;401/403/giảrole; startup fail + HTTP demo bearer bị từ chối ở prod; admin create/patch/invalid timestamp/UUID, bảo vệ held+sold/giá snapshot/ghếHELD; row-lock race; timeout thật rollback trước503; CORS/body/chunked/media/depth; ledger/envelope/commit/rollback/duplicateversion/transaction mandatory.
+- **Live demo và restart:** verify-part3.ps1 PASS; HTTP200/UP,2sự kiện,4ghế/GA100,401/403,V1–V4 đúng một lần. Restart backend cùng DB: “Schema public is up to date. No migration necessary”; verify tiếp tục PASS. Backend đang chạy PID8276 lúc bàn giao, http://127.0.0.1:8080/api/events; hai port8080/5432 chỉ bind127.0.0.1.
+- **Contract/CI local:** npm ci/test tools/contracts PASS28ca, OpenAPI14operation/7event/6state; npm run test:live PASS9response HTTP đúng schema; x-implemented đánh dấu đúng5operation catalog. Frontend npm ci/test/build/audit đạt1test/0vulnerability (không thêm UI). SBOM CycloneDX tạo thành công; OSV2.7.1 kiểm tra69runtime packages, No issues found. actionlint1.7.12 exit0; npm audit tools0; Gitleaks quét5commits và tập file tracked/untracked không bị ignore, no leaks found; git diff --check đạt. CI thêm PostgreSQL service để không skip integration tests; chưa có CI GitHub cho thay đổi lần này.
+- **Lỗi đã sửa:** repository proxy không cho đọc field trực tiếp; chuyển JdbcTemplate vào service. Full-suite seed query được scope theo fixture ID; context H2 tắt seed rõ ràng. SQLSTATE55P03 được Spring bọc UncategorizedSQLException nên thêm mapping cause chain. Windows khóa JAR target khi app đang chạy; launcher nay chạy bản sao Git-ignore infra/.local-runtime/backend.jar, giữ artifact build tự do. Test/build được chạy lại sau sửa và đạt như trên.
+- **Còn lại:** Không có publisher/consumer Kafka, payment processing, expiry, đặt/giữ vé, API customer booking hay giao diện đặt vé. Outbox chỉ là writer transaction và ledger nền; test dùng booking fixture, không phát event giả khi admin tạo catalog. Chưa commit/push. T3.1 vẫn Todo.
+
+Lệnh tự kiểm tra và ví dụ API quản trị tại README/infra/README. Mở /api/events bằng trình duyệt để xem JSON2sự kiện; frontend5173 hiện vẫn là scaffold.
+
+### 2026-11-12 — Phần 3, gate T2.1 và T2.2
+
+- Đọc tài liệu/hợp đồng và source; HEAD ban đầu 46470c14b0de0610379d0e6535a0f96f17a969e5, working tree sạch. Docker ban đầu chưa chạy; đã mở Docker Desktop và xác minh Server29.9.1. Giữ nguyên repo và V1.
+- ADR0003 ghi rõ trước code: bookings/items chỉ là storage nền cho FK, chưa có booking API; v0 không có xóa/sửa mode/seat qua PATCH; catalog không phát event BookingHeld giả.
+- T2.1: V2 catalog + bookings/items nền. `infra/test-part3.ps1 -Tests PostgresSchemaTest` BUILD SUCCESS,1test/0fail trên DB PostgreSQL17.11 mới tách biệt; Flyway chạy lần2 migrationsExecuted=0; constraint role/FK/giá/capacity bị vi phạm được từ chối; index tồn tại. Script chỉ xóa DB test UUID do chính nó tạo, không reset DB demo. T2.1 đạt trước khi viết seed.
+- T2.2: seed local/test có2persona/2event/2type/4ghế/GA100, INSERT ON CONFLICT không overwrite. `-Tests PostgresSeedTest` BUILD SUCCESS,1test/0fail; seed gọi thêm2lần vẫn đúng số hàng; profile prod/mixed không được bật mock auth. T2.2 đạt trước khi viết catalog API. Token nằm trong profile fixture, không trong DB/log.
+- T2.3: `-Tests PostgresCatalogTest` BUILD SUCCESS,2test/0fail; HTTP thật random port/PostgreSQL thật kiểm tra2mode,4ghế/GA100,list/detail/availability, UUID/phân trang400 và404. Read service dùng snapshot REPEATABLE_READ, chưa hold inventory. Gate đạt trước khi thêm admin/auth.
+- T2.4: `-Tests PostgresAdminTest` BUILD SUCCESS,7test/0fail sau sửa lỗi truy cập field trực tiếp trên repository proxy (đã inject JdbcTemplate vào service). Kiểm tra401/403 và X-Role/X-User-Id không đổi principal, startup fail khi mock bật trên prod, catalog create/patch, validation, rollback cả title khi capacity conflict, giữ giá snapshot, ghế HELD không sửa/xóa qua v0, CORS204/403, body quá128KiB cả chunked413, encoding415, GET body400. Test inventory row bị khóa rồi held_count tăng: admin đợi lock rồi từ chối capacity không đủ. Gate đạt trước khi tạo V3/outbox.
+- T2.5: `-Tests PostgresOutboxTest` BUILD SUCCESS,4test/0fail trên PostgreSQL thật: commit cùng booking fixture/outbox; lỗi sau append rollback cả2; duplicate aggregateVersion rollback cả2; transaction MANDATORY; payload sai từ chối; ledger terminal thiếu recorded_at bị chặn, row hợp lệ được nhận. Không có Kafka publisher hoặc booking API. V3 tạo payments/outbox; V4 bổ sung check JSON null bookingId bằng migration mới (không sửa V3 đã áp dụng).
 
 ### 2026-11-12 — T1.4: Chốt API/domain v0
 

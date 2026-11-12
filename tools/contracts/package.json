@@ -2,7 +2,7 @@
   "name": "ticketing-contract-checks",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node verify.mjs" },
+  "scripts": { "test": "node verify.mjs", "test:live": "node verify-live.mjs" },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.1.0",
     "ajv": "8.20.0",

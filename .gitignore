@@ -12,6 +12,7 @@
 .DS_Store
 Thumbs.db
 infra/data/
+infra/.local-runtime/
 reports/
 *.pem
 *.key

@@ -2,6 +2,8 @@
 
 > PostgreSQL là nguồn sự thật. Outbox ghi cùng transaction nghiệp vụ; Kafka phân phối ít nhất một lần. Event mô tả sự kiện đã commit, không tự quyết định quyền sở hữu ghế.
 
+T2.5 đã có OutboxWriter bắt buộc transaction, version kiểm tra với booking row, envelope v1 và index pending; commit/rollback kiểm tra PostgreSQL thật. Catalog create/patch không phát booking event giả. Publisher/consumer Kafka và producer booking/payment vẫn thuộc task sau.
+
 ## Envelope
 
     {

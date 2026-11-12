@@ -3,7 +3,7 @@
   "info": {
     "title": "Event Ticketing API",
     "version": "0.1.0",
-    "description": "T1.4 contract; only actuator health implemented at T1.3. Roles/profiles/body limits are server requirements, not enforced by this file."
+    "description": "Contract v0. Part 3 implements catalog read and admin create/patch plus actuator health. Booking/payment/replay APIs remain planned. Roles/profiles/body limits are server requirements."
   },
   "servers": [
     {
@@ -15,7 +15,7 @@
       "get": {
         "operationId": "listEvents",
         "summary": "listEvents",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "Implemented in Part 3. ",
         "tags": [
           "Events"
         ],
@@ -80,14 +80,15 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": true
       }
     },
     "/api/events/{id}": {
       "get": {
         "operationId": "getEvent",
         "summary": "getEvent",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "Implemented in Part 3. ",
         "tags": [
           "Events"
         ],
@@ -154,14 +155,15 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": true
       }
     },
     "/api/events/{id}/availability": {
       "get": {
         "operationId": "getAvailability",
         "summary": "getAvailability",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "Implemented in Part 3. ",
         "tags": [
           "Events"
         ],
@@ -228,7 +230,8 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": true
       }
     },
     "/api/bookings": {
@@ -417,7 +420,8 @@
             }
           }
         },
-        "x-max-body-bytes": 8192
+        "x-max-body-bytes": 8192,
+        "x-implemented": false
       }
     },
     "/api/bookings/{id}": {
@@ -521,7 +525,8 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": false
       }
     },
     "/api/me/bookings": {
@@ -636,7 +641,8 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": false
       }
     },
     "/api/bookings/{id}/cancel": {
@@ -775,7 +781,8 @@
               }
             }
           }
-        }
+        },
+        "x-implemented": false
       }
     },
     "/api/bookings/{id}/simulate-payment": {
@@ -956,7 +963,8 @@
         "x-profiles": [
           "local",
           "test"
-        ]
+        ],
+        "x-implemented": false
       }
     },
     "/api/bookings/{id}/tickets": {
@@ -1065,14 +1073,15 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": false
       }
     },
     "/api/admin/events": {
       "post": {
         "operationId": "createEvent",
         "summary": "createEvent",
-        "description": "Contract v0; implementation follows TASKS.  Max 200 seats TOTAL across all ticket types; unique labels within event. saleStartAt < saleEndAt <= startsAt. Validate these cross-field constraints in domain.",
+        "description": "Implemented in Part 3.  Max 200 seats TOTAL across all ticket types; unique labels within event. saleStartAt < saleEndAt <= startsAt. Validate these cross-field constraints in domain.",
         "tags": [
           "Admin"
         ],
@@ -1209,14 +1218,15 @@
             }
           }
         },
-        "x-max-body-bytes": 131072
+        "x-max-body-bytes": 131072,
+        "x-implemented": true
       }
     },
     "/api/admin/events/{id}": {
       "patch": {
         "operationId": "patchEvent",
         "summary": "patchEvent",
-        "description": "Contract v0; implementation follows TASKS.  ticketTypes patches existing IDs only; no mode changes, additions or deletions in v0. Reject capacity below held+sold with CATALOG_CONFLICT.",
+        "description": "Implemented in Part 3.  ticketTypes patches existing IDs only; no mode changes, additions or deletions in v0. Reject capacity below held+sold with CATALOG_CONFLICT.",
         "tags": [
           "Admin"
         ],
@@ -1385,7 +1395,8 @@
             }
           }
         },
-        "x-max-body-bytes": 131072
+        "x-max-body-bytes": 131072,
+        "x-implemented": true
       }
     },
     "/api/admin/bookings": {
@@ -1507,7 +1518,8 @@
               "INTERNAL_ERROR"
             ]
           }
-        }
+        },
+        "x-implemented": false
       }
     },
     "/api/admin/operations/outbox": {
@@ -1626,7 +1638,8 @@
         "x-profiles": [
           "local",
           "test"
-        ]
+        ],
+        "x-implemented": false
       }
     },
     "/api/admin/operations/events/{eventId}/replay": {
@@ -1807,7 +1820,8 @@
         "x-profiles": [
           "local",
           "test"
-        ]
+        ],
+        "x-implemented": false
       }
     }
   },

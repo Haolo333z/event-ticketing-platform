@@ -1,6 +1,6 @@
 # Hạ tầng local
 
-T1.3 chạy PostgreSQL 17.11 bằng Compose và backend bằng JDK 25 trên host. Chưa chạy Kafka hoặc tạo schema nghiệp vụ.
+PostgreSQL17.11 chạy bằng Compose, backend bằng JDK25 trên host. Phần3 có V1–V4, seed/catalog/auth/admin và outbox nền; chưa chạy Kafka.
 
 Từ thư mục gốc trên Windows:
 
@@ -18,7 +18,11 @@ Invoke-RestMethod http://127.0.0.1:8080/actuator/health
 docker compose --env-file .env -f infra/docker-compose.yml ps
 ```
 
-`verify-local.ps1` yêu cầu HTTP 200/status UP, V1 thành công đúng một lần và schema ticketing tồn tại. Migration do Flyway tự chạy trước startup; history cố định ở public, `baseline-on-migrate=false`, `clean-disabled=true`. V1 chỉ tạo schema nền; domain migration bắt đầu từ V2 sau T1.4. Test Maven dùng H2 và tắt Flyway để kiểm tra context độc lập; script này mới kiểm tra PostgreSQL/Flyway thật.
+`verify-local.ps1` kiểm tra HTTP200/UP, V1 đúng một lần và schema ticketing. `verify-part3.ps1` bổ sung2sự kiện,4ghế/GA100,401/403 và V1–V4. Flyway tự chạy trước startup; history public, baseline-on-migrate=false, clean-disabled=true. V1 không sửa; V2 catalog+bookings/items nền, V3 payments/outbox, V4 chặn JSON null bookingId. Seed riêng ngoài migration để không chạy trên production.
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part3.ps1` tạo DB ticketing_it_UUID mới, chạy toàn bộ test và drop đúng DB đó trong finally. Không xóa volume hay DB demo. Có thể chọn gate bằng `-Tests PostgresSchemaTest`, `PostgresSeedTest`, `PostgresCatalogTest`, `PostgresAdminTest`, `PostgresOutboxTest`. Kết quả tại backend/target/surefire-reports. Không có PG_IT_URL thì Maven chỉ chạy context H2, không phải nghiệm thu integration.
+
+Launcher chạy bản sao JAR ở infra/.local-runtime (Git ignore) để Windows không khóa artifact trong backend/target khi build/test tiếp. Dừng JVM cũ trước khi chạy launcher lại.
 
 ```powershell
 docker compose --env-file .env -f infra/docker-compose.yml stop postgres

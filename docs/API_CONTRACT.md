@@ -2,6 +2,8 @@
 
 > T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
+Phần3 đã triển khai5operation catalog/admin (x-implemented=true trong OpenAPI), mock auth và policy HTTP liên quan. Booking/payment/replay endpoints vẫn là hợp đồng cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003 và README.
+
 ## Quy tắc chung
 
 - Base path /api. API được bảo vệ nhận Authorization: Bearer demo-customer-token hoặc demo-admin-token trong local/test; server lấy account/role từ principal đã seed.
@@ -72,7 +74,7 @@ Không giảm GA capacity dưới held+sold; không xóa/đổi ghế HELD hoặ
 
 T1.4 đã chốt UUID, phân trang page=0/size=20/max100, GA/seat tối đa6. Body booking/simulator/replay 8192 byte, catalog 131072 byte UTF-8; 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, lỗi bất ngờ 500 INTERNAL_ERROR. Admin catalog conflict dùng 409 CATALOG_CONFLICT; replay quá 3 lần/event dùng 409 REPLAY_LIMIT_REACHED. RATE_LIMITED và IDEMPOTENCY_IN_PROGRESS giữ reserved, không phát khi chức năng tương ứng chưa được triển khai. Response vé trả [] nếu chưa CONFIRMED; owner sai trả404, role sai trả403. Request không khai báo field lạ; server không tin userId/role/giá client.
 
-CORS local/test chỉ http://127.0.0.1:5173 và http://localhost:5173, credentials=false; allow/expose headers ghi trong OpenAPI x-local-cors. Chính sách HTTP/giới hạn/deadline trong ADR 0002 là yêu cầu triển khai tiếp theo, chưa được enforce trong backend scaffold.
+CORS local/test chỉ http://127.0.0.1:5173 và http://localhost:5173, credentials=false; allow/expose headers ghi trong OpenAPI x-local-cors. Phần3 đã enforce policy body/CORS cho catalog/admin; ngân sách request/transaction booking trong ADR0002 vẫn là đầu vào cho task booking sau.
 
 SET LOCAL lock_timeout=1500ms, statement_timeout=5s; 55P03/57014 rollback rồi503 BOOKING_BUSY + Retry-After:1; client retry cùng key. Không suy loại contention từ SQLSTATE. Chỉ deadlock40P01/serialization40001 retry hữu hạn trong tổng deadline; không tự retry domain409. Connection timeout2s, attempt5s, tổng nghiệp vụ10s/request15s là cấu hình khởi đầu, cần test khi có booking thật.
 

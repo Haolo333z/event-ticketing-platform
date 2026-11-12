@@ -1,0 +1,5 @@
+demo:
+  auth:
+    enabled: true
+    customer-token: demo-customer-token
+    admin-token: demo-admin-token

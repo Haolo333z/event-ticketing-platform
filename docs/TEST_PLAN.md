@@ -4,6 +4,8 @@
 
 ## Nguyên tắc
 
+Phần3 có19test backend (18 PostgreSQL integration +1 context H2) chạy qua infra/test-part3.ps1; DB riêng mới mỗi lần, không reset demo. verify-part3.ps1 và tools/contracts verify-live.mjs kiểm tra app local/response schemas. Kết quả cụ thể ở PROGRESS, không thay cho các test booking/concurrency tuần3 trở đi.
+
 T1.4 có kiểm tra hợp đồng qua tools/contracts (OpenAPI3.1, JSON Schema event, fixture dương/âm), fixture byte UTF-8 và tools/contracts/measure-lock.ps1 trên PostgreSQL thật. Đây là kiểm tra thiết kế và cơ chế timeout, chưa phải concurrency booking. Gate HTTP/domain cần triển khai theo [TRACEABILITY](TRACEABILITY.md) và [ADR0002](adr/0002-api-domain-contract.md).
 
 Test nghiệp vụ dùng PostgreSQL thật trong môi trường cô lập; Kafka test khi triển khai consumer/outbox. Không thay DB bằng mock cho concurrency. Test fixture reset giữa các ca. Kiểm tra bất biến bằng truy vấn DB sau các luồng, không chỉ HTTP status. Mock bearer token chỉ dùng test auth/API.

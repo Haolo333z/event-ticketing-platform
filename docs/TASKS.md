@@ -38,28 +38,28 @@
 
 ## Tuần 2 — Danh mục, seed và phân quyền demo
 
-- [ ] **T2.1 — Schema/migration** cho tài khoản, sự kiện, loại vé, ghế và inventory.
+- [x] **T2.1 — Schema/migration (Done, 2026-11-12)** cho tài khoản, sự kiện, loại vé, ghế và inventory. Gate PostgreSQL migration/constraint đã đạt; xem PROGRESS.
   - **Mục tiêu/phạm vi:** Schema/migration cho tài khoản, sự kiện, loại vé, ghế và inventory.
   - **Phụ thuộc:** T1.4. **Module/file:** catalog/identity/inventory/messaging; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** migration chạy trên PostgreSQL sạch, FK/check/index hợp lệ; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T2.2 — Seed dữ liệu** cho một sự kiện ghế, một sự kiện GA, persona customer/admin và mock bearer token local/test.
+- [x] **T2.2 — Seed dữ liệu (Done, 2026-11-12)** cho một sự kiện ghế, một sự kiện GA, persona customer/admin và mock bearer token local/test. Gate seed idempotent/profile đã đạt; xem PROGRESS.
   - **Mục tiêu/phạm vi:** Seed dữ liệu cho một sự kiện ghế, một sự kiện GA, persona customer/admin và mock bearer token local/test.
   - **Phụ thuộc:** T2.1. **Module/file:** catalog/identity/inventory/messaging; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** seed idempotent, profile khác không có token demo; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T2.3 — API danh sách/chi tiết sự kiện và availability.**
+- [x] **T2.3 — API danh sách/chi tiết sự kiện và availability (Done, 2026-11-12).** Gate PostgreSQL/HTTP 2test đạt; xem PROGRESS.
   - **Mục tiêu/phạm vi:** API danh sách/chi tiết sự kiện và availability. 
   - **Phụ thuộc:** T2.2. **Module/file:** catalog/identity/inventory/messaging; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** API đọc/availability và validation; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T2.4 — API quản trị và mock auth:** token seed ánh xạ principal/role; tạo/sửa event, ticket type; chặn giảm capacity dưới held+sold và xóa ghế đang giữ; mock auth chỉ local/test.
+- [x] **T2.4 — API quản trị và mock auth (Done, 2026-11-12):** token seed ánh xạ principal/role; tạo/sửa event, ticket type; chặn giảm capacity dưới held+sold và xóa ghế đang giữ; mock auth chỉ local/test. Gate7test PostgreSQL/HTTP đạt; xem PROGRESS/ADR0003.
   - **Mục tiêu/phạm vi:** API quản trị và mock auth: token seed ánh xạ principal/role; tạo/sửa event, ticket type; chặn giảm capacity dưới held+sold và xóa ghế đang giữ; mock auth chỉ local/test.
   - **Phụ thuộc:** T2.3. **Module/file:** catalog/identity/inventory/messaging; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** 401/403, capacity/seat/price admin, mock auth fail-startup; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
 
-- [ ] **T2.5 — Schema outbox nền:** migration outbox_events, payments ledger tối thiểu, envelope, index pending và ghi outbox cùng transaction; chưa cần Kafka publisher.
+- [x] **T2.5 — Schema outbox nền (Done, 2026-11-12):** migration outbox_events, payments ledger tối thiểu, envelope, index pending và ghi outbox cùng transaction; chưa cần Kafka publisher. Gate4test PostgreSQL commit/rollback/envelope/ledger đạt; xem PROGRESS.
   - **Mục tiêu/phạm vi:** Schema outbox nền: migration outbox_events, envelope, index pending và ghi outbox cùng transaction; chưa cần Kafka publisher.
   - **Phụ thuộc:** T2.4. **Module/file:** catalog/identity/inventory/messaging; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

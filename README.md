@@ -3,7 +3,7 @@ An event-driven ticketing platform supporting multiple ticket types, concurrency
 
 ## Trạng thái
 
-T1.2 đã đạt CI; T1.3 có PostgreSQL, backend health endpoint và Flyway migration nền. Chưa có nghiệp vụ booking hoặc Kafka. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [ADR stack](docs/adr/0001-stack-and-local-environment.md) và [lệnh chạy local](infra/README.md).
+Phần 3 (T2.1–T2.5) có catalog SEATED/GA, dữ liệu demo local/test, API đọc/quản trị, mock bearer và outbox nền. Chưa có API giữ/đặt vé hoặc Kafka publisher. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [quyết định triển khai](docs/adr/0003-catalog-implementation.md) và [lệnh chạy local](infra/README.md).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
@@ -11,7 +11,53 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1
 ```
 
-## Yêu cầu
+## Xem hai sự kiện mẫu
+
+Sau khi backend chạy, mở [danh sách sự kiện](http://127.0.0.1:8080/api/events) trong trình duyệt (hiện là JSON, chưa có giao diện catalog).
+
+- [Sự kiện ghế chỉ định](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000001): 4 ghế A1–A4, giá 200.000 VND.
+- [Availability ghế](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000001/availability).
+- [Sự kiện GA](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000002): capacity 100, giá 100.000 VND.
+- [Availability GA](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000002/availability).
+
+Availability chỉ là snapshot, không giữ vé. Seed idempotent chỉ local/test, không overwrite giá/capacity đã chỉnh. Không cần xóa volume demo để chạy test: script test tự tạo DB riêng và dọn đúng DB đó.
+
+## Tự kiểm tra Phần 3 trên Windows
+
+Mở Docker Desktop trước. Từ thư mục gốc:
+
+```powershell
+# PostgreSQL thật, DB test riêng; build và toàn bộ test backend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part3.ps1
+npm.cmd ci --prefix tools/contracts
+npm.cmd test --prefix tools/contracts
+# Backend local cần đang chạy cho hai lệnh tiếp:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part3.ps1
+npm.cmd run test:live --prefix tools/contracts
+```
+
+Nếu demo đã chỉnh inventory thì verify-part3 có thể báo khác seed ban đầu; integration test vẫn dùng DB sạch riêng. `mvnw verify` không có PG_IT_URL chỉ chạy test context H2 và skip test PostgreSQL; không dùng kết quả đó thay gate Phần 3. CI backend có PostgreSQL17.11 và PG_IT_URL để chạy test thật.
+
+## Thử API quản trị
+
+Mock fixture công khai: `demo-customer-token` và `demo-admin-token`, chỉ local/test. Thiếu/token lạ trả401; customer gọi admin trả403. Server lấy account/role từ DB principal, bỏ qua header tự khai danh tính. Mock bật ngoài local/test làm startup thất bại; ngoài các profile này không có seed runner hay token demo mặc định.
+
+```powershell
+$admin = @{ Authorization = 'Bearer demo-admin-token' }
+$body = @{
+  title='Demo draft'; description='Local example'; venue='Demo venue'
+  saleStartAt='2026-01-01T00:00:00Z'; saleEndAt='2099-01-01T00:00:00Z'
+  startsAt='2099-01-02T00:00:00Z'; status='DRAFT'
+  ticketTypes=@(@{ name='GA'; mode='GA'; priceVnd=120000; capacity=50 })
+} | ConvertTo-Json -Depth 6
+$event = Invoke-RestMethod http://127.0.0.1:8080/api/admin/events -Method Post -Headers $admin -ContentType 'application/json' -Body $body
+$patch = @{ status='PUBLISHED'; ticketTypes=@(@{id=$event.ticketTypes[0].id; priceVnd=150000; capacity=60}) } | ConvertTo-Json -Depth 6
+Invoke-RestMethod "http://127.0.0.1:8080/api/admin/events/$($event.id)" -Method Patch -Headers $admin -ContentType 'application/json' -Body $patch
+```
+
+PATCH chỉ nhận field đã chốt; không cho đổi mode, sửa/xóa ghế hoặc thêm type. Giảm GA capacity dưới held+sold trả409 và rollback cả transaction. Đổi giá không sửa snapshot booking_items. Chưa có route DELETE hoặc booking. Public catalog chỉ hiện PUBLISHED.
+
+## Công cụ cần có
 
 - Temurin JDK 25.0.5+8, JAVA_HOME trỏ tới JDK và `java`/`javac` trên PATH cùng phiên bản.
 - Node 26.13.0, npm 11.20.0; Maven Wrapper tự tải Maven 3.9.16, không cần cài Maven global.
@@ -41,7 +87,7 @@ npm.cmd run build
 npm.cmd audit --audit-level=high
 ```
 
-Trên Linux/macOS, dùng `sh ./mvnw` và `npm`. Test backend hiện kiểm tra Spring context không cần external services; test frontend kiểm tra render trang khởi đầu. Đây chưa phải test nghiệp vụ. Chạy giao diện mẫu bằng `npm.cmd run dev` trong frontend rồi mở http://127.0.0.1:5173.
+Trên Linux/macOS, dùng `sh ./mvnw` và `npm`; integration test cần PostgreSQL riêng qua PG_IT_URL, POSTGRES_USER, POSTGRES_PASSWORD. Test frontend kiểm tra render trang khởi đầu. Chạy giao diện mẫu bằng `npm.cmd run dev` trong frontend rồi mở http://127.0.0.1:5173; chưa có luồng đặt vé.
 
 ## Cấu hình và CI
 
@@ -57,4 +103,4 @@ gitleaks dir . --redact --no-banner
 osv-scanner scan source --sbom backend/target/bom.json
 ```
 
-Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Bước kế tiếp theo TASKS là T1.3 sau khi T1.2 được nghiệm thu.
+Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Bước kế tiếp theo TASKS là T3.1, chưa thực hiện trong Phần 3.
