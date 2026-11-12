@@ -1,10 +1,12 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
-> Đây là kế hoạch; chưa có test/code hoặc số đo. Kết quả thực tế lưu sau khi triển khai, gồm máy, cấu hình DB pool và log.
+> Gồm kế hoạch toàn dự án và kết quả đã chạy đến Phần4. Các ca ghế/expiry/payment/Kafka vẫn là kế hoạch; không coi chúng đã đạt. Kết quả thực tại PROGRESS và evidence/part4-2026-11-12.json.
 
 ## Nguyên tắc
 
-Phần3 có19test backend (18 PostgreSQL integration +1 context H2) chạy qua infra/test-part3.ps1; DB riêng mới mỗi lần, không reset demo. verify-part3.ps1 và tools/contracts verify-live.mjs kiểm tra app local/response schemas. Kết quả cụ thể ở PROGRESS, không thay cho các test booking/concurrency tuần3 trở đi.
+Đến hết Phần4 có35test backend (34 PostgreSQL integration +1 context H2) chạy qua infra/test-part4.ps1; DB riêng mới mỗi lần, không reset demo. PostgresBookingTest có16test mới. verify-part4.ps1 kiểm tra booking/replay/owner/history trên demo; tools/contracts verify-live.mjs kiểm tra15response HTTP theo schema. verify-part3.ps1 giữ tiêu chí seed GA100 ban đầu nên có thể không còn đạt sau khi đã đặt vé demo.
+
+Frontend có11test Node/DOM (4client/storage +7interaction) và build TypeScript/Vite. infra/test-part4-ui.ps1 tạo DB riêng sạch, chạy JAR thật và App trong jsdom với fetch HTTP thật: booking2vé, tổng server140000, replay, stale inventory409, hết vé/history/CORS. jsdom không thay thế kiểm tra layout/browser; kết nối công cụ trình duyệt không khả dụng nên chưa có ảnh hoặc visual QA.
 
 T1.4 có kiểm tra hợp đồng qua tools/contracts (OpenAPI3.1, JSON Schema event, fixture dương/âm), fixture byte UTF-8 và tools/contracts/measure-lock.ps1 trên PostgreSQL thật. Đây là kiểm tra thiết kế và cơ chế timeout, chưa phải concurrency booking. Gate HTTP/domain cần triển khai theo [TRACEABILITY](TRACEABILITY.md) và [ADR0002](adr/0002-api-domain-contract.md).
 
@@ -42,3 +44,14 @@ Test nghiệp vụ dùng PostgreSQL thật trong môi trường cô lập; Kafka
 ## Ngưỡng nghiệm thu
 
 Không oversell, không partial hold, không vé trùng, không release lặp, không stuck pending khi worker hoạt động. Latency/TPS chỉ được chốt sau baseline máy ở T1.1; nếu không đạt thì ghi số thực, điều tra, không đổi tiêu chí sau khi chạy để báo cáo đẹp.
+
+## Gate Phần4 đã chạy ngày 2026-11-12
+
+- T3.1:202/Location, GET owner/ADMIN, customer khác404, mine riêng/phân trang, validation400/401/403 và mã lỗi; giá từ server, TTL600s/history ban đầu.
+- T3.2: IDEM-01 burst20request cùng key/payload →1booking/1body/1outbox, held2; IDEM-02 khác payload409 cả tuần tự và đồng thời; canonical UUID/field order/2.0; key scope theo account; replay sau EXPIRED dùng fixture DB có transition/outbox đúng, không triển khai worker.
+- IDEM-03: một connection thật giữ inventory row hoặc unique key, HTTP503/Retry-After1 sau lock_timeout; query xác nhận không booking/item/key/outbox/hold dở, retry cùng key sau khi mở khóa thành công.
+- T3.3: conditional UPDATE không đủ vé409; lỗi PostgreSQL sau outbox làm rollback toàn bộ. Deferred trigger chặn commit key chưa hoàn chỉnh. PostgreSQL trigger phát SQLSTATE40001 lần đầu rồi thành công; phát liên tục dừng ở3attempt/503 và không tăng hold lần hai. Đây là fault injection trên PostgreSQL thật, chưa phải tạo deadlock40P01 thật.
+- T3.4 GA-01:50request use case,5customer, capacity10 →10success/40conflict/held10/bookings10/outbox10. Ca HTTP riêng50request →10HTTP202/40HTTP409/held10/bookings10/outbox10. Mỗi request quantity1, sold0. Chạy đồng thời bằng executor/latch; không suy ra TPS hay bảo đảm mọi tải từ hai ca này.
+- T3.5:11test frontend đạt; ca live UI dùng API/DB thật capacity3 →held3/sold0 sau success/replay/conflict, CORS preflight204. Đã kiểm tra trạng thái/lỗi qua DOM; chưa kiểm tra bố cục thực trong Chrome.
+
+Máy chạy: Windows, Intel i5-11400H 6core/12logical, RAM16948453376byte (~15,78GiB), JDK25.0.5, PostgreSQL17.11, pool10/minIdle2/acquisition2s, lock1500ms/statement5s/attempt5s/total10s, không expiry worker. Bằng chứng từ working tree trên HEAD d476b78086b8d4daeacf4ed0060eba7d398684f2 (chưa commit thay đổi). Không có benchmark latency/p95/TPS trong Phần4. Pool exhaustion, statement cancel độc lập, mất kết nối đúng lúc COMMIT và deadlock40P01 thật chưa fault-inject; không báo các ca đó đã đạt.

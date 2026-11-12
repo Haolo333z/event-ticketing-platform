@@ -67,27 +67,27 @@
 
 ## Tuần 3 — Booking GA, idempotency và concurrency
 
-- [ ] **T3.1 — Contract** POST /api/bookings 202 + Location, GET booking, GET /api/me/bookings và lỗi API.
+- [x] **T3.1 — Contract (Done, 2026-11-12):** POST /api/bookings 202 + Location, GET booking, GET /api/me/bookings và lỗi API. BookingController/BookingQueryService, OpenAPI8operation đã chạy; owner/ADMIN, polling/history,400/401/403/404 đạt. Contract30ca +15response HTTP đạt; xem PROGRESS/ADR0004.
   - **Mục tiêu/phạm vi:** Contract POST /api/bookings 202 + Location, GET booking, GET /api/me/bookings và lỗi API.
   - **Phụ thuộc:** T2.5. **Module/file:** bookings/inventory/frontend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** 202/Location/polling/owner và error code; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T3.2 — Idempotency:** unique INSERT trong transaction, request cùng key song song chờ commit để replay; khác payload trả conflict; replay sau EXPIRED trả bookingId gốc; timeout rollback rồi trả lỗi đã phân loại hoặc 503 BOOKING_BUSY.
+- [x] **T3.2 — Idempotency (Done, 2026-11-12):** unique INSERT trong transaction, request cùng key song song chờ commit để replay; khác payload trả conflict; replay sau EXPIRED trả bookingId gốc; timeout rollback rồi trả lỗi đã phân loại hoặc 503 BOOKING_BUSY. V5/deferred guard + BookingCommandService; IDEM-01/02/03 đạt với PostgreSQL thật, burst20request chỉ1booking. Expired dùng fixture, chưa có worker; xem PROGRESS.
   - **Mục tiêu/phạm vi:** Idempotency: unique INSERT trong transaction, request cùng key song song chờ commit để replay; khác payload trả conflict; replay sau EXPIRED trả bookingId gốc.
   - **Phụ thuộc:** T3.1. **Module/file:** bookings/inventory/frontend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** IDEM-01/02/03: hai request trùng key đồng thời replay; khác payload 409; timeout không để lại booking/hold dở và retry cùng key an toàn; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T3.3 — Giữ vé GA:** conditional update trong transaction; rollback nếu thiếu capacity.
+- [x] **T3.3 — Giữ vé GA (Done, 2026-11-12):** conditional update trong transaction; rollback nếu thiếu capacity. GaInventory/CatalogBookingAccess + booking/item/history/BookingHeld/key cùng commit. Capacity conflict và lỗi sau outbox rollback toàn bộ; timeout và retry40001 tối đa3attempt đạt. V6 siết initial history; xem PROGRESS.
   - **Mục tiêu/phạm vi:** Giữ vé GA: conditional update trong transaction; rollback nếu thiếu capacity.
   - **Phụ thuộc:** T3.2. **Module/file:** bookings/inventory/frontend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** GA capacity invariant sau conflict/rollback; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T3.4 — Concurrency test GA/idempotency:** gửi booking đồng thời vượt capacity và request trùng key/payload; chứng minh không oversell, cùng key chỉ tạo một booking, payload khác bị từ chối.
+- [x] **T3.4 — Concurrency test GA/idempotency (Done, 2026-11-12):** gửi booking đồng thời vượt capacity và request trùng key/payload; chứng minh không oversell trong các ca đã chạy, cùng key chỉ tạo một booking, payload khác bị từ chối. PostgresBookingTest:50request/5customer và50HTTP/capacity10 đều10success/40conflict/held10;20duplicate chỉ1booking/1outbox/held2; khác payload202/409. [Bằng chứng](evidence/part4-2026-11-12.json).
   - **Mục tiêu/phạm vi:** Concurrency test GA/idempotency: gửi booking đồng thời vượt capacity và request trùng key/payload; chứng minh không oversell, cùng key chỉ tạo một booking, payload khác bị từ chối.
   - **Phụ thuộc:** T3.3. **Module/file:** bookings/inventory/frontend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** GA-01, IDEM-01/02 trong TEST_PLAN; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T3.5 — UI customer ban đầu:** danh sách/chi tiết, chọn số lượng, hiển thị conflict/hết hàng.
+- [x] **T3.5 — UI customer ban đầu (Done, 2026-11-12):** danh sách/chi tiết, chọn số lượng, hiển thị conflict/hết hàng. App/client/CSS dùng API thật, tổng giá từ server; giữ key/payload qua503/network/reload.11test frontend/build đạt; UI DOM+HTTP/PostgreSQL thật capacity3/held3/sold0 đạt. Chưa có visual QA trình duyệt do kết nối công cụ không khả dụng; đây là giới hạn đã ghi, không tuyên bố đã kiểm tra layout. T4.1 vẫn Todo.
   - **Mục tiêu/phạm vi:** UI customer ban đầu: danh sách/chi tiết, chọn số lượng, hiển thị conflict/hết hàng.
   - **Phụ thuộc:** T3.4. **Module/file:** bookings/inventory/frontend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

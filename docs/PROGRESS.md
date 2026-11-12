@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần3 — Sự kiện và dữ liệu mẫu đã hoàn thành
-- **Tiến độ:** T1.1–T2.5 Done; catalog/seed/auth/admin/outbox nền đã kiểm chứng PostgreSQL thật
+- **Giai đoạn:** Phần4 — Booking GA, idempotency và concurrency đã hoàn thành
+- **Tiến độ:** T1.1–T3.5 Done; booking GA/UI/owner/history/idempotency/rollback/concurrency đã kiểm chứng PostgreSQL thật
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T3.1 — Contract booking (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker Phần3. Thay đổi lần này chưa commit/push, chưa có GitHub Actions run cho commit mới.
+- **Task tiếp theo:** T4.1 — Mô hình seat map (Todo, chưa bắt đầu)
+- **Blocker:** Không có blocker chức năng Phần4. Visual QA chưa làm vì kết nối trình duyệt không khả dụng; lệnh restart JVM demo bị approval policy từ chối. Chưa commit/push, chưa có GitHub Actions run cho thay đổi mới.
 
-- **Task trong TASKS:** 9/45 Done. Có9bảng nghiệp vụ/nền và5API catalog; chưa có booking command, Kafka publisher hoặc giao diện đặt vé.
+- **Task trong TASKS:** 14/45 Done. Có11bảng nghiệp vụ/nền,8API đã triển khai và UI booking GA. Chưa có giữ ghế, expiry worker, thanh toán/phát vé hoặc Kafka.
 
 ## Đã hoàn thành
 
@@ -35,13 +35,31 @@
 
 ## Rủi ro / việc cần xác nhận
 
-- T1.1 đã chốt version, TTL 600s, worker 5s/batch50, max6 vé, pool10/2. T1.4 chốt body/CORS/deadline tại ADR0002; pool acquisition2s thay cho scaffold30s là yêu cầu triển khai, chưa đổi runtime.
+- T1.1 đã chốt version, TTL600s, worker5s/batch50, max6vé, pool10/2. Runtime đã có acquisition2s; T3 BookingPolicy dùng lock1500ms/statement5s/attempt5s/total10s, frontend abort15s. Worker chưa triển khai.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
 - Lock order, rollback nhiều ghế, race worker/payment và aggregate version cần được chứng minh bằng integration/concurrency tests.
-- Catalog đã có migration và HTTP/integration tests; schema/API booking, expiry/payment processing/Kafka và concurrency booking vẫn thuộc giai đoạn sau. Availability không hold vé.
-- Lock timeout1500ms đã kiểm tra cả advisory và row inventory admin; HTTP503/Retry-After1 và rollback đã đạt. Unique-key/idempotency booking contention chưa triển khai. CORS/body limits catalog đã có test HTTP, chưa thay cho toàn bộ security review T7.
+- Catalog và booking GA đã có migration/API/integration/concurrency tests. Expiry/payment processing/Kafka vẫn thuộc giai đoạn sau. Availability không hold vé; quá TTL chưa tự nhả tồn kho trong Phần4.
+- Lock timeout1500ms đã kiểm tra riêng inventory GA và unique idempotency key; HTTP503/Retry-After1 sau rollback, retry cùng key đạt. CORS/body policy có test HTTP, chưa thay toàn bộ security review T7. Pool exhaustion/statement cancel độc lập/mất kết nối lúc COMMIT/40P01 thật chưa fault-inject.
 
 ## Nhật ký
+
+### 2026-11-12 — Phần4 hoàn tất: T3.1–T3.5
+
+- **Đầu vào/phạm vi:** đọc RULES/PROGRESS/TASKS/PRD/ARCHITECTURE/DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN, hợp đồng và source sau Phần3; HEAD d476b78086b8d4daeacf4ed0060eba7d398684f2, working tree sạch lúc bắt đầu. Giữ repo/stack, không Redis, không chọn ghế/payment/Kafka; không commit/push.
+- **Mâu thuẫn đã giải quyết trước code:** DATA_MODEL muốn row idempotency hoàn chỉnh nhưng ARCHITECTURE reserve key trước booking. ADR0004 chốt NULL tạm trong cùng transaction và deferred trigger kiểm tra tại COMMIT, không có STARTED bền. POST chỉ nhận GaSelection trong phạm vi T3; SeatSelection/CreateBooking giữ thiết kế T4. Làm rõ event không PUBLISHED/CLOSED404, inactive/ngoài giờ bán409; replay response gốc và GET trạng thái hiện tại. PRD/state/envelope không đổi.
+- **T3.1:** BookingController có POST202/Location sau commit, GET owner/ADMIN và GET mine CUSTOMER phân trang. BookingQueryService dùng snapshot; history ban đầu NULL→PENDING_PAYMENT. Validation UUID/key/field/quantity1..6, token lạ401/role sai403/owner khác404; không lấy userId/role/giá client. Tổng giá và expiresAt do server/DB tính. OpenAPI đánh dấu đúng8operation hiện thực, còn6operation tương lai chưa chạy.
+- **T3.2:** V5 thêm idempotency_keys và booking_status_history; PK(account,operation,key), SHA256 canonical, composite FK account/booking, response202 và deferred completion guard. BookingCommandService INSERT ON CONFLICT rồi SELECT statement mới READ COMMITTED; duplicate chờ commit/replay cùng body/Location, hash khác409 IDEMPOTENCY_KEY_REUSED. Replay sau EXPIRED dùng fixture transition/outbox đúng, vẫn bookingId/body gốc; chưa triển khai expiry. Test key scope khác account và UUID hoa/thường/field order/2.0 đạt.
+- **T3.3:** CatalogBookingAccess khóa SHARE event rồi type cùng thứ tự admin; GaInventory conditional UPDATE held+sold+quantity<=capacity. Booking/item/snapshot/GA/history/BookingHeld/version1/key/response cùng transaction, sold không tăng. Capacity conflict hoặc lỗi PostgreSQL sau outbox rollback tất cả; incomplete key commit bị chặn. V6 bổ sung check initial history vì SQL CHECK có thể nhận UNKNOWN khi from_status NULL; không sửa V1–V5 đã áp dụng. BookingPolicy SET LOCAL timeout;55P03/57014 trả503/Retry-After1 sau rollback,40P01/40001 retry tối đa3attempt trong budget. Fault injection40001 lần đầu thành công sau retry và lỗi liên tục dừng3attempt đạt; chưa tạo deadlock40P01 thật.
+- **T3.4:** PostgresBookingTest16test mới, bao gồm success/sold-out/invalid/owner/history/idempotency/expired/rollback/row lock/key lock/retry/concurrency.50request use case từ5customer capacity10:10success/40conflict, held10/sold0/bookings10/outbox10.50HTTP đồng thời riêng:10HTTP202/40HTTP409, held10/bookings10/outbox10.20request cùng key quantity2:1bookingId/1body/1outbox/held2. Cùng key khác payload đồng thời:202/409,1booking. Query sum(item.quantity)=10 trong ca5customer. Không suy thành benchmark hoặc bảo đảm mọi tải; [bằng chứng lưu](evidence/part4-2026-11-12.json), output tạo lại tại backend/target/part4-evidence.json.
+- **T3.5:** frontend App/client/styles dùng fetch thật catalog/detail/availability/POST/poll GET/history. Chọn GA1..6; chỉ hiển thị đơn giá catalog/tổng server, mã lỗi/correlationId. Double-click guard; key/payload cố định lưu sessionStorage trước POST,503/network/reload giữ để retry, không tự tạo key mới. Sau thành công cần chủ động đặt thêm.11test frontend (4client/storage +7SSR/DOMinteraction) đạt; TypeScript/Vite production build đạt.
+- **Build/DB thực tế:** `infra/test-part4.ps1` → BUILD SUCCESS,35tests/0fail/0error/0skip (34PostgreSQL +1context H2); report surefire: Admin9/Booking16/Catalog2/Outbox4/ProductionProfile1/Schema1/Seed1/Context1. DB test UUID mới mỗi lần, Flyway V1–V6 từ sạch; gọi migrate lần2 migrationsExecuted=0. Không reset demo. Docker Desktop đã được mở lại khi engine dừng; PostgreSQL17.11 thật được dùng cho lần chạy cuối. JDK25.0.5, i5-11400H6core/12logical, RAM~15,78GiB, pool10/2/acquisition2s.
+- **Live UI:** `infra/test-part4-ui.ps1` chạy JAR build cuối trên DB/cổng riêng, React App trong jsdom dùng HTTP thật. Tạo catalog capacity3/giá70000 bằng API admin; UI đặt2vé nhận202/tổng140000; replay cùng key/body không thêm vé; client khác giữ vé cuối khiến snapshot cũ, UI nhận409 rồi refresh hết vé; lịch sử2booking, preflight204. SQL held3/sold0/capacity3. Script dừng/dọn chỉ process/DB test do chính nó tạo. Chạy lại sau build cuối đạt; không mock response trong ca này.
+- **Hợp đồng/demo:** tools/contracts `npm test` PASS OpenAPI3.1/14operations/30ca; `test:live` PASS15response HTTP schema. `infra/verify-part4.ps1` PASS202/Location/replay/owner/history và V1–V6 mỗi version đúng1lần. Backend demo8080 và Vite5173 đang phục vụ khi kiểm tra HTTP. Smoke và live-contract mỗi script giữ1vé ở lần đầu bằng key riêng cố định; seed không overwrite/reset inventory. README có lệnh và ví dụ PowerShell.
+- **CI local/scan:** frontend và tools/contracts npm audit0vulnerabilities; CycloneDX SBOM BUILD SUCCESS, OSV2.7.1 scan69packages không có vấn đề; actionlint1.7.12 exit0. Workflow thêm job-step live UI/HTTP contract trên DB CI riêng sau backend verify. GitHub Actions chưa chạy vì chưa commit/push; không dùng CI commit cũ để nghiệm thu thay đổi mới. Kết quả Gitleaks/diff được ghi trong mục kiểm tra cuối bên dưới.
+- **Kiểm tra cuối:** Gitleaks8.30.1 scan tập file Git tracked/untracked không ignored (~545KB) và6commit lịch sử, no leaks found; `.env` vẫn bị Git ignore. git diff --check exit0 (chỉ có nhắc LF/CRLF của Git). Ví dụ README đã thử thực:202/tổng200000, replay bookingId cũ, đổi quantity409 IDEMPOTENCY_KEY_REUSED, GET owner/mine đạt; PowerShell5 cần đọc response stream nếu ErrorDetails trống, README đã sửa. Vite5173 HTTP200. Demo GA còn96vé: smoke1 +contract1 +README2 đang được giữ,3booking của customer; không reset. Số này là snapshot tại lần kiểm tra, có thể thay đổi khi người dùng thử UI.
+- **Giới hạn còn lại:** công cụ computer-use không kết nối browser/nativehost, nên chưa có Chrome visual QA/screenshot; DOMinteraction và UI với API thật đã đạt nhưng không chứng minh layout. Automatic approval review từ chối lệnh restart JVM demo, lý do duy nhất trả về “blocked by policy”; chưa kiểm chứng restart process demo lần này, backend cũ vẫn chạy. Flyway migrate lần2 đã được kiểm tra riêng trên PostgreSQL thật. Chưa fault-inject pool exhaustion/statement cancel độc lập/mất mạng lúc COMMIT/deadlock40P01 thật. Chưa làm T4.1 trở đi: ghế, worker, thanh toán/vé/Kafka; booking qua TTL vẫn pending/held cho đến phần worker, không tự expiry trong GET/UI.
+
+Lệnh tự kiểm tra: README gốc và infra/README; T3.1–T3.5 Done theo acceptance đã chạy,14/45task. Không có task chức năng còn thiếu trong Phần4; các giới hạn kiểm chứng nêu trên vẫn được giữ rõ.
 
 ### 2026-11-12 — Phần3 hoàn tất: T2.1 → T2.5
 

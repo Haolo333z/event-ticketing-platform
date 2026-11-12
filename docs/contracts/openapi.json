@@ -3,7 +3,7 @@
   "info": {
     "title": "Event Ticketing API",
     "version": "0.1.0",
-    "description": "Contract v0. Part 3 implements catalog read and admin create/patch plus actuator health. Booking/payment/replay APIs remain planned. Roles/profiles/body limits are server requirements."
+    "description": "Contract v0. Part 4 implements GA booking create/read/mine, catalog and admin create/patch. Seat booking, payment and replay remain planned."
   },
   "servers": [
     {
@@ -238,7 +238,7 @@
       "post": {
         "operationId": "createBooking",
         "summary": "createBooking",
-        "description": "Contract v0; implementation follows TASKS.  Same account/operation/key and canonical payload replays original 202/body even after expiry; key with changed payload returns 409. Commit hold before responding.",
+        "description": "Implemented in Part 4.  Same account/operation/key and canonical payload replays original 202/body even after expiry; key with changed payload returns 409. Commit hold before responding. Only GA quantity is implemented in Part 4; seatIds and SEATED types return 400 until T4.2. Inactive/not on sale returns INVENTORY_UNAVAILABLE; non-published (including CLOSED) or missing resources return 404.",
         "tags": [
           "Bookings"
         ],
@@ -415,20 +415,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateBooking"
+                "$ref": "#/components/schemas/GaSelection"
               }
             }
           }
         },
         "x-max-body-bytes": 8192,
-        "x-implemented": false
+        "x-implemented": true,
+        "x-implemented-request-schema": "GaSelection"
       }
     },
     "/api/bookings/{id}": {
       "get": {
         "operationId": "getBooking",
         "summary": "getBooking",
-        "description": "Contract v0; implementation follows TASKS. CUSTOMER owner or ADMIN; other owners get 404.",
+        "description": "Implemented in Part 4. CUSTOMER owner or ADMIN; other owners get 404.",
         "tags": [
           "Bookings"
         ],
@@ -526,14 +527,14 @@
             ]
           }
         },
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/me/bookings": {
       "get": {
         "operationId": "listMyBookings",
         "summary": "listMyBookings",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "Implemented in Part 4. ",
         "tags": [
           "Bookings"
         ],
@@ -642,7 +643,7 @@
             ]
           }
         },
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/bookings/{id}/cancel": {
@@ -1971,7 +1972,8 @@
           {
             "$ref": "#/components/schemas/GaSelection"
           }
-        ]
+        ],
+        "description": "Planned combined GA/seat shape for T4; the currently implemented POST uses GaSelection only."
       },
       "BookingAccepted": {
         "type": "object",

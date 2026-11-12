@@ -2,7 +2,7 @@
 
 > T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
-Phần3 đã triển khai5operation catalog/admin (x-implemented=true trong OpenAPI), mock auth và policy HTTP liên quan. Booking/payment/replay endpoints vẫn là hợp đồng cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003 và README.
+Đến hết Phần4 đã triển khai8operation (x-implemented=true trong OpenAPI):5catalog/admin và POST booking GA, GET booking, GET mine. Payment/cancel/tickets/admin bookings/replay endpoints vẫn là thiết kế cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003/0004 và README.
 
 ## Quy tắc chung
 
@@ -35,13 +35,17 @@ Phần3 đã triển khai5operation catalog/admin (x-implemented=true trong Open
     POST /api/bookings
     Authorization: Bearer demo-customer-token
     Idempotency-Key: buy-001
-    {"eventId":"uuid","ticketTypeId":"uuid","seatIds":["uuid-a","uuid-b"]}
+    {"eventId":"20000000-0000-4000-8000-000000000002","ticketTypeId":"30000000-0000-4000-8000-000000000002","quantity":2}
 
     HTTP/1.1 202 Accepted
     Location: /api/bookings/booking-uuid
-    {"bookingId":"booking-uuid","status":"PENDING_PAYMENT","expiresAt":"2026-11-12T09:10:00Z","totalAmountVnd":500000}
+    {"bookingId":"booking-uuid","status":"PENDING_PAYMENT","expiresAt":"2026-11-12T09:10:00Z","totalAmountVnd":200000}
 
-GA gửi quantity thay seatIds. Chỉ một trong hai hình thức cho một booking MVP; quantity nguyên dương và không vượt giới hạn cấu hình.
+Phần4 chỉ nhận GA quantity nguyên1..6, UUID chuẩn và đúng ba field trên. seatIds/type SEATED trả400; schema POST hiện trỏ GaSelection. Component CreateBooking/SeatSelection vẫn lưu thiết kế cho T4, chưa được nhận qua API. Hash chuẩn hóa thứ tự field, UUID hoa/thường và số nguyên JSON (2.0 tương đương2). Key chỉ gồm [A-Za-z0-9._:-].
+
+GET booking trả bookingId/eventId/status/expiresAt/expiredAt/totalAmountVnd/history; customer khác trả404, ADMIN có thể xem. GET mine chỉ CUSTOMER, page0/size20/max100, sắp createdAt DESC/id DESC. Trạng thái lịch sử ban đầu NULL→PENDING_PAYMENT. expiresAt từ đồng hồ DB +TTL600s; chưa có worker nên không tự đổi trạng thái/nhả tồn kho khi qua hạn. Replay vẫn trả response202 gốc; muốn trạng thái hiện tại phải GET theo Location.
+
+Phần dưới là hợp đồng payment dự kiến, chưa có endpoint chạy:
 
     POST /api/bookings/booking-uuid/simulate-payment
     {"scenario":"SUCCESS","requestId":"uuid"}
@@ -59,7 +63,7 @@ DELAY_TIMEOUT nghĩa là kết quả được ghi sau hạn để kiểm thử b
 | 403 FORBIDDEN | Role sai, thao tác demo/replay ngoài profile |
 | 404 NOT_FOUND | Event/booking không tồn tại hoặc không thuộc principal |
 | 409 IDEMPOTENCY_KEY_REUSED | Key cũ với payload khác |
-| 409 INVENTORY_UNAVAILABLE | Không đủ inventory |
+| 409 INVENTORY_UNAVAILABLE | Không đủ inventory, type inactive hoặc ngoài cửa sổ bán |
 | 409 HOLD_EXPIRY_PROCESSING | Hold đến hạn chưa được nhả/commit |
 | 409 INVALID_BOOKING_STATE | Cancel/payment không hợp lệ |
 | 409 IDEMPOTENCY_IN_PROGRESS | Chỉ khi xác định được request cùng key đang xử lý và contract chọn trả sớm thay vì chờ |
@@ -74,8 +78,8 @@ Không giảm GA capacity dưới held+sold; không xóa/đổi ghế HELD hoặ
 
 T1.4 đã chốt UUID, phân trang page=0/size=20/max100, GA/seat tối đa6. Body booking/simulator/replay 8192 byte, catalog 131072 byte UTF-8; 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, lỗi bất ngờ 500 INTERNAL_ERROR. Admin catalog conflict dùng 409 CATALOG_CONFLICT; replay quá 3 lần/event dùng 409 REPLAY_LIMIT_REACHED. RATE_LIMITED và IDEMPOTENCY_IN_PROGRESS giữ reserved, không phát khi chức năng tương ứng chưa được triển khai. Response vé trả [] nếu chưa CONFIRMED; owner sai trả404, role sai trả403. Request không khai báo field lạ; server không tin userId/role/giá client.
 
-CORS local/test chỉ http://127.0.0.1:5173 và http://localhost:5173, credentials=false; allow/expose headers ghi trong OpenAPI x-local-cors. Phần3 đã enforce policy body/CORS cho catalog/admin; ngân sách request/transaction booking trong ADR0002 vẫn là đầu vào cho task booking sau.
+CORS local/test chỉ http://127.0.0.1:5173 và http://localhost:5173, credentials=false; allow/expose headers ghi trong OpenAPI x-local-cors. Body/CORS policy áp dụng cả booking. Event không PUBLISHED (kể cả CLOSED) hoặc type không thuộc event trả404; type inactive/ngoài giờ bán trả409. Không lấy giá, account hoặc role từ request.
 
-SET LOCAL lock_timeout=1500ms, statement_timeout=5s; 55P03/57014 rollback rồi503 BOOKING_BUSY + Retry-After:1; client retry cùng key. Không suy loại contention từ SQLSTATE. Chỉ deadlock40P01/serialization40001 retry hữu hạn trong tổng deadline; không tự retry domain409. Connection timeout2s, attempt5s, tổng nghiệp vụ10s/request15s là cấu hình khởi đầu, cần test khi có booking thật.
+SET LOCAL lock_timeout=1500ms, statement_timeout=5s; 55P03/57014 rollback rồi503 BOOKING_BUSY + Retry-After:1; client retry cùng key. Không suy loại contention từ SQLSTATE. BookingCommandService chỉ retry40P01/40001 tối đa3attempt với backoff trong ngân sách10s; không retry domain409 hoặc55P03. Hikari acquisition2s, transaction attempt5s; frontend abort15s giữ lại key/payload vì kết quả có thể chưa rõ. PostgreSQL thật đã kiểm tra row/key lock timeout và serialization retry; chưa kiểm thử mất mạng đúng lúc COMMIT hoặc pool exhaustion. Các ngưỡng không phải cam kết thời gian HTTP tuyệt đối khi mạng/DB lỗi.
 
 MVP createEvent nhận catalog lồng ticketTypes/seats; patchEvent chỉ cập nhật type ID hiện có. Không có endpoint xóa/thêm ghế riêng trong contract v0. Thay đổi mở rộng phải cập nhật hợp đồng trước. Tổng ghế/event<=200, type<=20, các cross-field invariant xem DATA_MODEL/ADR. paymentIntentId lấy từ bookings, PaymentResultRecorded.paymentResultId là payments.id, requestId client lưu payments.request_id. DELAY_TIMEOUT ghi result khi DB clock >= expiresAt+1s. Simulator cho phép ghi kết quả sau expiry/cancel/fail để kiểm chứng compensation, không tự confirm lại. HTTP202 không hứa booking sẽ confirmed.

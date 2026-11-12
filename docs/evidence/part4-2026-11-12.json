@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-12",
+  "baseHead": "d476b78086b8d4daeacf4ed0060eba7d398684f2",
+  "scope": "Uncommitted Part 4 working tree; T3.1-T3.5",
+  "environment": {
+    "os": "Windows",
+    "cpu": "Intel Core i5-11400H, 6 cores / 12 logical processors",
+    "ramBytes": 16948453376,
+    "jdk": "Temurin 25.0.5",
+    "postgres": "17.11",
+    "poolMax": 10,
+    "poolMinIdle": 2,
+    "poolAcquisitionMs": 2000,
+    "lockMs": 1500,
+    "statementMs": 5000,
+    "attemptMs": 5000,
+    "totalBudgetMs": 10000,
+    "expiryWorker": false
+  },
+  "backend": {"tests": 35, "postgresTests": 34, "h2ContextTests": 1, "failures": 0, "errors": 0, "skipped": 0},
+  "frontend": {"tests": 11, "failures": 0, "build": "passed"},
+  "contracts": {"operations": 14, "implementedOperations": 8, "staticCases": 30, "liveHttpResponses": 15},
+  "concurrency": [
+    {"scenario": "GA-01", "requests": 50, "customers": 5, "capacity": 10, "success": 10, "conflict": 40, "held": 10, "sold": 0, "bookings": 10, "outbox": 10},
+    {"scenario": "IDEM-01", "requests": 20, "quantity": 2, "distinctBookingIds": 1, "distinctBodies": 1, "held": 2, "outbox": 1},
+    {"scenario": "GA-01-HTTP", "requests": 50, "capacity": 10, "http202": 10, "http409": 40, "held": 10, "sold": 0, "bookings": 10, "outbox": 10}
+  ],
+  "liveUi": {"runtime": "jsdom + real HTTP + isolated PostgreSQL", "quantity": 2, "serverTotalVnd": 140000, "replay": "same booking and response", "staleInventoryHttp": 409, "historyCount": 2, "corsPreflightHttp": 204, "capacity": 3, "held": 3, "sold": 0},
+  "limitations": ["No native browser visual QA: computer-use connection unavailable", "No GitHub CI run for uncommitted changes", "No latency or TPS benchmark", "No real 40P01 deadlock, pool exhaustion, independent statement cancellation or connection loss at COMMIT fault injection", "Demo JVM restart command rejected by automatic approval policy; Flyway second migrate verified in PostgreSQL tests"]
+}

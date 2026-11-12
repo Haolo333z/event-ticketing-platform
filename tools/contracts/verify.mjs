@@ -17,6 +17,9 @@ function check(schema, value, expected) {
 const create = api.components.schemas.CreateBooking;
 check(create, fixtures.bookingGa, true);
 check(create, fixtures.bookingSeats, true);
+const activeRequest=api.paths['/api/bookings'].post.requestBody.content['application/json'].schema;
+check(activeRequest,fixtures.bookingGa,true);
+check(activeRequest,fixtures.bookingSeats,false);
 for (const value of [
   {...fixtures.bookingGa,quantity:0}, {...fixtures.bookingGa,quantity:7},
   {...fixtures.bookingGa,quantity:1.5}, {...fixtures.bookingGa,userId:fixtures.bookingGa.eventId},

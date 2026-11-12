@@ -21,7 +21,9 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
-Phần3 đã hiện thực catalog read/admin, seed và identity mock local/test, error/CORS/body policy, cùng outbox writer nền. Migration V1–V4 có9bảng; bookings/items chưa có use case/API đặt vé. Triển khai và test tại [ADR0003](adr/0003-catalog-implementation.md) và PROGRESS.
+Phần3 đã hiện thực catalog read/admin, seed và identity mock local/test, error/CORS/body policy, cùng outbox writer nền. Phần4 thêm booking GA, idempotency, owner/history và UI dùng API thật. Migration V1–V6 có11bảng. Chưa có giữ ghế, expiry worker, payment processing hoặc Kafka. Triển khai và test tại [ADR0003](adr/0003-catalog-implementation.md), [ADR0004](adr/0004-ga-booking.md) và PROGRESS.
+
+BookingCommandService quản lý transaction/retry; controller chỉ chuyển HTTP. CatalogBookingAccess là hợp đồng nội bộ đọc/khóa catalog trong transaction bắt buộc, GaInventory giữ bộ đếm có điều kiện, OutboxWriter ghi BookingHeld. Luồng GA: reserve key → FOR SHARE event/type theo thứ tự admin → booking → conditional GA update → item/history/outbox/response → COMMIT →202. Transaction dùng READ COMMITTED; GET booking/mine dùng snapshot REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key đang gửi được giữ trong sessionStorage khi mất kết nối/503.
 
 - Identity & Access: principal demo/seed, role CUSTOMER/ADMIN.
 - Event Catalog: sự kiện, mở bán, địa điểm, khu vực/giá.
@@ -132,7 +134,7 @@ sequenceDiagram
 
 ## 9. Dữ liệu và API
 
-T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Mục tiêu14bảng, Phần3 đã migrate9bảng; bookings giữ payment_intent_id, payments lưu mỗi result/request mô phỏng. Catalog đã enforce body/CORS/timeout và auth; API booking/deadline tổng, replay audit giới hạn3 lần/event và inbox thuộc giai đoạn sau. Không sửa V1 đã chạy.
+T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Mục tiêu14bảng, đến hết Phần4 đã migrate11bảng; bookings giữ payment_intent_id, payments có storage nền cho result/request mô phỏng. Catalog/booking đã enforce body/CORS/timeout/auth; replay audit API, inbox và payment processing thuộc giai đoạn sau. Migration đã chạy được giữ nguyên.
 
 Bảng dự kiến: users, events, ticket_types, seats cho ghế định danh, inventory_ga cho vé không ghế, bookings, booking_items, idempotency_keys, payments, payment_compensations, tickets, outbox_events, inbox_events, booking_status_history. Seed mock token bằng cấu hình local/test. Chi tiết PK/FK/check/index ở [DATA_MODEL](DATA_MODEL.md).
 
@@ -153,7 +155,7 @@ Giữ ranh giới module khi scaffold; không dồn domain vào một bộ contr
 
 ## 11. Triển khai và quan sát
 
-Docker Compose chạy frontend, backend, PostgreSQL, Kafka và tiện ích đã chốt tại T1.1; cổng demo bind 127.0.0.1, replay/simulator chặn ngoài local/test. Có health check, migration rõ thứ tự và seed riêng. Metrics gồm booking theo state, hold expiry, overdue hold count/oldest age, outbox pending/age, retry/DLQ, latency và lỗi API. Log cấu trúc có correlationId, bookingId, eventId; không log token hoặc bí mật.
+Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện ích đã chốt T1.1. Hiện tại chỉ PostgreSQL chạy Compose, backend JDK và frontend Vite chạy host; cổng demo bind127.0.0.1. Có health check, migration rõ thứ tự và seed riêng. Replay/simulator và metrics là phần sau: booking theo state, hold expiry, overdue hold count/oldest age, outbox pending/age, retry/DLQ, latency/lỗi API. Không log token hoặc bí mật.
 
 
 Event producer/consumer và failure policy: [EVENT_CATALOG](EVENT_CATALOG.md). Test và recovery: [TEST_PLAN](TEST_PLAN.md), [DEMO_AND_RECOVERY](DEMO_AND_RECOVERY.md).

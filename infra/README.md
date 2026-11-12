@@ -1,6 +1,6 @@
 # Hạ tầng local
 
-PostgreSQL17.11 chạy bằng Compose, backend bằng JDK25 trên host. Phần3 có V1–V4, seed/catalog/auth/admin và outbox nền; chưa chạy Kafka.
+PostgreSQL17.11 chạy bằng Compose, backend bằng JDK25 trên host. Đến hết Phần4 có V1–V6, catalog/auth/admin, booking GA/idempotency/history và outbox BookingHeld. Chưa có expiry worker/payment/Kafka.
 
 Từ thư mục gốc trên Windows:
 
@@ -31,3 +31,25 @@ docker compose --env-file .env -f infra/docker-compose.yml stop postgres
 Lệnh stop giữ volume. Không dùng `down -v` với dữ liệu cần giữ: lệnh đó xóa database demo. Muốn kiểm chứng lại từ DB sạch nên dùng volume/project demo riêng; lần nghiệm thu T1.3 dùng volume mới, xác nhận 0 bảng trước startup rồi kiểm tra restart trên cùng volume.
 
 Baseline và ngân sách tài nguyên: [ADR 0001](../docs/adr/0001-stack-and-local-environment.md). PostgreSQL 5432 và backend 8080 chỉ bind 127.0.0.1. `.env` không commit. Không thêm Redis khi chưa có ADR.
+
+## Phần4 — Booking GA
+
+```powershell
+# PostgreSQL thật, toàn bộ35test backend; không reset demo:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4.ps1
+# Có thể chọn16test booking: thêm -Tests PostgresBookingTest
+npm.cmd ci --prefix frontend
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+# JAR vừa build, DB UI riêng sạch, HTTP thật và React DOM:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1
+# App demo8080 phải đang chạy:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part4.ps1
+npm.cmd run test:live --prefix tools/contracts
+# Terminal giao diện:
+npm.cmd run dev --prefix frontend
+```
+
+Mở http://127.0.0.1:5173, chọn GA và đặt1..6vé. verify-part4 giữ1vé lần đầu, sau đó replay key cố định; contract live giữ thêm1vé bằng key khác. Các test cô lập không thay inventory demo. V5 tạo idempotency_keys/booking_status_history và deferred commit guard; V6 chặn initial history sai. Migrate lần hai không chạy lại version đã áp dụng. README gốc có ví dụ POST/replay/conflict/GET/history.
+
+test-part4-ui dùng cổng loopback tự chọn, JAR tạm và DB ticketing_ui_UUID do chính script tạo. finally dừng đúng process test, drop đúng DB đó; app demo8080 được giữ nguyên. Kết quả live là DOM+API/PostgreSQL thật, chưa phải browser visual QA. Không có worker nhả hold khi TTL qua hạn trong phần này.

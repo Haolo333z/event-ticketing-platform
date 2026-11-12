@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Phần3 đã triển khai V1–V4,9bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events. Bookings/items chỉ là storage nền, chưa có booking API;5bảng còn lại thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
+> Đến hết Phần4 đã triển khai V1–V6, 11 bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events/idempotency_keys/booking_status_history. Booking GA đã có API; tickets/payment_compensations/inbox_events thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -84,7 +84,9 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 ## Migration và seed
 
-V1 tạo schema ticketing, history public. V2 catalog/users/inventory và bookings/items nền; V3 payments/outbox; V4 siết check JSON bookingId. Các bảng idempotency/history/tickets/compensation/inbox sẽ có migration tiếp theo đúng task. Seed persona/sự kiện nằm ngoài migration, chỉ local/test; admin token không hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
+V1 tạo schema ticketing, history public. V2 catalog/users/inventory và bookings/items nền; V3 payments/outbox; V4 siết check JSON bookingId. V5 thêm idempotency/history, unique bookings(id,account_id) và FK tổng hợp để key không trỏ booking người khác. V6 siết initial history NULL→PENDING_PAYMENT. Các bảng tickets/compensation/inbox sẽ có migration tiếp theo đúng task. Seed persona/sự kiện nằm ngoài migration, chỉ local/test; admin token không hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
+
+V5 cho booking_id/response_status/response_body NULL trong transaction đang reserve key. Deferred constraint trigger kiểm tra row cuối tại COMMIT: bắt buộc booking và response202/PENDING_PAYMENT với bookingId khớp. Vì vậy không có row STARTED hoặc response chưa hoàn chỉnh được commit. Hash GA chuẩn hóa UUID lowercase và quantity nguyên (2 và 2.0 cùng nội dung). Chưa nhận seatIds; việc sort seatIds thuộc T4. Xem [ADR0004](adr/0004-ga-booking.md).
 
 ## Dữ liệu giữ lại
 
@@ -92,7 +94,7 @@ MVP không xóa idempotency key/outbox/inbox trong 10 tuần để replay an to�
 
 ## Chốt mô hình v0 tại T1.4
 
-Đây là đặc tả mục tiêu;9bảng đã chạy ở Phần3 được ghi trong phần mở đầu, các bảng còn lại chưa migrate. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
+Đây là đặc tả mục tiêu; 11 bảng đã chạy được ghi trong phần mở đầu, 3 bảng còn lại chưa migrate. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL, ngoại lệ ba cột idempotency tạm NULL được ràng buộc tại COMMIT như trên. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
 
 | Bảng | Bổ sung kiểu/cột và ràng buộc đã chốt |
 |---|---|

@@ -19,6 +19,6 @@ T1.4 đã kiểm tra cú pháp OpenAPI/$ref, fixture GA/seat và payload sai,7 e
 
 - T2.1: FK tổng hợp, CHECK/unique/index và delete policy trong DATA_MODEL; DB sạch thật. Không thay V1.
 - T2.4/T7.1/T7.4: request đúng limit và limit+1 kể cả chunked; vượt tổng ghế200 dù từng type hợp lệ; POST/PATCH validate payload/domain; Origin được phép và bị từ chối; OPTIONS không yêu cầu token.
-- T3.1–T3.5: SET LOCAL timeout trong transaction; cố tình khóa unique key và inventory riêng, rollback trước503, retry cùng key không tạo hold dở. Test pool exhaustion/statement cancel và commit outcome không rõ.
+- T3.1–T3.5: SET LOCAL timeout trong transaction; cố tình khóa unique key và inventory riêng, rollback trước503, retry cùng key không tạo hold dở. Phần4 đã đạt các ca này và GA-01/IDEM-01/02/03; bằng chứng ở TEST_PLAN/PROGRESS. Pool exhaustion/statement cancel độc lập và mất kết nối đúng lúc COMMIT còn là ca tăng cường cần thực hiện sau; frontend đã kiểm tra giữ nguyên command khi network error/503, chưa thay cho fault injection COMMIT trên DB.
 - T5.1–T5.5/T6.1–T6.5: result scheduling bền, aggregateId/result đúng booking, null recorded_at lúc scheduled, chỉ DB clock khi kết quả bền, timestamp không do client quyết định; replay giữ eventId và không bỏ inbox.
 - Khi sửa contract chạy `npm ci --prefix tools/contracts` và `npm test --prefix tools/contracts`; các thay đổi schema/event/version phải review cùng PRD.
