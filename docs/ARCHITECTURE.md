@@ -17,7 +17,7 @@ Dùng modular monolith hướng sự kiện: một codebase backend chia module 
 | Đóng gói | Docker Compose | Local tái lập |
 | API docs | OpenAPI | Khám phá/thử API |
 
-Version chốt tại T1.1. Redis không nằm trong Compose baseline; chỉ thêm qua ADR khi có use case và test cụ thể. PostgreSQL đảm bảo correctness.
+Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environment.md): JDK 25.0.5+8 LTS / Spring Boot 4.1.2, PostgreSQL 17.11, Kafka 4.2.2, Node 26.13.0, React 19.3.1 / TypeScript 7.0.2 / Vite 8.3.8. ADR ghi migration/JDBC/client theo Boot BOM, tham số và tài nguyên máy. Redis không nằm trong Compose baseline; chỉ thêm qua ADR khi có use case và test cụ thể. PostgreSQL đảm bảo correctness.
 
 ## 2. Module
 

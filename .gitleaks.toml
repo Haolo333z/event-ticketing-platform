@@ -1,0 +1,6 @@
+title = "Ticketing secret scan"
+[extend]
+useDefault = true
+[[allowlists]]
+description = "Generated dependencies, build output and local Git metadata"
+paths = ['''(^|/)(node_modules|target|dist|coverage|reports|\.git)/''']

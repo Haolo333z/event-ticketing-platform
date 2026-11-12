@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Chuẩn bị trước khi scaffold code
-- **Tiến độ:** 13 file tài liệu cập nhật v0.4 sau rà soát; chưa triển khai ứng dụng
-- **Task đang làm:** Chưa có
-- **Task tiếp theo:** T1.1 — Chốt stack và môi trường
-- **Blocker:** Chưa có
+- **Giai đoạn:** Scaffold repository, T1.2
+- **Tiến độ:** T1.1 Done; khung backend/frontend và CI T1.2 đã tạo, build/test/scan local đạt; chưa có nghiệp vụ
+- **Task đang làm:** T1.2 — In Progress, chờ lần chạy GitHub Actions cho thay đổi mới
+- **Task tiếp theo:** Hoàn tất kiểm chứng CI T1.2; T1.3 vẫn Todo, chưa bắt đầu
+- **Blocker:** Chưa có bằng chứng GitHub Actions run cho workflow mới. JDK 25 và Maven Wrapper đã được xác minh hoạt động; lưu ý RAM trước demo theo ADR.
 
-- **Task triển khai:** 0/45 hoàn thành
+- **Task trong TASKS:** 1/45 Done; T1.2 In Progress. Có scaffold và test mẫu, chưa có nghiệp vụ booking/API/DB.
 
 ## Đã hoàn thành
 
@@ -24,7 +24,7 @@
 ## Quyết định đã thống nhất
 
 - Dự án cá nhân 10 tuần, ưu tiên backend, demo local, không dùng .NET.
-- Ứng viên stack: Java + Spring Boot, PostgreSQL, Kafka, React/TypeScript, Docker Compose; Redis chỉ cho use case tiện ích cụ thể. Version chốt tại T1.1.
+- Stack đã chốt tại [ADR 0001](adr/0001-stack-and-local-environment.md): Temurin JDK 25.0.5+8 LTS, Spring Boot 4.1.2, Maven Wrapper 3.9.16, PostgreSQL 17.11, Kafka 4.2.2, Node 26.13.0/npm 11.20.0, React 19.3.1, TypeScript 7.0.2, Vite 8.3.8; Docker 29.9.1/Compose 5.6.0. Không dùng Redis trong baseline.
 - Modular monolith hướng sự kiện; payment mô phỏng.
 - PostgreSQL là nguồn sự thật; consumer at-least-once và idempotent.
 - Mock bearer token customer/admin seed sẵn, chỉ local/test; cổng demo bind localhost; không phải auth production.
@@ -35,13 +35,50 @@
 
 ## Rủi ro / việc cần xác nhận
 
-- Chốt version, TTL, batch, pool size và version tương thích ở T1.1/T1.4 trước scaffold; các số trong PRD là giả định ban đầu.
+- T1.1 đã chốt version, TTL 600s, worker 5s/batch 50, tối đa 6 vé/booking, pool max 10/min idle 2. Đây là cấu hình ban đầu, chưa benchmark; timeout/body limit/CORS tiếp tục chốt ở T1.4.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
 - Lock order, rollback nhiều ghế, race worker/payment và aggregate version cần được chứng minh bằng integration/concurrency tests.
-- Chưa có source code, schema cuối, OpenAPI hoàn chỉnh hoặc kết quả test. Chưa chạy test ứng dụng vì chưa có phần mềm được triển khai.
-- Lock timeout cần cấu hình và đo; phải rollback trước khi trả lỗi, phân biệt chờ idempotency với tranh chấp inventory. Body limit/CORS và phiên bản stack chốt ở T1.1/T1.4, không áp giá trị tùy ý.
+- Có scaffold source và test mẫu; chưa có schema cuối, OpenAPI hoàn chỉnh hoặc test nghiệp vụ/integration/concurrency. Test context không chứng minh health/API/DB/Kafka hoạt động.
+- Lock timeout cần cấu hình và đo; phải rollback trước khi trả lỗi, phân biệt chờ idempotency với tranh chấp inventory. Body limit/CORS chốt ở T1.4, không áp giá trị tùy ý.
 
 ## Nhật ký
+
+### 2026-11-12 — T1.2: Scaffold repository và CI
+
+- **Bằng chứng JDK mới:** `java -version` trả `openjdk version "25.0.5"`, `Temurin-25.0.5+8`, LTS; `javac -version` trả `25.0.5`. `JAVA_HOME/bin/javac.exe` tồn tại và Maven Wrapper build bằng JDK này thành công. Kết quả Java 26 trong nhật ký T1.1 là quan sát cũ, đã được thay thế bởi kiểm tra mới này.
+- **Kiểm tra hiện trạng trước sửa:** Git và docs đã tồn tại; origin vẫn là `https://github.com/Haolo333z/event-ticketing-platform.git`; có README gốc và các thay đổi tài liệu T1.1 chưa commit. Giữ các thay đổi này, bổ sung README; không git init, không thay remote, không commit/push.
+- **Đã tạo:** backend Spring Boot 4.1.2, Maven Wrapper 3.3.4 pin Maven 3.9.16 và SHA-256 distribution, Java target 25; package dành sẵn cho 10 module trong ARCHITECTURE; resources/migration chưa có SQL. Frontend React 19.3.1/TypeScript 7.0.2/Vite 8.3.8, lockfile, Node test runner; chưa cần plugin JSX vì scaffold dùng createElement. infra/README dành cho Compose về sau. Thêm .gitignore, .gitattributes, .env.example chỉ placeholder, Gitleaks config, CI và Dependabot.
+- **CI:** ba job backend/frontend/secrets trên push, PR, workflow_dispatch; verify + context test + CycloneDX SBOM + OSV backend; npm ci/test/build/audit (high trở lên); Gitleaks full Git history và working tree. Scanner failure không bị bỏ qua; permission contents:read; tải scanner có kiểm tra checksum trong workflow. Không cần NVD API key hoặc license Gitleaks Action.
+- **Kiểm tra local đạt:** Maven Wrapper `verify cyclonedx:makeAggregateBom` BUILD SUCCESS, 1 test context/0 fail; tạo executable JAR và SBOM 21 components. `npm ci`, `npm test` (1 pass), `npm run build` (TypeScript + Vite), `npm audit --audit-level=high` (0 vulnerabilities). OSV Scanner 2.7.1 scan SBOM: 21 packages, No issues found. Gitleaks 8.30.1: 2 commits và working tree, no leaks found, exit 0 cả hai. actionlint 1.7.12 kiểm tra workflow exit 0. git diff --check đạt; Git ignore .env/node_modules/target/dist, không ignore .env.example.
+- **Lỗi đã sửa:** TypeScript 7 cần khai báo types node/react/react-dom tường minh; build frontend đã đạt sau sửa. JVM có cảnh báo dynamic agent khi chạy test, test vẫn đạt.
+- **Còn thiếu để Done:** workflow mới chưa được commit/push và chưa có GitHub Actions run thành công; do acceptance yêu cầu CI chạy, T1.2 giữ In Progress. Scan local là kết quả tại thời điểm kiểm tra, không bảo đảm không có lỗ hổng mới. Scanner backend hiện kiểm tra dependency runtime từ SBOM (test scope chưa nằm trong SBOM).
+- **Bước tiếp theo:** review/commit/push các file đã chuẩn bị, xem ba job CI; nếu tất cả xanh thì cập nhật T1.2 Done và tổng 2/45. Chưa thực hiện T1.3, chưa start DB/Kafka, health endpoint hay migration.
+
+Lệnh kiểm tra lại (PowerShell, từ thư mục gốc):
+
+```powershell
+cd backend
+.\mvnw.cmd -B -ntp verify cyclonedx:makeAggregateBom
+cd ../frontend
+npm.cmd ci
+npm.cmd test
+npm.cmd run build
+npm.cmd audit --audit-level=high
+cd ..
+git diff --check
+git status --short
+```
+
+Sau khi review và commit, chạy `git push` để kích hoạt CI; kiểm tra tab Actions của repository. Không đánh dấu CI đã chạy từ kết quả actionlint/local.
+
+### 2026-11-12 — T1.1: Chốt stack và môi trường
+
+- **Hoàn thành:** ADR tương thích/phiên bản, quyết định không Redis, tham số ban đầu và ngân sách máy; T1.1 Done theo acceptance tài liệu và kiểm tra môi trường.
+- **Files thay đổi:** docs/adr/0001-stack-and-local-environment.md, TASKS.md, PROGRESS.md; ARCHITECTURE.md dẫn tới quyết định đã chốt.
+- **Kiểm tra thực tế:** Java/javac 26.0.1; Node 26.13.0/npm 11.20.0; Git 2.55.0.windows.3. `mvn` không có trên PATH. Docker Client/Server 29.9.1, Compose 5.6.0; daemon Linux x86_64, 12 CPU, RAM 7,65 GiB. Windows 11, i5-11400H 6 core/12 thread, RAM 15,78 GiB (trống 2,58 GiB), D: trống 130,62 GiB. Không có container chạy hoặc listener ở bốn cổng dự kiến tại thời điểm đo.
+- **Tương thích:** tài liệu Boot 4.1.2 hỗ trợ Java 17–27; Java 26 phù hợp Boot nhưng non-LTS. Kafka hỗ trợ đầy đủ Java 25 nên chọn JDK 25 LTS. Tra Boot BOM, PostgreSQL support, Maven, Adoptium, Node/Vite và npm registry; manifest postgres:17.11 và apache/kafka:4.2.2 có linux/amd64. Chi tiết nguồn và lệnh trong ADR.
+- **Còn thiếu/giới hạn:** chưa cài/chọn JDK 25, chưa có wrapper, chưa pull/start DB/Kafka hay build/test ứng dụng. RAM trống thấp, cần đóng ứng dụng nặng trước demo. Không có benchmark để khẳng định pool/worker đáp ứng tải.
+- **Bước tiếp theo:** chuẩn bị JDK 25 theo lệnh trong ADR; T1.2 vẫn Todo. Lần này dừng ở T1.1; T1.3 kiểm chứng health/migration, T1.4 chốt hợp đồng và timeout.
 
 ### 2026-11-12 — Hiệu chỉnh tài liệu v0.4
 
@@ -76,7 +113,7 @@
 
 | Giai đoạn | Tài liệu | Source | Test | Nghiệm thu |
 |---|---|---|---|---|
-| Trước scaffold | v0.4, chờ chốt T1.1/T1.4 | Chưa | Chưa | Chưa |
+| Trước scaffold | v0.4 + ADR 0001; T1.1 Done, T1.4 Todo | Chưa | CLI/tài nguyên/tương thích đã kiểm tra; chưa test ứng dụng | T1.1 đạt; chưa nghiệm thu hệ thống |
 | Tuần 2–4 | Đặc tả nền có sẵn | Chưa | Chưa | Chưa |
 | Tuần 5–10 | Theo TASKS | Chưa | Chưa | Chưa |
 

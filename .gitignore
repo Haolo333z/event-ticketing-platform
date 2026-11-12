@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+**/target/
+**/node_modules/
+**/dist/
+**/coverage/
+*.log
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+infra/data/
+reports/
+*.pem
+*.key

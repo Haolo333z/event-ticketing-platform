@@ -11,16 +11,18 @@
 
 ## Tuần 1 — Chốt nền tảng
 
-- [ ] **T1.1 — Chốt stack/môi trường:** kiểm tra tương thích Java/Spring, PostgreSQL, Kafka, Redis nếu cần, Node; ghi version, ADR, TTL hold, worker interval/batch, max quantity, DB pool và yêu cầu máy. Quyết định Redis chỉ khi có use case; không coi version tham khảo trong Word là yêu cầu bắt buộc.
+- [x] **T1.1 — Chốt stack/môi trường (Done, 2026-11-12):** kiểm tra tương thích Java/Spring, PostgreSQL, Kafka, Redis nếu cần, Node; ghi version, ADR, TTL hold, worker interval/batch, max quantity, DB pool và yêu cầu máy. Quyết định Redis chỉ khi có use case; không coi version tham khảo trong Word là yêu cầu bắt buộc.
   - **Mục tiêu/phạm vi:** Chốt stack/môi trường: kiểm tra tương thích Java/Spring, PostgreSQL, Kafka, Redis nếu cần, Node; ghi version, ADR, TTL hold, worker interval/batch, max quantity, DB pool và yêu cầu máy. Quyết định Redis chỉ khi có use case.
   - **Phụ thuộc:** khởi đầu. **Module/file:** docs/infra/backend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** ADR kiểm tra tương thích và RAM; tham số cấu hình được ghi; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T1.2 — Tạo repository:** README, .gitignore, .env.example, backend/frontend/infra; thêm CI build/test, secret scan và dependency scan mức cơ bản; không commit secret.
+  - **Kết quả:** [ADR 0001](adr/0001-stack-and-local-environment.md) chốt JDK 25.0.5+8 LTS / Boot 4.1.2, PostgreSQL 17.11, Kafka 4.2.2, Node 26.13.0; không Redis. Java 26.0.1 phù hợp phạm vi Boot nhưng không chọn làm baseline LTS. Docker Client/Server 29.9.1, Compose 5.6.0 hoạt động; host 15,78 GiB RAM, Docker 7,65 GiB; RAM host trống 2,58 GiB cần giải phóng trước demo. TTL 600s, worker 5s/50, max 6 vé, pool 10/2. Đã kiểm tra CLI, tài nguyên, tài liệu chính thức và manifest image; chưa chạy ứng dụng. JDK 25 chưa được xác minh đã cài, wrapper chưa tạo; đây là chuẩn bị cho scaffold, T1.2 vẫn Todo.
+- [ ] **T1.2 — Tạo repository (In Progress, 2026-11-12):** README, .gitignore, .env.example, backend/frontend/infra; thêm CI build/test, secret scan và dependency scan mức cơ bản; không commit secret.
   - **Mục tiêu/phạm vi:** Tạo repository: README, .gitignore, .env.example, backend/frontend/infra; thêm CI build/test, secret scan và dependency scan mức cơ bản; không commit secret.
   - **Phụ thuộc:** T1.1. **Module/file:** docs/infra/backend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** CI chạy build/test mẫu, quét secret/dependency; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
+  - **Đã đạt:** giữ Git/docs/remote; bổ sung README, cấu trúc module backend/frontend/infra, .gitignore/.env.example; wrapper Maven 3.9.16, lockfile npm; workflow build/test/Gitleaks/OSV/npm audit và Dependabot. Temurin Java/javac 25.0.5 đã xác minh; build/test mẫu backend (1 test) và frontend (1 test) đạt, OSV 21 packages không phát hiện vấn đề, npm audit 0 vulnerabilities, Gitleaks history/worktree không phát hiện secret, actionlint đạt. **Còn thiếu:** bằng chứng GitHub Actions chạy thành công sau commit/push; chưa đánh dấu Done. Xem PROGRESS để tái hiện lệnh.
 - [ ] **T1.3 — Chạy môi trường local tối thiểu:** app, health endpoint, PostgreSQL và migration đầu.
   - **Mục tiêu/phạm vi:** Chạy môi trường local tối thiểu: app, health endpoint, PostgreSQL và migration đầu.
   - **Phụ thuộc:** T1.2. **Module/file:** docs/infra/backend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
