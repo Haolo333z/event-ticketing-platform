@@ -14,14 +14,26 @@
 ~~~mermaid
 erDiagram
     USERS ||--o{ BOOKINGS : places
+    EVENTS ||--o{ BOOKINGS : receives
     EVENTS ||--o{ TICKET_TYPES : offers
     EVENTS ||--o{ SEATS : contains
+    TICKET_TYPES ||--o{ SEATS : classifies
+    TICKET_TYPES ||--o| INVENTORY_GA : has
     BOOKINGS ||--|{ BOOKING_ITEMS : contains
     TICKET_TYPES ||--o{ BOOKING_ITEMS : selected
+    SEATS o|--o{ BOOKING_ITEMS : historical_selection
+    BOOKINGS o|--o{ SEATS : current_owner
+    USERS ||--o{ IDEMPOTENCY_KEYS : scopes
+    BOOKINGS ||--o| IDEMPOTENCY_KEYS : result
     BOOKINGS ||--o{ PAYMENTS : records
     PAYMENTS ||--o| PAYMENT_COMPENSATIONS : compensates
+    BOOKINGS ||--o{ PAYMENT_COMPENSATIONS : requires
     BOOKING_ITEMS ||--o{ TICKETS : issues
+    BOOKINGS ||--o{ TICKETS : owns
     BOOKINGS ||--o{ OUTBOX_EVENTS : emits
+    OUTBOX_EVENTS ||--o{ INBOX_EVENTS : deduplicates_logically
+    BOOKINGS ||--o{ BOOKING_STATUS_HISTORY : transitions
+    OUTBOX_EVENTS o|--o{ BOOKING_STATUS_HISTORY : causes_logically
 ~~~
 
 ## Bảng, khóa và ràng buộc dự kiến
@@ -36,7 +48,7 @@ erDiagram
 | bookings | id, account_id, event_id, status, expires_at, expired_at, total_amount_vnd, aggregate_version | FK user/event; amount >= 0; index(status,expires_at) |
 | booking_items | id, booking_id, ticket_type_id, seat_id NULL, quantity, unit_price_vnd, total_price_vnd | FK; unique(seat_id) không áp dụng vì ghế được mua trong nhiều đơn thất bại/hết hạn; kiểm tra mode trong domain |
 | idempotency_keys | account_id, operation, key, request_hash, booking_id, response_status, response_body, created_at | PK(account_id,operation,key); booking_id unique khi có; không lưu STARTED bền trong MVP |
-| payments | id, booking_id, payment_result_id, scenario, status, recorded_at, processed_at | unique(booking_id, payment_result_id); recorded_at dùng DB clock; không lưu thẻ |
+| payments | id, booking_id, request_id, scenario, status, result_due_at, recorded_at, processed_at | unique(booking_id, request_id); id là paymentResultId trong event; recorded_at dùng DB clock, NULL khi SCHEDULED; không lưu thẻ |
 | tickets | id, booking_id, booking_item_id, ticket_ordinal, code | FK booking/booking_item; check ticket_ordinal >= 1; unique(booking_item_id,ticket_ordinal); unique(code) |
 | payment_compensations | id, booking_id, payment_id, status, reason, created_at, processed_at | FK booking/payment; unique(payment_id); status PENDING/COMPLETED/FAILED; retry cùng nghĩa vụ |
 | outbox_events | id, aggregate_id, aggregate_version, type, schema_version, payload, status, created_at, published_at | unique(aggregate_id,aggregate_version); index pending created_at |
@@ -77,3 +89,30 @@ Migration phải thêm outbox schema và event envelope trước booking tuần 
 ## Dữ liệu giữ lại
 
 MVP không xóa idempotency key/outbox/inbox trong 10 tuần để replay an toàn và dễ audit. Khi vận hành lâu dài cần chính sách retention dựa trên thời hạn khiếu nại, bản sao lưu và version, chốt bằng ADR trước khi bật cleanup. Không coi chỉ mục hoặc check constraint là bằng chứng đủ cho concurrency nếu chưa chạy test.
+
+## Chốt mô hình v0 tại T1.4
+
+Đây là đặc tả đầu vào migration, không phải SQL đã chạy. Tất cả bảng nghiệp vụ ở schema ticketing; Flyway history ở public. UUID do server sinh; tiền bigint VND trong [0,10^12], thời gian timestamptz UTC. Không dùng cascade delete với dữ liệu lịch sử; FK mặc định RESTRICT/NO ACTION. Bảng có id dùng UUID PK NOT NULL. Các cột không ghi NULL dưới đây là NOT NULL. created_at mặc định clock_timestamp() khi insert; không dùng thời gian client quyết định expiry/payment.
+
+| Bảng | Bổ sung kiểu/cột và ràng buộc đã chốt |
+|---|---|
+| users | demo_role varchar(16) enum CUSTOMER/ADMIN, display_name varchar(100), created_at; token không lưu trong bảng, seed cấu hình profile |
+| events | title varchar(200), description varchar(2000), venue varchar(200), sale_start_at/sale_end_at/starts_at timestamptz; status DRAFT/PUBLISHED/CLOSED; created_at; CHECK sale_start_at < sale_end_at <= starts_at |
+| ticket_types | event_id UUID FK events; name varchar(100), mode GA/SEATED bất biến sau booking; price_vnd bigint, active boolean; UNIQUE(id,event_id) cho FK tổng hợp |
+| seats | event_id/ticket_type_id UUID, label varchar(40), status AVAILABLE/HELD/SOLD, held_by_booking_id UUID NULL, hold_expires_at timestamptz NULL, version bigint >=0; FK(ticket_type_id,event_id) → ticket_types(id,event_id); UNIQUE(id,event_id,ticket_type_id); UNIQUE(event_id,label). Owner phải booking cùng event/type, kiểm tra dưới lock trong domain; state/owner/deadline CHECK như trên |
+| inventory_ga | ticket_type_id UUID PK/FK; capacity/held_count/sold_count integer; check counts và tổng <=capacity. Chỉ type GA có row, SEATED không có; enforce mode bằng domain dưới lock/test, không bằng CHECK cross-table |
+| bookings | account_id FK users, event_id FK events, ticket_type_id UUID; FK(ticket_type_id,event_id) → ticket_types; UNIQUE(id,event_id,ticket_type_id). payment_intent_id UUID UNIQUE, created_at, expires_at, expired_at NULL, total_amount_vnd bigint, aggregate_version bigint >=1; status đúng 6 state PRD; expired_at bắt buộc cho EXPIRED/REFUND_REQUIRED, không xóa sau refund; expires_at>created_at |
+| booking_items | booking_id/event_id/ticket_type_id UUID; FK bộ ba → bookings; FK(ticket_type_id,event_id) → ticket_types; seat_id UUID NULL; FK(seat_id,event_id,ticket_type_id) → seats; quantity integer 1..6, giá bigint; CHECK total_price_vnd=quantity*unit_price_vnd; CHECK seat_id IS NULL OR quantity=1; UNIQUE(booking_id,seat_id) (NULL cho GA), UNIQUE(id,booking_id). Một GA item/booking dùng partial unique booking_id WHERE seat_id IS NULL. Không unique seat_id xuyên lịch sử |
+| idempotency_keys | PK(account_id UUID FK users,operation varchar(64),key varchar(128)); request_hash char(64) SHA-256; booking_id UUID UNIQUE/FK bookings; response_status integer=202, response_body jsonb, created_at. Row chỉ commit khi booking commit, không row STARTED độc lập; account_id phải khớp booking trong domain. Scope operation=CREATE_BOOKING; canonical hash sort seatIds để đảo thứ tự ghế không bị coi payload khác |
+| payments | id UUID là kết quả/attempt, booking_id FK bookings; request_id UUID client dedup, scenario SUCCESS/FAILURE/DELAY_TIMEOUT; status SCHEDULED/SUCCESS/FAILURE; created_at, result_due_at timestamptz NULL, recorded_at timestamptz NULL, processed_at timestamptz NULL; UNIQUE(booking_id,request_id), UNIQUE(id,booking_id). CHECK SCHEDULED ⇒ recorded_at IS NULL và due_at có giá trị; SUCCESS/FAILURE ⇒ recorded_at có giá trị. DELAY_TIMEOUT ghi SUCCESS khi due, không lấy timestamp client. paymentIntentId trả từ bookings; không coi request_id là paymentResultId |
+| tickets | booking_id FK bookings, booking_item_id UUID; FK(booking_item_id,booking_id) → booking_items(id,booking_id); ticket_ordinal integer 1..6, code varchar(128), created_at; UNIQUE(item,ordinal), UNIQUE(code). Ordinal<=item.quantity và chỉ CONFIRMED enforce domain trong transaction confirm |
+| payment_compensations | booking_id UUID FK bookings, payment_id UUID UNIQUE; FK(payment_id,booking_id) → payments(id,booking_id); status PENDING/COMPLETED/FAILED, reason varchar(500), created_at, processed_at NULL; attempt_count integer >=0. Chỉ result SUCCESS tạo nghĩa vụ; retry cùng row |
+| outbox_events | id UUID=eventId; aggregate_id FK bookings, aggregate_version bigint>=1, type enum 7 event, schema_version integer=1, payload jsonb, correlation_id UUID, created_at=occurredAt, status PENDING/PUBLISHED/FAILED, published_at NULL, attempts integer>=0, next_attempt_at NULL, last_error varchar(500) NULL. UNIQUE(aggregate_id,aggregate_version). replay_requests jsonb array tối đa3 audit entries; mỗi entry có requestId,adminAccountId,reason,requestedAt; append dưới row lock, domain dedup requestId |
+| inbox_events | PK(consumer_name varchar(100),event_id UUID); processed_at. event_id liên kết logic tới outbox.id, **không FK** vì message có thể được nhận độc lập/retention khác; domain/business commit cùng inbox |
+| booking_status_history | id UUID, booking_id FK bookings, from_status NULL hoặc enum 6 state, to_status enum 6 state, occurred_at, cause_event_id UUID NULL (logical reference, không FK); initial NULL→PENDING_PAYMENT; transitions khác đúng PRD §5, không thêm transition REFUND_REQUIRED→CONFIRMED |
+
+Quan hệ outbox→inbox và cause_event_id trên ER là quan hệ logic, không yêu cầu SQL FK. Không tạo bảng projection/buffer chưa có use case. Bảng booking history giữ hai bước EXPIRED và REFUND_REQUIRED nếu late result xử lý cùng transaction. Khi success sau CANCELLED/PAYMENT_FAILED, giữ nguyên state và tạo compensation, không tự chuyển REFUND_REQUIRED (chỉ EXPIRED có cạnh đó).
+
+Index chốt: index mọi FK chưa được bao phủ bởi prefix PK/unique (account/event/type/booking/payment/item); bookings(status,expires_at,id) partial WHERE status='PENDING_PAYMENT'; bookings(account_id,created_at DESC,id DESC); seats(event_id,ticket_type_id,status,id), seats(hold_expires_at) partial HELD; outbox(status,next_attempt_at,created_at,id) partial PENDING/FAILED; payments(booking_id,recorded_at), payments(result_due_at,id) partial SCHEDULED; history(booking_id,occurred_at,id). Không tạo unique inbox(event_id) toàn cục vì mỗi consumer có dedup riêng.
+
+Schema không thể tự bảo đảm tổng item, số vé theo quantity, mode inventory hay transition cross-table. Các invariant này cần domain transaction và test GA/SEAT/EXP/PAY/TICKET/COMP trong TEST_PLAN. Toàn bộ event và HTTP ID mapping chốt tại [ADR 0002](adr/0002-api-domain-contract.md).

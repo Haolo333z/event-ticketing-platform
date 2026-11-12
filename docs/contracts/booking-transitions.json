@@ -1,0 +1,12 @@
+{
+  "source": "PRD.md section 5",
+  "initial": "PENDING_PAYMENT",
+  "transitions": {
+    "PENDING_PAYMENT": ["CONFIRMED", "PAYMENT_FAILED", "CANCELLED", "EXPIRED"],
+    "CONFIRMED": [],
+    "PAYMENT_FAILED": [],
+    "CANCELLED": [],
+    "EXPIRED": ["REFUND_REQUIRED"],
+    "REFUND_REQUIRED": []
+  }
+}

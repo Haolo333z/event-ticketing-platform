@@ -29,11 +29,12 @@
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** start/health/migration từ DB sạch; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
   - **Kết quả:** PostgreSQL 17.11 healthy trên volume demo mới, DB có 0 bảng trước startup; V1 tạo schema ticketing thành công. Health HTTP 200/UP, V1 success đúng một lần; restart cùng DB không migrate lại. Maven verify đạt; script verify-local PASS; chỉ bind localhost. Lệnh chạy tại infra/README.md; log và lỗi đã xử lý tại PROGRESS. T1.4 chưa bắt đầu.
-- [ ] **T1.4 — Chốt API/domain v0:** OpenAPI, ER sơ bộ, state machine trong PRD, event envelope, lỗi API, identity demo và bảng trace PRD/API/task; chốt giới hạn request body theo payload thật, CORS cho origin local nếu cần và timeout/error mapping theo loại tranh chấp.
+- [x] **T1.4 — Chốt API/domain v0 (Done, 2026-11-12):** OpenAPI, ER sơ bộ, state machine trong PRD, event envelope, lỗi API, identity demo và bảng trace PRD/API/task; chốt giới hạn request body theo payload thật, CORS cho origin local nếu cần và timeout/error mapping theo loại tranh chấp.
   - **Mục tiêu/phạm vi:** Chốt API/domain v0: OpenAPI, ER sơ bộ, state machine trong PRD, event envelope, lỗi API, identity demo và bảng trace PRD/API/task.
   - **Phụ thuộc:** T1.3. **Module/file:** docs/infra/backend; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** review ER/API/event/state và trace yêu cầu; ghi rõ body limit, CORS origin local và ngưỡng chờ khóa có thể cấu hình (không áp cứng 64 KB/3s trước khi đo), phân biệt timeout idempotency với inventory; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
+  - **Kết quả:** ADR0002, ER/constraint đủ14bảng, OpenAPI3.1/14operation, JSON Schema7event,6state/5cạnh và TRACEABILITY. tools/contracts verify PASS28ca dương/âm; fixture catalog51839byte→limit128KiB, booking/payment/replay8KiB; CORS hai origin5173; DB lock_timeout1500ms đo1635ms,55P03/rollback;503+Retry-After1 không đoán loại lock. Chưa enforce HTTP policy hoặc tạo V2; T2.1 vẫn Todo. Chi tiết và lệnh tái hiện trong PROGRESS.
 
 ## Tuần 2 — Danh mục, seed và phân quyền demo
 

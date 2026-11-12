@@ -111,7 +111,7 @@ Sau khi EXPIRED đã commit, kể cả payment có recorded_at trước hạn nh
 - Admin không giảm GA capacity dưới held+sold, không xóa ghế HELD/SOLD, không đổi mode loại vé có booking. Giá mới chỉ áp dụng cho đơn mới; booking_items giữ giá snapshot.
 - Hủy customer chỉ cho PENDING_PAYMENT và chưa có success bền; CONFIRMED không hủy/hoàn thật trong MVP.
 - Flash sale trong MVP là kịch bản mở bán theo thời gian và tải đồng thời; hàng chờ quy mô Internet nằm ngoài phạm vi.
-- Tham số khởi đầu cần chốt ở T1.1/T1.4: TTL hold đề xuất 10 phút, worker mỗi 5 giây, batch tối đa 50 booking, tối đa 6 vé/booking. Đây là cấu hình đề xuất phải đo/điều chỉnh, không phải kết quả benchmark.
+- Tham số khởi đầu đã chốt ở T1.1/T1.4: TTL hold 10 phút, worker mỗi 5 giây, batch tối đa 50 booking, tối đa 6 vé/booking. Giới hạn HTTP/CORS/deadline được chốt tại [ADR0002](adr/0002-api-domain-contract.md); HTTP schema tại [OpenAPI](contracts/openapi.json), 5 cạnh state tại [booking-transitions](contracts/booking-transitions.json). Đây là cấu hình khởi đầu phải kiểm chứng khi có nghiệp vụ, không phải kết quả benchmark.
 
 ## 6. Mục tiêu kiểm chứng demo
 

@@ -4,6 +4,8 @@ Bản v0.4 là tài liệu thiết kế trước khi viết mã, đã cập nh�
 
 ## Thứ tự đọc
 
+T1.4: [OpenAPI 3.1](contracts/openapi.json), [event JSON Schema](contracts/events.schema.json), [state transitions](contracts/booking-transitions.json), [ADR 0002](adr/0002-api-domain-contract.md) và [bảng đối chiếu](TRACEABILITY.md). Kiểm tra lại bằng `npm ci --prefix tools/contracts` rồi `npm test --prefix tools/contracts` từ thư mục gốc. Các contract mô tả triển khai tương lai, không phải API nghiệp vụ đang chạy.
+
 1. [PRD](PRD.md): phạm vi, nghiệp vụ, acceptance.
 2. [ARCHITECTURE](ARCHITECTURE.md): ranh giới module, transaction, outbox/recovery.
 3. [DATA_MODEL](DATA_MODEL.md), [API_CONTRACT](API_CONTRACT.md), [EVENT_CATALOG](EVENT_CATALOG.md): hợp đồng triển khai.

@@ -12,6 +12,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26.13.0'
+          cache: npm
+          cache-dependency-path: tools/contracts/package-lock.json
+      - run: npm ci --prefix tools/contracts
+      - run: npm test --prefix tools/contracts
+      - run: npm audit --prefix tools/contracts --audit-level=high
+
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 15

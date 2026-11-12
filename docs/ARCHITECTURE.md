@@ -130,6 +130,8 @@ sequenceDiagram
 
 ## 9. Dữ liệu và API
 
+T1.4 chốt hợp đồng tại [OpenAPI](contracts/openapi.json), [event schema](contracts/events.schema.json), [DATA_MODEL](DATA_MODEL.md), [ADR 0002](adr/0002-api-domain-contract.md) và [trace](TRACEABILITY.md). Có14 bảng nghiệp vụ; bookings giữ payment_intent_id, payments lưu mỗi result/request mô phỏng. Giới hạn/CORS/timeout ở ADR là yêu cầu triển khai, chưa cấu hình cho endpoint nghiệp vụ trong task này. Outbox replay audit giới hạn3 lần/event; không xóa inbox. Không sửa V1 đã chạy.
+
 Bảng dự kiến: users, events, ticket_types, seats cho ghế định danh, inventory_ga cho vé không ghế, bookings, booking_items, idempotency_keys, payments, payment_compensations, tickets, outbox_events, inbox_events, booking_status_history. Seed mock token bằng cấu hình local/test. Chi tiết PK/FK/check/index ở [DATA_MODEL](DATA_MODEL.md).
 
 - UUID; thời gian UTC/timestamptz; quyết định hết hạn dùng DB clock; tiền VND lưu số nguyên.

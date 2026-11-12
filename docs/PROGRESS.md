@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Môi trường local tối thiểu đã chạy
-- **Tiến độ:** T1.1, T1.2, T1.3 Done; PostgreSQL/health/Flyway nền đã kiểm chứng; chưa có nghiệp vụ
+- **Giai đoạn:** Chốt hợp đồng API/domain trước migration nghiệp vụ
+- **Tiến độ:** T1.1–T1.4 Done; OpenAPI/event/state/ER và quyết định HTTP đã chốt; chưa có nghiệp vụ
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T1.4 — Chốt API/domain v0 (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker cho T1.3. Thay đổi T1.3 mới kiểm chứng local, chưa có CI cho commit mới.
+- **Task tiếp theo:** T2.1 — Schema/migration (Todo, chưa bắt đầu)
+- **Blocker:** Không có blocker T1.4. CI job contracts mới kiểm tra local, chưa chạy trên GitHub cho thay đổi lần này.
 
-- **Task trong TASKS:** 3/45 Done. Có scaffold, health endpoint, PostgreSQL và migration schema nền; chưa có bảng/nghiệp vụ booking.
+- **Task trong TASKS:** 4/45 Done. Có scaffold, health/PostgreSQL/V1 và hợp đồng; chưa có bảng/nghiệp vụ booking.
 
 ## Đã hoàn thành
 
@@ -35,13 +35,34 @@
 
 ## Rủi ro / việc cần xác nhận
 
-- T1.1 đã chốt version, TTL 600s, worker 5s/batch 50, tối đa 6 vé/booking, pool max 10/min idle 2. Đây là cấu hình ban đầu, chưa benchmark; timeout/body limit/CORS tiếp tục chốt ở T1.4.
+- T1.1 đã chốt version, TTL 600s, worker 5s/batch50, max6 vé, pool10/2. T1.4 chốt body/CORS/deadline tại ADR0002; pool acquisition2s thay cho scaffold30s là yêu cầu triển khai, chưa đổi runtime.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
 - Lock order, rollback nhiều ghế, race worker/payment và aggregate version cần được chứng minh bằng integration/concurrency tests.
-- Có scaffold source và test mẫu; chưa có schema cuối, OpenAPI hoàn chỉnh hoặc test nghiệp vụ/integration/concurrency. Test context không chứng minh health/API/DB/Kafka hoạt động.
-- Lock timeout cần cấu hình và đo; phải rollback trước khi trả lỗi, phân biệt chờ idempotency với tranh chấp inventory. Body limit/CORS chốt ở T1.4, không áp giá trị tùy ý.
+- Có scaffold source và test mẫu, ER và OpenAPI đã chốt; chưa có schema nghiệp vụ được migrate hoặc test booking/integration/concurrency. Kiểm tra hợp đồng không chứng minh endpoint nghiệp vụ đã enforce.
+- Lock timeout1500ms đã thử bằng advisory lock; chưa kiểm chứng unique-key/inventory contention thực. Phải rollback trước503 và không suy loại lock từ SQLSTATE. CORS/body/error mapping cần integration test khi triển khai endpoint.
 
 ## Nhật ký
+
+### 2026-11-12 — T1.4: Chốt API/domain v0
+
+- **Đầu vào:** đọc RULES/PROGRESS/PRD/ARCHITECTURE/DATA_MODEL/API_CONTRACT/EVENT_CATALOG, TASKS và TEST_PLAN. Working tree sạch lúc bắt đầu; HEAD 63db4cc2736c20e1aec939df64bbb6099694ef3a. Người dùng xác nhận đã commit/push T1.3 và CI xanh; đây là xác nhận từ người dùng, không phải lần audit CI mới trong T1.4.
+- **Đã chốt:** DATA_MODEL có ER đủ14 bảng, kiểu/nullability/PK/FK tổng hợp, unique/check/index, delete policy và invariant cần domain. Giữ V1, không tạo SQL V2. paymentIntentId nằm trên booking; paymentResultId=payments.id; requestId client=payments.request_id. Replay audit giới hạn3 lần/event trên outbox; không xóa inbox.
+- **Artifact:** docs/contracts/openapi.json (OpenAPI3.1,14 operations, request/response/error/header/role/profile), events.schema.json (JSON Schema2020-12,7 type), booking-transitions.json (6state/5cạnh), examples.json (fixture). ADR0002 chốt HTTP/domain; TRACEABILITY nối PRD/API/event/bảng với task/test. Đồng bộ PRD/ARCHITECTURE/DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN/README tài liệu.
+- **Giới hạn:** body8192 byte booking/payment/replay,131072 byte catalog; UTF-8, identity encoding, reject field lạ, quantity1..6, page0/size20/max100; CORS chỉ hai origin local5173, credentials=false. lock_timeout1500ms/statement5s; connection acquisition2s, attempt5s/tổng10s/request15s là ngân sách ban đầu cần enforce và test khi triển khai. Reserved IDEMPOTENCY_IN_PROGRESS/RATE_LIMITED chưa phát trong baseline. 55P03/57014 rollback→503BOOKING_BUSY+Retry-After1, không quy mọi timeout thành idempotency conflict.
+- **Kiểm tra đã chạy:** npm ci --prefix tools/contracts; npm test --prefix tools/contracts PASS: Swagger Parser13.1.0 xác nhận OpenAPI/$ref,14 operations; AJV8.20.0 + formats3.0.1 kiểm tra28 ca dương/âm,7 event fixture, enum state và5cạnh đối chiếu PRD; kiểm tra role/profile,Location/Retry-After,CORS. Không giả lập auth bằng việc chỉ xem metadata.
+- **Đo request thực:** JSON.stringify UTF-8: GA6=117byte,6ghế=350byte, catalog20type/tổng200ghế/Unicode ở giới hạn field=51839byte. Chọn8192/131072 có headroom; byte limit vẫn ưu tiên nếu client gửi whitespace/escape làm body lớn hơn. Đây là byte của fixture, không phải benchmark HTTP.
+- **Đo DB thực:** tools/contracts/measure-lock.ps1 trên PostgreSQL17.11 demo, hai kết nối advisory lock; SET LOCAL lock_timeout1500ms/statement_timeout5s, trả55P03, ROLLBACK; elapsed1635ms gồm Docker/psql overhead. Script không tạo/sửa bảng nghiệp vụ, không reset dữ liệu. Chưa có số đo khóa ghế/GA hoặc idempotency table vì T2.1 chưa làm.
+- **Tự động hóa:** tools/contracts có package-lock, script verify và đo lock; thêm job contracts vào CI và Dependabot cho tool. npm audit tool=0 vulnerabilities; actionlint1.7.12 exit0; Gitleaks quét tập file tracked/untracked không bị Git ignore, no leaks found; git diff --check đạt. GitHub CI cho thay đổi T1.4 chưa chạy; backend/frontend runtime không thay đổi trong task này.
+- **Còn thiếu ngoài T1.4:** SQL migration/business controllers/auth seed; enforce body/CORS/deadline/error handler; test boundary byte/chunked/preflight/owner và contention thực theo TRACEABILITY. T1.4 đạt acceptance thiết kế và kiểm tra; T2.1 vẫn Todo, chưa thực hiện. Chưa commit/push lần này.
+
+Lệnh kiểm tra lại từ thư mục gốc:
+
+```powershell
+npm.cmd ci --prefix tools/contracts
+npm.cmd test --prefix tools/contracts
+# PostgreSQL demo cần đang chạy cho phép đo sau:
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/contracts/measure-lock.ps1
+```
 
 ### 2026-11-12 — Xác minh CI T1.2 và thực hiện T1.3
 

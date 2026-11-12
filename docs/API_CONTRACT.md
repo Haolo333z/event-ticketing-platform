@@ -1,6 +1,6 @@
 # API_CONTRACT — Hợp đồng HTTP v0.4
 
-> Bản đặc tả trước khi có OpenAPI machine-readable. Khi triển khai, OpenAPI là bản thực thi của hợp đồng này; thay đổi phải cập nhật đồng bộ.
+> T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
 ## Quy tắc chung
 
@@ -70,4 +70,10 @@ Không giảm GA capacity dưới held+sold; không xóa/đổi ghế HELD hoặ
 
 ## Điều kiện chốt
 
-T1.4 chốt shape UUID, phân trang, giới hạn quantity, giới hạn body theo payload thực tế và CORS theo origin local cụ thể nếu frontend khác origin. Trước frontend tuần 3, có OpenAPI khớp các mã lỗi và response; không thêm endpoint giả không có task triển khai.
+T1.4 đã chốt UUID, phân trang page=0/size=20/max100, GA/seat tối đa6. Body booking/simulator/replay 8192 byte, catalog 131072 byte UTF-8; 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, lỗi bất ngờ 500 INTERNAL_ERROR. Admin catalog conflict dùng 409 CATALOG_CONFLICT; replay quá 3 lần/event dùng 409 REPLAY_LIMIT_REACHED. RATE_LIMITED và IDEMPOTENCY_IN_PROGRESS giữ reserved, không phát khi chức năng tương ứng chưa được triển khai. Response vé trả [] nếu chưa CONFIRMED; owner sai trả404, role sai trả403. Request không khai báo field lạ; server không tin userId/role/giá client.
+
+CORS local/test chỉ http://127.0.0.1:5173 và http://localhost:5173, credentials=false; allow/expose headers ghi trong OpenAPI x-local-cors. Chính sách HTTP/giới hạn/deadline trong ADR 0002 là yêu cầu triển khai tiếp theo, chưa được enforce trong backend scaffold.
+
+SET LOCAL lock_timeout=1500ms, statement_timeout=5s; 55P03/57014 rollback rồi503 BOOKING_BUSY + Retry-After:1; client retry cùng key. Không suy loại contention từ SQLSTATE. Chỉ deadlock40P01/serialization40001 retry hữu hạn trong tổng deadline; không tự retry domain409. Connection timeout2s, attempt5s, tổng nghiệp vụ10s/request15s là cấu hình khởi đầu, cần test khi có booking thật.
+
+MVP createEvent nhận catalog lồng ticketTypes/seats; patchEvent chỉ cập nhật type ID hiện có. Không có endpoint xóa/thêm ghế riêng trong contract v0. Thay đổi mở rộng phải cập nhật hợp đồng trước. Tổng ghế/event<=200, type<=20, các cross-field invariant xem DATA_MODEL/ADR. paymentIntentId lấy từ bookings, PaymentResultRecorded.paymentResultId là payments.id, requestId client lưu payments.request_id. DELAY_TIMEOUT ghi result khi DB clock >= expiresAt+1s. Simulator cho phép ghi kết quả sau expiry/cancel/fail để kiểm chứng compensation, không tự confirm lại. HTTP202 không hứa booking sẽ confirmed.

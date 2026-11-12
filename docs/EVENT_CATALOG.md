@@ -17,6 +17,10 @@
 
 Payload chỉ có ID và dữ liệu cần thiết, không đưa token/thẻ/PII. Khi thay schema không tương thích, tăng schemaVersion và có consumer tương thích.
 
+T1.4 chốt schema machine-readable [contracts/events.schema.json](contracts/events.schema.json) (JSON Schema 2020-12), ví dụ đủ7 type trong contracts/examples.json. Chỉ schemaVersion=1, aggregateVersion>=1, UUID/date-time UTC; thuộc tính lạ bị từ chối. aggregateId phải bằng payload.bookingId (kiểm tra domain, JSON Schema không so chéo giá trị). occurredAt và các mốc nghiệp vụ được server/DB ghi. Payload v1: BookingHeld có bookingId/expiresAt; PaymentResultRecorded có bookingId/paymentResultId; BookingConfirmed có bookingId/confirmedAt; BookingPaymentFailed có bookingId/failedAt; BookingCancelled có bookingId/cancelledAt; BookingExpired có bookingId/expiredAt; BookingRefundRequired có bookingId/paymentId/compensationId. Các ID trong event phải thuộc cùng booking.
+
+paymentResultId là payments.id (UUID server), requestId client là payments.request_id; paymentIntentId nằm trên bookings để nhóm các lần mô phỏng. Late success sau CANCELLED/PAYMENT_FAILED tạo compensation và giữ state hiện tại theo PRD, không phát thêm event BookingRefundRequired vì booking không chuyển REFUND_REQUIRED; compensation processor/reconciler đọc nghĩa vụ pending. Audit replay lưu có giới hạn trên outbox, giữ nguyên envelope/eventId, không xóa inbox; xem ADR0002.
+
 | Event | Ghi bởi | Consumer và hiệu ứng |
 |---|---|---|
 | BookingHeld | Booking transaction | Payment simulator/recovery orchestration; không giữ ghế lần hai |
