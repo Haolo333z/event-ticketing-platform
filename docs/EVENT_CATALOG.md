@@ -33,12 +33,12 @@ paymentResultId là payments.id (UUID server), requestId client là payments.req
 | BookingPaymentFailed | Booking processor | Audit/operations; inventory đã được nhả khi commit |
 | BookingCancelled | Booking processor | Audit/operations; inventory đã được nhả khi commit |
 | BookingExpired | Expiry transaction | Audit/operations; không nhả lần hai |
-| BookingRefundRequired | Booking processor | Compensation simulator idempotent, một nghĩa vụ trên mỗi payment, không phát vé |
+| BookingRefundRequired | Booking processor | Audit thông báo; DB recovery worker đọc nghĩa vụ unique(payment_id), không phát vé |
 
 ## Thứ tự và deduplication
 
 - Kafka key là bookingId. Outbox có unique(aggregate_id,aggregate_version); mỗi event của booking (kể cả PaymentResultRecorded) tăng version. Publisher MVP một instance, chọn theo thứ tự version trên mỗi booking, gửi/xác nhận tuần tự trước khi đánh dấu published; không dựa riêng vào SKIP LOCKED hoặc Kafka key để kết luận thứ tự. Nếu cần nhiều publisher, phải thiết kế claim theo aggregate và test thứ tự trước.
-- Inbox PK(consumer_name,event_id); ghi inbox với hiệu ứng nghiệp vụ cùng transaction. Duplicate trả no-op.
+- Inbox PK(consumer,event_id); ghi inbox với hiệu ứng nghiệp vụ cùng transaction. Duplicate trả no-op.
 - Không so sánh aggregateVersion của event với bookings.aggregate_version để bỏ qua tác vụ: DB có thể đã cập nhật sau khi event được commit nhưng trước khi consumer chạy. Payment consumer chỉ xử lý PaymentResultRecorded; nó dedup theo inbox/eventId, đọc payments result bền, khóa booking và áp dụng state machine. Một gap trong chuỗi version *toàn booking* không chứng minh thiếu payment event ở consumer này.
 - Consumer projection/audit chỉ kiểm tra `eventVersion > last_applied_version + 1` khi thực sự tiêu thụ đầy đủ mọi event của booking, dùng version riêng của projection; version cũ/đã xử lý thì no-op. Nếu có gap thật, retry hữu hạn rồi đưa vào recovery/DLQ và dừng áp dụng event vượt gap cho booking đó; không tạo bảng buffer cho MVP. Test riêng duplicate, gap thật và loại event không thuộc subscription.
 - Outbox index pending created_at để polling; retry backoff hữu hạn. Broker tắt: event vẫn pending. Gửi thành công nhưng chưa đánh dấu: có thể gửi lại.
@@ -51,3 +51,11 @@ Expiry/confirm/fail/cancel cùng cập nhật booking, inventory, history và ou
 ## Triển khai theo tuần
 
 Tuần 3 có bảng outbox và BookingHeld nhưng publisher có thể chưa chạy. Tuần 4 expiry ghi BookingExpired. Tuần 5 simulator ghi durable payment result, dùng cùng processor cục bộ để chứng minh state machine. Tuần 6 publisher, Kafka consumer, inbox, retry và recovery thay đường gọi kích hoạt bằng event; xử lý nghiệp vụ tập trung một hàm để không thay contract HTTP.
+
+## T6 — Đường chạy Kafka hiện tại
+
+Chi tiết thay các mô tả lịch sử “chưa Kafka” ở trên: [ADR0007](adr/0007-kafka-and-recovery.md). Producer dùng outbox sau commit, business topic `ticketing.booking.v1` và DLQ `ticketing.booking.dlq.v1`; schema v1 giữ nguyên. Consumer group mặc định `ticketing.payment-v1` và `ticketing.booking-audit-v1`, inbox consumer tương ứng `payment-v1`/`booking-audit-v1`.
+
+Payment chỉ nhận PaymentResultRecorded. Audit nhận đủ 7 type và ghi projection riêng; trùng ID/hash no-op, gap/collision retry3delivery rồi parkDB trướcACK. Không bỏ payment vì version cũ so với booking. Business publisher retry3lần/backoff1/2s rồi FAILED giữ nguyên record; version sau bị chặn cho tới recovery. Consumer retry tại partition250ms, không có retry topic riêng. DLQ notification được gửi từ failureDB sau commit (tối đa3attempt), nên Kafka/DB outage không làm mất raw record.
+
+Replay admin local/test giữ eventId/envelope gốc, tối đa3request/event, không xóa inbox; thiếu version phục hồi theo thứ tự. Refund mô phỏng đọc nghĩa vụ bền, retry3attempt/backoff1/2s, history cùng transaction; FAILED hết ngân sách cần điều tra, không tự tạo payment hay nghĩa vụ mới. Không dùng event BookingConfirmed để phát vé.

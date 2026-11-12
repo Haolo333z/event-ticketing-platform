@@ -1,5 +1,11 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T6 — Kafka/PostgreSQL thật
+
+`infra/test-part7.ps1` chạy15ca KafkaRecoveryTest cộng88ca backend cũ trong DB riêng: migration sạch/rerun, schema/inbox unique/hash, async paymentversion2, duplicate/restart consumer, stop/startbroker, version1→2→3, ACK thành công nhưngDBmarkfail, inbox/businessrollback+đo3delivery bằng sequence ngoài rollback, gap3trước1/2, poisonrecord+đọcKafkaDLQ thật, replay401/403/profile/audit/limit3, paymentđúnghạn khiKafkachưađến, late success/refund12caller concurrent/historyrollback/bounded3failure, duplicate failure/expiry không nhả holdkhác, sessionleader chống publisherthứ2.
+
+`infra/test-part6-ui.ps1 -Kafka`: 50HTTP responseOpenAPI, checkout DOM API thật GA3+seats2/5véunique, failure/cancel/late success/expiry, JVMrestart scheduledresult, compensationCOMPLETED và SQL0oversell/0vésaiowner/0nghĩavụtrùng/V1–V9mộtlần. Frontend26ca; staticcontract49payload. Không coi jsdom là browser visual QA; YAMLlint không chứng minh remote CI xanh. Các mục Phần4–6 dưới đây giữ bằng chứng lịch sử.
+
 > Kế hoạch toàn dự án và kết quả đến Phần6. Payment/ghế/expiry/vé đã có bằng chứng dưới đây;Kafka/inbox/refund worker vẫn là kế hoạch. Kết quả thực tại PROGRESS/evidence/part6-2026-11-12.json. Các gate Phần4/5 giữ số liệu lịch sử của chúng.
 
 ## Nguyên tắc

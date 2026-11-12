@@ -17,7 +17,7 @@ foreach($listenerId in $listeners){
     $expectedCommand=$expectedRuntime.Replace('/','\')
     if(!$listenerProcess -or $listenerProcess.Name -ne 'java.exe' -or !$listenerProcess.CommandLine -or $listenerProcess.CommandLine.Replace('/','\').IndexOf($expectedCommand,[StringComparison]::OrdinalIgnoreCase) -lt 0){throw 'Port8080 belongs to another process; refusing to stop it.'}
 }
-& docker @composeArgs up -d --wait postgres
+& docker @composeArgs up -d --wait postgres kafka
 if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL failed to start.' }
 Push-Location (Join-Path $repoRoot 'backend')
 try {

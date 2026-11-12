@@ -1,5 +1,40 @@
 # DEMO_AND_RECOVERY — Vận hành và trình diễn
 
+## T6 — Quy trình đã triển khai
+
+Các mục sau là kịch bản tổng thể; dashboard/metrics/reset toàn bộ thuộc giai đoạn sau. Lệnh T6 không reset database/volume.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1
+# Terminal khác:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part7.ps1
+```
+
+Outage tự động và đối chiếu PostgreSQL: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1 -Tests KafkaRecoveryTest`. Script thực sự docker stop/start broker test hai lần, giữ broker demo.
+
+Nếu tự thử demo: `docker compose --env-file .env -f infra/docker-compose.yml stop kafka`, tạo booking/payment qua UI, rồi `docker compose --env-file .env -f infra/docker-compose.yml start kafka`. Giữ volume. Publisher tối đa3attempt/backoff1/2s, PENDING rồi FAILED nếu chưa phục hồi; version sau cùng booking chờ. Expiry vẫn xử lý payment bền đúng hạn khi Kafka offline.
+
+Xem outbox/replay bằng fixture token công khai local/test:
+
+```powershell
+$admin=@{Authorization='Bearer demo-admin-token'}
+$page=Invoke-RestMethod 'http://127.0.0.1:8080/api/admin/operations/outbox?page=0&size=100' -Headers $admin
+$page.items | Format-Table eventId,bookingId,aggregateVersion,eventType,status,attempts
+$failed=$page.items | Where-Object status -eq 'FAILED' | Sort-Object bookingId,aggregateVersion | Select-Object -First 1
+if($failed){
+  $body=@{requestId=[Guid]::NewGuid().ToString();reason='Kafka recovered; retry original event'}|ConvertTo-Json
+  Invoke-RestMethod "http://127.0.0.1:8080/api/admin/operations/events/$($failed.eventId)/replay" -Method Post -Headers $admin -ContentType 'application/json' -Body $body
+}
+```
+
+Phân trang khi hơn100event; chọn version thấp nhất chưa publish. Replay tối đa3requestId khác nhau/event; HTTP chưa rõ kết quả dùng lại **cùng body**. API202 là đã ghi audit/requeue, không phải consumer hoàn tất. Giữ event ID/inbox; side effect đã commit sẽ no-op.
+
+Consumer lỗi: đọc message_failures (consumer/topic/partition/offset/event_id/error/status/dlq_attempts) bằng psql. Raw record giữ trong DB, không in vào log công khai. Sửa nguyên nhân rồi replay outbox hợp lệ gốc. Gap audit: xem event_projections.last_applied_version, replay missing version trước rồi lần lượt event cao hơn bị park. RESOLVED chỉ sau handler commit. Poison schema/key không có outbox hợp lệ cần điều tra/cập nhật consumer; API không sửa payload hoặc ép thực thi.
+
+DLQ ticketing.booking.dlq.v1 là thông báo raw/metadata, gửi từ failureDB sau commit, tối đa3attempt. Kafka/DLQ chưa gửi được thì DB vẫn giữ lỗi. Không tự reset counter bằng SQL. Refund FAILED sau3attempt giữ nghĩa vụ/history để điều tra, không tạo nghĩa vụ thay thế; chưa có API ép refund. REFUND_REQUIRED giữ sau COMPLETED; xem payment_compensations và compensation_attempts. Không dùng tiền thật.
+
+Giới hạn: một brokerRF1, chưa chứng minh chịu mất ổ đĩa/volume, cluster nhiều node hoặc chaos dài hạn. Retention Kafka7ngày; T6 không tự xóa outbox/inbox/recovery. Demo token chỉ local/test.
+
 > Runbook dự kiến trước khi có source code. Lệnh chính xác và screenshot bổ sung ở tuần 8–10; không nhận đây là quy trình đã chạy.
 
 ## Chuẩn bị

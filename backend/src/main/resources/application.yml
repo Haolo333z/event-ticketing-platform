@@ -27,3 +27,11 @@ management:
       show-details: never
 expiry:
   enabled: ${EXPIRY_ENABLED:true}
+messaging:
+  enabled: ${MESSAGING_ENABLED:false}
+  scheduling-enabled: true
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+  topic: ${KAFKA_TOPIC:ticketing.booking.v1}
+  dlq-topic: ${KAFKA_DLQ_TOPIC:ticketing.booking.dlq.v1}
+  group-prefix: ${KAFKA_GROUP_PREFIX:ticketing}
+  refund-simulated-failures: ${REFUND_SIMULATED_FAILURES:0}

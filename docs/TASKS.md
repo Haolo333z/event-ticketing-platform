@@ -152,27 +152,27 @@
 
 ## Tuần 6 — Event-driven và phục hồi
 
-- [ ] **T6.1 — Inbox và event contract:** dùng outbox đã có từ T2.5, tạo inbox và chốt producer/consumer/schema version ở EVENT_CATALOG.
+- [x] **T6.1 — Inbox và event contract (Done, 2026-11-13):** V9 inbox unique theo consumer/eventId, strict schema v1/hash; migration sạch/rerun và constraint đạt. [Bằng chứng Phần7](evidence/part7-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Inbox và event contract: dùng outbox đã có từ T2.5, tạo inbox và chốt producer/consumer/schema version ở EVENT_CATALOG.
   - **Phụ thuộc:** T5.5. **Module/file:** messaging/operations; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** schema version và inbox unique eventId; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T6.2 — Publisher Kafka:** retry hữu hạn/backoff, giữ event pending; một publisher MVP gửi/xác nhận tuần tự theo aggregateVersion cho từng booking.
+- [x] **T6.2 — Publisher Kafka (Done, 2026-11-13):** publisher sau commit/ACK theo version/leader;3attempt/backoff, giữFAILED; broker off/on, thứ tự1→2→3, ACK/DB fault và leader test đạt. [Bằng chứng](evidence/part7-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Publisher Kafka: giữ thứ tự theo bookingId kể cả khi có retry; không suy thứ tự từ SKIP LOCKED hoặc timestamp duy nhất.
   - **Phụ thuộc:** T6.1. **Module/file:** messaging/operations; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** broker off/on, outbox pending không mất; test cùng booking có nhiều version và retry publisher không đảo thứ tự hiệu ứng; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T6.3 — Kafka consumer idempotent:** inbox theo consumer/eventId, payment result bền và state machine; projection chỉ kiểm tra gap nếu nhận đủ event toàn booking; event trùng no-op.
+- [x] **T6.3 — Kafka consumer idempotent (Done, 2026-11-13):** processor chung/inbox, audit đủ7type/version riêng; duplicate/restart/gap thật/paymentversion2/BookingConfirmed replay không phát vé đạt. [Bằng chứng](evidence/part7-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Payment consumer gọi cùng PaymentResultProcessor và không so eventVersion với bookings.aggregate_version để bỏ qua tác vụ; projection dùng last_applied_version riêng nếu có.
   - **Phụ thuộc:** T6.2. **Module/file:** messaging/operations; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** MSG-01/02 và TICKET-02: duplicate/gap thật/out-of-order, payment event version >1 vẫn xử lý, replay BookingConfirmed không phát vé; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T6.4 — Failure handling và replay API:** broker restart, timeout, DLQ/recovery, admin replay chỉ local/test và có audit.
+- [x] **T6.4 — Failure handling và replay API (Done, 2026-11-13):** failure bền trướcACK, DLQ saucommit/retry3delivery; replay role/profile/audit/dedup/limit3. PostgreSQL rollback/replay, broker restart và50HTTPcontract đạt. [Bằng chứng](evidence/part7-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Failure handling và replay API: broker restart, timeout, DLQ/recovery, admin replay chỉ local/test và có audit.
   - **Phụ thuộc:** T6.3. **Module/file:** messaging/operations; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** replay có role/profile/audit, bounded retries; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T6.5 — Recovery bù trừ:** refund mô phỏng retry idempotent, có history.
+- [x] **T6.5 — Recovery bù trừ (Done, 2026-11-13):** cùng nghĩa vụ unique(payment_id), history nguyên tử/retry tối đa3;12caller chỉ1completion, rollback/exhaustion/cancel-late và worker restart đạt. Full103backend/26frontend,GA/seat/KafkaUI/Windows smoke đạt. [Bằng chứng](evidence/part7-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Recovery bù trừ: refund mô phỏng retry idempotent, có history.
   - **Phụ thuộc:** T6.4. **Module/file:** messaging/operations; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

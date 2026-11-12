@@ -3,7 +3,29 @@ An event-driven ticketing platform supporting multiple ticket types, concurrency
 
 ## Trạng thái
 
-Phần6 (T5.1–T5.5) đã có thanh toán mô phỏng SUCCESS/FAILURE/DELAY_TIMEOUT, phân xử với expiry, phát vé GA/ghế, cancel và nghĩa vụ bù trừ PENDING. Các luồng giữ vé GA/ghế vẫn được kiểm tra lại. Không dùng tiền thật, Kafka/inbox hoặc refund worker. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [ADR0006](docs/adr/0006-payment-results-and-tickets.md) và [lệnh local](infra/README.md).
+Lệnh kiểm tra Phần7 (Docker Desktop đang chạy, từ thư mục gốc):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1
+npm.cmd test --prefix tools/contracts
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+# HTTP + checkout dùng Kafka thật, DB riêng và restart worker:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka
+# Demo foreground, terminal khác mở frontend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1
+# Terminal khác:
+npm.cmd run dev --prefix frontend
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part7.ps1
+```
+
+Smoke mong đợi: CONFIRMED,2tickets,sold2,payment inbox1,projection version3,outbox PUBLISHED. Script test tự tạo broker/volume và hai database UUID riêng; ngắt **broker test**, giữ dữ liệu demo. Thiếu PG_IT_URL/KAFKA_IT_BOOTSTRAP thì Maven có thể skip integration, không dùng làm nghiệm thu.
+
+Mở http://127.0.0.1:5173, giữ GA hoặc ghế rồi mô phỏng thanh toán. 202 là đã ghi nhận; UI poll API, có thể chờ vài giây trước CONFIRMED/vé. Muộn → REFUND_REQUIRED,0vé; worker hoàn tiền mô phỏng cập nhật nghĩa vụ COMPLETED, booking giữ nguyên để theo dõi. API sự kiện: http://127.0.0.1:8080/api/events.
+
+Local bật messaging mặc định, test tắt trừ ca Kafka. Broker bind127.0.0.1:9092, có volume; outbox từ Phần6 cũng được gửi theo version. Giữ volume khi thử outage. Broker tắt lâu có thể hết3attempt → FAILED giữ record, cần replay có audit; xem [runbook T6](docs/DEMO_AND_RECOVERY.md#t6--quy-trình-đã-triển-khai).
+
+Phần7 thêm Kafka publisher sau commit, consumer inbox idempotent, retry/DLQ/replay admin và refund mô phỏng có history. Giữ luồng GA/ghế/payment/expiry và phát vé trong PostgreSQL. Không dùng tiền thật. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [ADR0007](docs/adr/0007-kafka-and-recovery.md) và [lệnh local](infra/README.md).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
@@ -31,7 +53,7 @@ Frontend ở http://127.0.0.1:5173 (`npm.cmd run dev --prefix frontend` nếu ch
 
 - **Mô phỏng thành công**: GET booking →CONFIRMED; vé hiển thị mã EF-UUID, GA ordinal hoặc nhãn ghế do server trả.3vé GA là3ticket riêng;2ghế có2ticket ordinal1, đúng seatId/seatLabel.
 - **Mô phỏng thất bại**: PAYMENT_FAILED,không vé,inventory trả lại.
-- **Mô phỏng kết quả đến muộn**: ghi SCHEDULED ngay; sau expiresAt+1s scheduler ghi SUCCESS. UI tiếp tục poll sau EXPIRED để thấy REFUND_REQUIRED; không có vé. Nghĩa vụ bù trừ được lưu PENDING, chưa có refund worker của T6.
+- **Mô phỏng kết quả đến muộn**: ghi SCHEDULED ngay; sau expiresAt+1s scheduler ghi SUCCESS. UI tiếp tục poll sau EXPIRED để thấy REFUND_REQUIRED; không có vé. Worker T6 hoàn tiền mô phỏng trên cùng nghĩa vụ, booking giữ REFUND_REQUIRED để theo dõi.
 - **Hủy giữ chỗ**: CANCELLED nếu còn pending/chưa có success hợp lệ; repeat cancel không release lần hai. Nếu payment đã thắng, cancel409 và UI cập nhật CONFIRMED/vé thật.
 
 Nếu payment bị network/503/500, dùng **Thử lại thanh toán cùng yêu cầu**; requestId/scenario/bookingId lưu sessionStorage qua reload, không tự tạo attempt khác. Không xóa storage khi chưa rõ kết quả.202 chỉ xác nhận đã nhận mô phỏng; booking/vé luôn lấy từ GET API.

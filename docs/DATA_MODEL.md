@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Đến hết Phần6 đã có V1–V8/13bảng, thêm tickets/payment_compensations vào11bảng Phần5. Payments có correlation_id để giữ trace cho delayed result. Inbox thuộc T6, chưa migrate. PRD là nguồn nghiệp vụ, ARCHITECTURE là nguồn transaction boundary.
+> Đến hết Phần6 đã có V1–V8/13bảng, thêm tickets/payment_compensations vào11bảng Phần5. Payments có correlation_id để giữ trace cho delayed result. V9 bổ sung inbox/audit/recovery và lịch sử refund (ADR0007). PRD là nguồn nghiệp vụ, ARCHITECTURE là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -52,7 +52,7 @@ erDiagram
 | tickets | id, booking_id, booking_item_id, ticket_ordinal, code | FK booking/booking_item; check ticket_ordinal >= 1; unique(booking_item_id,ticket_ordinal); unique(code) |
 | payment_compensations | id, booking_id, payment_id, status, reason, created_at, processed_at | FK booking/payment; unique(payment_id); status PENDING/COMPLETED/FAILED; retry cùng nghĩa vụ |
 | outbox_events | id, aggregate_id, aggregate_version, type, schema_version, payload, status, created_at, published_at | unique(aggregate_id,aggregate_version); index pending created_at |
-| inbox_events | consumer_name, event_id, processed_at | PK(consumer_name,event_id) |
+| inbox_events | consumer, event_id, aggregate_id, aggregate_version, envelope_hash, processed_at | PK(consumer,event_id) |
 | booking_status_history | id, booking_id, from_status, to_status, occurred_at, cause_event_id | index(booking_id,occurred_at,id) |
 
 Schema cụ thể cần migration và thử trên PostgreSQL. Không gắn FK đến booking trước khi booking row tồn tại: sinh UUID và insert booking PENDING_PAYMENT trước khi cập nhật seats. Trong một transaction, nếu giữ thất bại thì rollback cả booking, idempotency, inventory và outbox. Không dùng DEFERRABLE FK nếu cách insert này đã đủ.
@@ -84,7 +84,7 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 ## Migration và seed
 
-V1 schema, V2 catalog/booking nền, V3 payments/outbox, V4 check JSON bookingId, V5 idempotency/history, V6 initial history, V7 composite seat owner FK. V8 tickets/compensations/correlation payment; inbox thuộc T6. Seed persona/sự kiện nằm ngoài migration, chỉ local/test. Migration đã chạy không sửa lại.
+V1 schema, V2 catalog/booking nền, V3 payments/outbox, V4 check JSON bookingId, V5 idempotency/history, V6 initial history, V7 composite seat owner FK. V8 tickets/compensations/correlation payment; V9 inbox/projection/recovery/refund history. Seed persona/sự kiện nằm ngoài migration, chỉ local/test. Migration đã chạy không sửa lại.
 
 V5 cho booking_id/response_status/response_body NULL trong transaction đang reserve key. Deferred constraint trigger kiểm tra row cuối tại COMMIT: bắt buộc booking và response202/PENDING_PAYMENT với bookingId khớp. Vì vậy không có row STARTED hoặc response chưa hoàn chỉnh được commit. Hash GA chuẩn hóa UUID lowercase và quantity nguyên (2 và 2.0 cùng nội dung), giữ tương thích Phần4. Hash SEATED có prefix và danh sách UUID sắp thứ tự, đảo thứ tự ghế replay cùng key. V7 bổ sung FK seats(held_by_booking_id,event_id,ticket_type_id)→bookings(id,event_id,ticket_type_id), bảo vệ owner cùng event/type. Xem ADR0004/0005. Không có unique seat_id xuyên lịch sử vì ghế có thể đặt lại sau expiry.
 
@@ -112,7 +112,7 @@ MVP không xóa idempotency key/outbox/inbox trong 10 tuần để replay an to�
 | tickets | booking_id FK bookings, booking_item_id UUID; FK(booking_item_id,booking_id) → booking_items(id,booking_id); ticket_ordinal integer 1..6, code varchar(128), created_at; UNIQUE(item,ordinal), UNIQUE(code). Ordinal<=item.quantity và chỉ CONFIRMED enforce domain trong transaction confirm |
 | payment_compensations | booking_id UUID FK bookings, payment_id UUID UNIQUE; FK(payment_id,booking_id) → payments(id,booking_id); status PENDING/COMPLETED/FAILED, reason varchar(500), created_at, processed_at NULL; attempt_count integer >=0. Chỉ result SUCCESS tạo nghĩa vụ; retry cùng row |
 | outbox_events | id UUID=eventId; aggregate_id FK bookings, aggregate_version bigint>=1, type enum 7 event, schema_version integer=1, payload jsonb, correlation_id UUID, created_at=occurredAt, status PENDING/PUBLISHED/FAILED, published_at NULL, attempts integer>=0, next_attempt_at NULL, last_error varchar(500) NULL. UNIQUE(aggregate_id,aggregate_version). replay_requests jsonb array tối đa3 audit entries; mỗi entry có requestId,adminAccountId,reason,requestedAt; append dưới row lock, domain dedup requestId |
-| inbox_events | PK(consumer_name varchar(100),event_id UUID); processed_at. event_id liên kết logic tới outbox.id, **không FK** vì message có thể được nhận độc lập/retention khác; domain/business commit cùng inbox |
+| inbox_events | PK(consumer varchar(100),event_id UUID); aggregate_id/version, envelope_hash, processed_at. event_id liên kết logic tới outbox.id, **không FK** vì retention độc lập; domain/business commit cùng inbox |
 | booking_status_history | id UUID, booking_id FK bookings, from_status NULL hoặc enum 6 state, to_status enum 6 state, occurred_at, cause_event_id UUID NULL (logical reference, không FK); initial NULL→PENDING_PAYMENT; transitions khác đúng PRD §5, không thêm transition REFUND_REQUIRED→CONFIRMED |
 
 Quan hệ outbox→inbox và cause_event_id trên ER là quan hệ logic, không yêu cầu SQL FK. Không tạo bảng projection/buffer chưa có use case. Bảng booking history giữ hai bước EXPIRED và REFUND_REQUIRED nếu late result xử lý cùng transaction. Khi success sau CANCELLED/PAYMENT_FAILED, giữ nguyên state và tạo compensation, không tự chuyển REFUND_REQUIRED (chỉ EXPIRED có cạnh đó).
@@ -120,3 +120,15 @@ Quan hệ outbox→inbox và cause_event_id trên ER là quan hệ logic, không
 Index chốt: index mọi FK chưa được bao phủ bởi prefix PK/unique (account/event/type/booking/payment/item); bookings(status,expires_at,id) partial WHERE status='PENDING_PAYMENT'; bookings(account_id,created_at DESC,id DESC); seats(event_id,ticket_type_id,status,id), seats(hold_expires_at) partial HELD; outbox(status,next_attempt_at,created_at,id) partial PENDING/FAILED; payments(booking_id,recorded_at), payments(result_due_at,id) partial SCHEDULED; history(booking_id,occurred_at,id). Không tạo unique inbox(event_id) toàn cục vì mỗi consumer có dedup riêng.
 
 Schema không thể tự bảo đảm tổng item, số vé theo quantity, mode inventory hay transition cross-table. Các invariant này cần domain transaction và test GA/SEAT/EXP/PAY/TICKET/COMP trong TEST_PLAN. Toàn bộ event và HTTP ID mapping chốt tại [ADR 0002](adr/0002-api-domain-contract.md).
+
+## V9 — T6 inbox và recovery
+
+V1–V8 giữ nguyên. V9 chuẩn hóa next_attempt_at của outbox cũ (NULL → created_at) và default DB clock cho event mới; thêm 5 bảng, tổng 18 bảng nghiệp vụ:
+
+- inbox_events: PK(consumer,event_id), hash SHA256 envelope, aggregate/version và thời điểm commit; không FK outbox để retention độc lập.
+- event_projections: PK aggregate_id, last_applied_version của consumer audit nhận đủ 7 type.
+- projection_events: PK(aggregate_id,aggregate_version), event_id unique; audit chỉ áp dụng version liên tiếp, không có side effect vé/inventory.
+- message_failures: unique(consumer,topic,partition_id,record_offset), raw record/key, attempts=3, DEAD/RESOLVED, event_id nullable cho poison record và trạng thái gửi DLQ hữu hạn.
+- compensation_attempts: FK compensation, PK(compensation_id,attempt), outcome FAILED/COMPLETED. payment_compensations thêm next_attempt_at; attempt_count tối đa3 do worker kiểm soát, unique(payment_id) vẫn bảo vệ một nghĩa vụ.
+
+Không có buffer bỏ gap hoặc FK inbox→outbox. Recovery/audit dùng thực tế bởi consumer và replay T6; không phải bảng dự phòng. Xem ADR0007.

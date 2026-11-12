@@ -1,5 +1,17 @@
 # Hạ tầng local
 
+## T6 — Kafka và test cô lập
+
+Local: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1`; frontend `npm.cmd run dev --prefix frontend`, http://127.0.0.1:5173. Giữ `.env` hiện có; local bật messaging mặc định, bootstrap127.0.0.1:9092. Đổi cổng cần đổi đồng bộ KAFKA_PORT/bootstrap.
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1`: toàn backend với PostgreSQL/Kafka thật; hai DB và broker/volume UUID riêng. `-Tests KafkaRecoveryTest` chỉ gate Kafka. Không stop broker demo.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka`: HTTP OpenAPI, checkout GA/ghế/vé, expiry/late success, restart JVM và refund worker; DB/topic/group riêng, không ngắt broker demo.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part7.ps1`: tạo fixture local, GA2, chờ consumer confirm, replay notification hai lần cùng request, đối chiếu PostgreSQL.
+
+Log suite: backend/target/surefire-reports; evidence: backend/target/part7-kafka-evidence.json. UI giữ startup/restart log trong TEMP tên ticketing_payment_ui_UUID, dọn JVM/DB/copyJAR do script tạo. [Runbook recovery](../docs/DEMO_AND_RECOVERY.md#t6--quy-trình-đã-triển-khai).
+
+Các mục Phần3–6 dưới đây là hướng dẫn và bằng chứng lịch sử; T6 thay ghi chú “chưa Kafka/inbox/refund worker”.
+
 PostgreSQL17.11 chạy Compose,backend JDK25 trên host. Phần6 có V1–V8,GA/ghế/expiry và payment simulator/processor/cancel/tickets/compensationPENDING. Chưa có Kafka/inbox/refund worker; ghi chú ở từng mục Phần4/5 là lịch sử của các phần đó.
 
 Từ thư mục gốc trên Windows:

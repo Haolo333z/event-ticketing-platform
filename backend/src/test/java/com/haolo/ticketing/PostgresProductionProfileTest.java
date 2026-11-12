@@ -12,7 +12,7 @@ import org.springframework.context.ApplicationContext;
 import com.haolo.ticketing.identity.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"spring.datasource.url=${PG_IT_URL}","expiry.enabled=false"})
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"spring.datasource.url=${PG_IT_URL}","expiry.enabled=false","messaging.enabled=false"})
 @ActiveProfiles("prod") @EnabledIfEnvironmentVariable(named="PG_IT_URL",matches=".+")
 class PostgresProductionProfileTest {
     @LocalServerPort int port;

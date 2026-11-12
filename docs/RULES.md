@@ -55,6 +55,7 @@
 - Tiền dùng BigDecimal hoặc số nguyên VND, không dùng float/double.
 - Lưu UTC; quyết định expiry dùng DB time.
 - Transaction ngắn; không gọi mạng ngoài khi giữ khóa.
+- Ngoại lệ điều phối publisher T6: session advisory lock riêng (ADR0007), ngoài transaction nghiệp vụ; không giữ khóa booking/inventory khi gọi Kafka.
 - Tách DTO khỏi entity; dùng unique/FK/check constraint cho bất biến DB.
 - Event gồm eventId, eventType, occurredAt, aggregateId, aggregateVersion, correlationId, schemaVersion và payload tối thiểu.
 - Cấu hình môi trường rõ ràng, dependency/version có chủ đích.

@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
     "spring.datasource.password=",
     "spring.flyway.enabled=false",
     "demo.seed.enabled=false",
-    "expiry.enabled=false",
+    "expiry.enabled=false","messaging.enabled=false",
     "demo.auth.enabled=false"
 })
 class TicketingApplicationTest {

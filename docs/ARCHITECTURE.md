@@ -21,7 +21,7 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
-Đến Phần6 có catalog/admin/auth demo,bookingGA/SEATED,expiry,payment simulator/shared processor,cancel,ticket/compensation vàUI thật. V1–V8 có13bảng/11API. Chưa có Kafka/inbox/refund worker. Triển khai/test tại ADR0003–0006 và PROGRESS.
+Đến Phần6 có catalog/admin/auth demo,bookingGA/SEATED,expiry,payment simulator/shared processor,cancel,ticket/compensation vàUI thật. T6 bổ sung V9:18bảng/13API; Kafka/inbox/audit/recovery/refund worker theo ADR0007. Triển khai/test tại ADR0003–0006 và PROGRESS.
 
 BookingTransactions quản lý ranh giới transaction/retry chung cho command và expiry; controller chỉ chuyển HTTP. CatalogBookingAccess khóa SHARE event/type theo thứ tự admin; GaInventory conditional update hoặc SeatInventory khóa từng UUID rồi giữ tất cả/rollback. Item/history/BookingHeld/key/response cùng commit trước202. ExpiryService mỗi booking một transaction, kiểm tra state/due/payment trước InventoryRelease/history/BookingExpired. Isolation command/expiry READ COMMITTED; GET booking/mine REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key giữ qua network/503/reload.
 
@@ -163,3 +163,9 @@ Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện í
 
 
 Event producer/consumer và failure policy: [EVENT_CATALOG](EVENT_CATALOG.md). Test và recovery: [TEST_PLAN](TEST_PLAN.md), [DEMO_AND_RECOVERY](DEMO_AND_RECOVERY.md).
+
+## T6 — Ranh giới Kafka và PostgreSQL
+
+[ADR0007](adr/0007-kafka-and-recovery.md) chốt publisher session-leader và gửi/ACK ngoài transaction nghiệp vụ, inbox+business commit trước offset, hai group payment/audit, retry tại partition, durable failure trước ACK rồi DLQ sau commit. `MESSAGING_ENABLED=true` local mặc định: simulator trả202 sau ghi result/outbox, consumer xử lý bất đồng bộ. Expiry vẫn đọc ledger bền dưới booking lock. Khi Kafka offline có thể chờ consumer hoặc expiry; không suy HTTP202 là đã có vé.
+
+RefundRecoveryService chỉ local/test, không gọi mạng/tiền thật; pending/failed nghĩa vụ được khóa và attempt/history/status commit nguyên tử, tối đa3lần. No-op khi COMPLETED. Audit projection không phát vé hoặc điều khiển inventory.

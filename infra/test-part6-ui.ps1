@@ -1,8 +1,13 @@
+param([switch]$Kafka)
 . "$PSScriptRoot/local-env.ps1"
 $jar=Join-Path $repoRoot 'backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar'
 if(!(Test-Path -LiteralPath $jar)){throw 'Run infra/test-part6.ps1 first'}
 & docker @composeArgs up -d --wait postgres
 if($LASTEXITCODE -ne 0){throw 'PostgreSQL unavailable'}
+if($Kafka){
+    & docker @composeArgs up -d --wait kafka
+    if($LASTEXITCODE -ne 0){throw 'Kafka unavailable'}
+}
 $name='ticketing_payment_ui_'+[Guid]::NewGuid().ToString('N')
 & docker @composeArgs exec -T postgres createdb -U $env:POSTGRES_USER $name
 if($LASTEXITCODE -ne 0){throw 'Cannot create isolated test database'}
@@ -13,7 +18,7 @@ Copy-Item -LiteralPath $jar -Destination $runtime
 $process=$null
 $env:API_BASE_URL="http://127.0.0.1:$port"
 function Start-TestBackend([string]$suffix){
-    Start-Process java -ArgumentList @('-Duser.timezone=UTC','-Xmx512m','-jar',$runtime,"--spring.datasource.url=jdbc:postgresql://127.0.0.1:$($env:DB_PORT)/$name",'--spring.profiles.active=test',"--server.port=$port",'--expiry.enabled=true','--BOOKING_HOLD_TTL_SECONDS=4','--EXPIRY_INTERVAL_SECONDS=1') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $env:TEMP ($name+$suffix+'.log')) -RedirectStandardError (Join-Path $env:TEMP ($name+$suffix+'.err'))
+    Start-Process java -ArgumentList @('-Duser.timezone=UTC','-Xmx512m','-jar',$runtime,"--spring.datasource.url=jdbc:postgresql://127.0.0.1:$($env:DB_PORT)/$name",'--spring.profiles.active=test',"--server.port=$port",'--expiry.enabled=true','--BOOKING_HOLD_TTL_SECONDS=4','--EXPIRY_INTERVAL_SECONDS=1',"--messaging.enabled=$($Kafka.IsPresent.ToString().ToLowerInvariant())","--messaging.topic=$name.booking.v1","--messaging.dlq-topic=$name.booking.dlq.v1","--messaging.group-prefix=$name") -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $env:TEMP ($name+$suffix+'.log')) -RedirectStandardError (Join-Path $env:TEMP ($name+$suffix+'.err'))
 }
 function Wait-TestBackend($taskProcess){
     for($i=0;$i -lt 100;$i++){
@@ -49,6 +54,17 @@ try {
         Start-Sleep -Milliseconds 200
     }
     if($current.status -ne 'REFUND_REQUIRED'){throw 'Scheduled payment did not recover after restart'}
+    if($Kafka){
+        $complete=$false
+        for($i=0;$i -lt 100;$i++){
+            $query="SELECT count(*) FROM ticketing.payment_compensations WHERE booking_id='$($booking.bookingId)' AND status='COMPLETED';"
+            $result=$query|& docker @composeArgs exec -T postgres psql -U $env:POSTGRES_USER -d $name -At -v ON_ERROR_STOP=1
+            if(($result -join '').Trim() -eq '1'){$complete=$true;break}
+            Start-Sleep -Milliseconds 100
+        }
+        if(!$complete){throw 'Kafka-enabled refund worker did not complete the existing obligation'}
+        Write-Output 'PASS Kafka scheduler: payment through event path, durable restart and simulated compensation COMPLETED.'
+    }
     $replay=Invoke-RestMethod "$env:API_BASE_URL/api/bookings/$($booking.bookingId)/simulate-payment" -Method Post -Headers $headers -ContentType 'application/json' -Body $payment
     if($replay.paymentIntentId -ne $accepted.paymentIntentId){throw 'Delayed replay changed intent'}
     $ticketResponse=Invoke-WebRequest -UseBasicParsing "$env:API_BASE_URL/api/bookings/$($booking.bookingId)/tickets" -Headers $headers
@@ -62,11 +78,11 @@ SELECT count(*) FROM ticketing.tickets t JOIN ticketing.booking_items i ON i.id=
 SELECT count(*) FROM ticketing.inventory_ga WHERE held_count<0 OR sold_count<0 OR held_count+sold_count>capacity;
 SELECT count(*) FROM ticketing.seats s JOIN ticketing.bookings b ON b.id=s.held_by_booking_id WHERE s.status='SOLD' AND b.status<>'CONFIRMED';
 SELECT count(*) FROM (SELECT payment_id FROM ticketing.payment_compensations GROUP BY payment_id HAVING count(*)>1) d;
-SELECT count(*) FROM public.flyway_schema_history WHERE success AND version IN ('1','2','3','4','5','6','7','8');
+SELECT count(*) FROM public.flyway_schema_history WHERE success AND version IN ('1','2','3','4','5','6','7','8','9');
 '@
     $actual=$sql|& docker @composeArgs exec -T postgres psql -U $env:POSTGRES_USER -d $name -At -v ON_ERROR_STOP=1
-    if($LASTEXITCODE -ne 0 -or ($actual -join ',') -ne '0,0,0,0,0,8'){throw "Invariant checks failed: $($actual -join ',')"}
-    Write-Output 'PASS SQL:0tickets on invalid states,0wrong ordinals/booking,0oversell,0wrong SOLD owner,0duplicate compensation;V1-V8.'
+    if($LASTEXITCODE -ne 0 -or ($actual -join ',') -ne '0,0,0,0,0,9'){throw "Invariant checks failed: $($actual -join ',')"}
+    Write-Output 'PASS SQL:0tickets on invalid states,0wrong ordinals/booking,0oversell,0wrong SOLD owner,0duplicate compensation;V1-V9.'
 } finally {
     if($process -and !$process.HasExited){Stop-Process -Id $process.Id;$process.WaitForExit()}
     Remove-Item Env:API_BASE_URL -ErrorAction SilentlyContinue

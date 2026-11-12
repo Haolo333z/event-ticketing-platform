@@ -47,6 +47,9 @@ check(eventSchema,{...fixtures.events[0],aggregateVersion:0},false);
 check(eventSchema,{...fixtures.events[0],eventType:'Unknown'},false);
 check(eventSchema,{...fixtures.events[0],token:'forbidden'},false);
 check(eventSchema,{...fixtures.events[0],payload:{bookingId:'bad'}},false);
+check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'Broker restored'},true);
+for(const value of [{requestId:'bad',reason:'test'},{requestId:fixtures.bookingGa.eventId,reason:''},{requestId:fixtures.bookingGa.eventId,reason:'x'.repeat(501)},{requestId:fixtures.bookingGa.eventId,reason:'test',force:true}])check(api.components.schemas.ReplayRequest,value,false);
+for(const path of ['/api/admin/operations/outbox','/api/admin/operations/events/{eventId}/replay'])for(const op of Object.values(api.paths[path]))assert.equal(op['x-implemented'],true);
 const ids = new Set(); let operations=0;
 for (const [path,item] of Object.entries(api.paths)) for (const [method,op] of Object.entries(item)) {
   assert(!ids.has(op.operationId)); ids.add(op.operationId); operations++;

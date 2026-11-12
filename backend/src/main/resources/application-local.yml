@@ -1,3 +1,5 @@
+messaging:
+  enabled: ${MESSAGING_ENABLED:true}
 demo:
   auth:
     enabled: true

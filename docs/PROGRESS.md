@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần6 — Thanh toán mô phỏng, state machine và vé đã hoàn thành
-- **Tiến độ:** T1.1–T5.5 Done; GA/ghế/expiry/payment/cancel/ticket/compensation vàUI kiểm chứng PostgreSQL thật
+- **Giai đoạn:** Phần7 — Kafka và phục hồi đã hoàn thành, đối chiếu ngày 2026-11-13
+- **Tiến độ:** T1.1–T6.5 Done; Kafka/PostgreSQL thật, GA/ghế/payment/expiry, inbox/replay và refund mô phỏng đã kiểm chứng
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T6.1 — Inbox/event contract (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker chức năng Phần6. Chưa browser visual QA/remote CI/benchmark hoặc một số fault mạng; chưa commit/push. Không triển khai Kafka/inbox/refund worker thuộc phần sau.
+- **Task tiếp theo:** T7.1 (chưa bắt đầu, ngoài phạm vi yêu cầu này)
+- **Blocker:** Không còn blocker T6. Chưa remote CI cho thay đổi này, browser visual QA, cluster nhiều broker/mất đĩa hoặc chaos dài hạn. Không commit/push.
 
-- **Task trong TASKS:** 24/45 Done.13bảng/V1–V8,11API,UI GA/ghế/checkout/vé;worker payment/expiry. Chưa Kafka/inbox/refund worker.
+- **Task trong TASKS:** 29/45 Done.18bảng/V1–V9,13API đã triển khai; Kafka publisher/2consumer, recovery/DLQ/replay và refund worker. Các mục Phần3–6 dưới đây giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -268,3 +268,33 @@ Sau khi review và commit, chạy `git push` để kích hoạt CI; kiểm tra t
     - Lỗi/blocker còn lại:
     - Quyết định/tài liệu cần cập nhật:
     - Bước tiếp theo:
+## 2026-11-13 — Phần7: T6.1–T6.5 Done
+
+Tiếp tục từ HEAD5942ed0 và các thay đổi hiện có, không làm lại Phần6. Đã đọc RULES/TASKS/PROGRESS/ARCHITECTURE/DATA_MODEL/EVENT_CATALOG/API_CONTRACT/TEST_PLAN, ADR payment/expiry/replay và kiểm tra source/migration/outbox. Quyết định trước code tại [ADR0007](adr/0007-kafka-and-recovery.md). Suite chạy đêm12/11, đối chiếu hoàn tất13/11: [bằng chứng Phần7](evidence/part7-2026-11-13.json).
+
+| Task | Kết quả và file chính | Kiểm chứng thực tế |
+|---|---|---|
+| T6.1 | V9: inbox PK(consumer,event_id), hash envelope, audit/recovery/refund history; EventCodec giữ schema v1 | Schema/thuộc tính lạ/key sai bị chặn; unique và ID khác nội dung bị chặn; migration sạch/rerun đạt |
+| T6.2 | OutboxPublisher gửi sau commit, ACK version thấp nhất; session leader ngoài transaction nghiệp vụ;3attempt/backoff1/2s rồi FAILED giữ record | Broker stop/start thật hai ca; version1→2→3; version sau không vượt lỗi; ACK rồi DBmarkfail gửi lại cùngID; publisher thứ2 bị chặn bởi leader |
+| T6.3 | EventConsumer payment dùng PaymentResultProcessor chung; audit nhận đủ7type/version riêng; inbox+business cùngTX | Paymentversion2;10duplicate/restartconsumer không tăng vé/history; gap3trước1/2 park rồi phục hồi; replay BookingConfirmed không phát vé; duplicate failure/expiry không nhả hold khác |
+| T6.4 | FailureStore lưu raw/metadata trước ACK; DLQ gửi sau commit; OperationsController/ReplayService chỉ admin local/test, audit và tối đa3request/event | Ticketfault:3delivery đo bằng PGsequence, inbox/ticket/state/outbox rollback; sửa lỗi+replay phục hồi. Poisonrecord giữDB/đọcKafkaDLQ thật. 401/403/profile/validation/audit/dedup/limit3 đạt |
+| T6.5 | RefundRecoveryService khóa cùng nghĩa vụ unique(payment_id); attempt/history/status cùngTX, tối đa3attempt; không tiền thật | 12caller chỉ1completion; fail/retry có2history; rollback không lưu nửa chừng; hết3attempt giữFAILED. Success sauCANCELLED vẫn phục hồi; REFUND_REQUIRED không phát vé/nhận lại inventory |
+
+### Lệnh đã chạy và kết quả
+
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1`: **103/103**,0failure/error/skip (15Kafka +87PostgreSQL cũ +1H2). Hai DB và broker/volume UUID được dọn, giữ demo. Log: backend/target/part7-final.log. Launcher local sau đó chạy contextH2 và ghi lại surefire; JSON đã giữ số liệu full suite trước bước này, không lấy số skip launcher làm nghiệm thu.
+- **PASS** `npm.cmd test --prefix frontend`: **26/26**; `npm.cmd run build --prefix frontend`: TypeScript/Vite đạt.
+- **PASS** `npm.cmd test --prefix tools/contracts`: OpenAPI3.1,14operation,**49payload**;13operation đã triển khai, admin bookings T7 chưa làm.
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka`: **50HTTP response** đúng OpenAPI; DOM/API/Kafka/PostgreSQL thật: GA3+ghế2 phát5vé unique; duplicate giữ kết quả, failure/cancel nhả, late success0vé; restart JVM phục hồi scheduledpayment/refundCOMPLETED; SQL0oversell/0vé sai trạng thái/0compensation trùng; V1–V9 mỗi bản một lần, restart không migrate lại.
+- **PASS** `infra/test-part4-ui.ps1`: GA quantity2/tổng140000/replay/conflict409/history/CORS204; held3/sold0/capacity3. **PASS** `infra/test-part5-ui.ps1`: A1+A2/replay/clash/expiry/rebook/GAreturncapacity2; SQL0orphan/oversell/duplicateexpiry và restart không migrate lại.
+- **PASS** `infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1`: chỉ thay JVM runtime đúng workspace, giữ DB/.env/volume; DBdemo V8→V9 đúng một lần, health200/UP. **PASS** `infra/verify-part7.ps1`: booking415c2884-00c7-4198-896a-e8c4874dd1fa,CONFIRMED,2vé,sold2,paymentinbox1,projection3,audit1 cho2requestreplay giống nhau,0outbox chưa publish.
+- Snapshot DBdemo sau smoke: **71PUBLISHED**, auditinbox71/paymentinbox15, **5compensationCOMPLETED**,0GAoversell,0vé trên booking chưaCONFIRMED; V1..V9 đều count1. Đây là snapshot phiên kiểm tra, không là số bất biến cho lần sau.
+- **PASS** actionlint CI; npm audit frontend/contracts0vulnerability; Gitleaks candidate tree không lộ secret. **FAIL ban đầu** OSV6advisory ở2codec Kafka; đã pin patch lz4-java1.11.4/snappy-java1.1.10.9 theoADR0007 và chạy lại full103/Kafka/live. **PASS cuối** OSV77component không báo vấn đề. Chưa scan image broker/OS riêng.
+
+### Lỗi đã sửa và giới hạn
+
+Đã sửa healthcheck Kafka khi cổng host khác9092 (dùng listener nội bộ29092); điền next_attempt_at cho outbox cũ; query test dùng held_count/sold_count và fixture deadline hợp check; script Windows bỏ bọc mảng lồng Invoke-RestMethod (DB đã phát đúng2vé). Không xóa migration/test để làm xanh. V1–V8 không đổi; V9 là migration duy nhất mới.
+
+CI thêm broker/database riêng, evidence và checkout Kafka; **chưa chạy GitHub Actions của thay đổi chưa commit/push**. Browser dùng jsdom/HTTP, chưa visual QA thật. RF1/singlepublisher là MVP; chưa chứng minh mất volume, cluster nhiều node, network partition dài hạn hoặc crash đúng mọi cửa sổ COMMIT. Retry/DLQ/refund hết ngân sách giữ record để điều tra, không tự reset hoặc ép side effect; chưa có API force refund. T6 không tự purge inbox/outbox/recovery. T7 trở đi chưa làm.
+
+README/infra README/runbook có lệnh Windows và recovery theo version. Không commit/push; người dùng xem diff và tự quyết định.

@@ -47,7 +47,7 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
       ['SUCCESS','Mô phỏng thành công'],['FAILURE','Mô phỏng thất bại'],['DELAY_TIMEOUT','Mô phỏng kết quả đến muộn']
     ] as const).map(([scenario,label])=>h('button',{key:scenario,type:'button',disabled:busy||!!pending||!canSimulate,onClick:()=>void pay(scenario)},label)),
       booking.status==='PENDING_PAYMENT'&&h('button',{type:'button',className:'quiet',disabled:busy||!!pending,onClick:()=>void cancel()},'Hủy giữ chỗ')),
-    booking.status==='REFUND_REQUIRED'&&h('p',{className:'alert pending'},'Kết quả thành công đến sau khi mất quyền giữ chỗ. Không phát vé; đã ghi nghĩa vụ bù trừ mô phỏng, chưa xử lý hoàn tiền.'),
+    booking.status==='REFUND_REQUIRED'&&h('p',{className:'alert pending'},'Kết quả thành công đến sau khi mất quyền giữ chỗ. Không phát vé; nghĩa vụ bù trừ được worker hoàn tiền mô phỏng xử lý. Trạng thái này được giữ để theo dõi; không có giao dịch tiền thật.'),
     h('section',{'aria-label':'Vé của booking',className:'tickets'},h('h3',null,'Vé của booking'),
       booking.status!=='CONFIRMED'?h('p',null,'Chưa có vé. Chỉ booking CONFIRMED được phát vé.'):h('div',null,
         h('button',{type:'button',className:'quiet',disabled:busy,onClick:()=>void refresh().catch(value=>setError(value instanceof ApiError?value:new ApiError('NETWORK_ERROR','Chưa tải được vé')))},'Tải lại vé'),

@@ -18,11 +18,12 @@ public class PaymentSimulatorService {
     private final PaymentResultProcessor processor;
     private final OutboxWriter outbox;
     private final DemoSettings settings;
+    @org.springframework.beans.factory.annotation.Value("${messaging.enabled:false}") private boolean messaging;
     public PaymentSimulatorService(JdbcTemplate jdbc,BookingTransactions transactions,BookingLifecycle lifecycle,PaymentResultProcessor processor,OutboxWriter outbox,DemoSettings settings){this.jdbc=jdbc;this.transactions=transactions;this.lifecycle=lifecycle;this.processor=processor;this.outbox=outbox;this.settings=settings;}
     public Accepted simulate(DemoPrincipal principal,UUID booking,SimulationInput input,UUID correlation){
         long deadline=transactions.newDeadline();
         var receipt=recordUntil(principal,booking,input,correlation,deadline);
-        if(!receipt.scheduled())processor.processUntil(booking,receipt.paymentId(),deadline);
+        if(!receipt.scheduled()&&!messaging)processor.processUntil(booking,receipt.paymentId(),deadline);
         return new Accepted(receipt.paymentIntentId(),"ACCEPTED");
     }
     /** Record first; expiry and recovery can process this durable row even if the adapter fails next. */

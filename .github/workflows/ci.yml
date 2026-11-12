@@ -28,7 +28,7 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17.11
@@ -54,9 +54,28 @@ jobs:
           java-version: '25.0.5+8'
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - name: Isolated Kafka and database for recovery tests
+        shell: bash
+        run: |
+          docker exec ${{ job.services.postgres.id }} createdb -U ticketing ticketing_kafka_ci
+          KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-ci up -d --wait kafka
+          echo 'KAFKA_IT_BOOTSTRAP=127.0.0.1:19092' >> "$GITHUB_ENV"
+          echo 'KAFKA_IT_PG_URL=jdbc:postgresql://127.0.0.1:5432/ticketing_kafka_ci' >> "$GITHUB_ENV"
+          echo 'KAFKA_IT_CONTAINER=ticketing-kafka-it-ci-kafka-1' >> "$GITHUB_ENV"
+          echo 'KAFKA_IT_TOPIC=ticketing-kafka-it-ci.booking.v1' >> "$GITHUB_ENV"
       - name: Build, test and generate dependency SBOM
         working-directory: backend
         run: sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-evidence
+          path: |
+            backend/target/surefire-reports/
+            backend/target/part7-kafka-evidence.json
+      - name: Remove only isolated Kafka resources
+        if: always()
+        run: KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-ci down --volumes
       - uses: actions/setup-node@v5
         with:
           node-version: '26.13.0'
@@ -103,9 +122,10 @@ jobs:
         shell: bash
         run: |
           docker exec ${{ job.services.postgres.id }} createdb -U ticketing ticketing_payment_ci
-          java -jar backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ticketing_payment_ci --spring.profiles.active=test --server.port=8082 --expiry.enabled=true --BOOKING_HOLD_TTL_SECONDS=4 --EXPIRY_INTERVAL_SECONDS=1 > /tmp/ticketing-payment.log 2>&1 &
+          KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-ui up -d --wait kafka
+          java -jar backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ticketing_payment_ci --spring.profiles.active=test --server.port=8082 --expiry.enabled=true --BOOKING_HOLD_TTL_SECONDS=4 --EXPIRY_INTERVAL_SECONDS=1 --messaging.enabled=true --messaging.bootstrap-servers=127.0.0.1:19092 --messaging.topic=ticketing.ui.booking.v1 --messaging.dlq-topic=ticketing.ui.booking.dlq.v1 --messaging.group-prefix=ticketing-ui-ci > /tmp/ticketing-payment.log 2>&1 &
           backend_pid=$!
-          trap 'kill "$backend_pid"' EXIT
+          trap 'kill "$backend_pid"; KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-ui down --volumes' EXIT
           ready=false
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:8082/api/events | grep -q '20000000-0000-4000-8000-000000000002'; then

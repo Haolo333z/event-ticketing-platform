@@ -1,0 +1,212 @@
+{
+  "stage": "T6.1-T6.5",
+  "baseCommit": "5942ed0e09866b8e06850d9c071f89278de6cb61",
+  "backend": {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1",
+    "suites": [
+      {
+        "name": "com.haolo.ticketing.KafkaRecoveryTest",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "48.975"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresAdminTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "3.542"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresBookingTest",
+        "tests": "16",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "5.198"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresCatalogTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.115"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresOutboxTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.518"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresPaymentTest",
+        "tests": "30",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "7.087"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.477"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSchemaTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.163"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "7.903"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeedTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.024"
+      },
+      {
+        "name": "com.haolo.ticketing.TicketingApplicationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.219"
+      }
+    ],
+    "tests": 103,
+    "failures": 0
+  },
+  "kafkaCases": [
+    {
+      "case": "T6.1 schema/inbox",
+      "result": "PASS"
+    },
+    {
+      "tickets": 3,
+      "case": "Kafka payment v2, 10 duplicates, consumer restart, 5 confirmed replays",
+      "confirmTransitions": 1
+    },
+    {
+      "case": "real broker stop/start",
+      "tickets": 2,
+      "retained": true,
+      "versions": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "result": "PASS",
+      "tickets": 2,
+      "case": "consumer rollback + 3 deliveries + admin replay"
+    },
+    {
+      "ticketsAfter": 2,
+      "case": "version 3 before 1/2, gap parked and replayed",
+      "ticketsBefore": 2
+    },
+    {
+      "case": "COMP-01: late payment, failure/retry, 12 concurrent refund calls",
+      "attempts": 2,
+      "heldPlusSold": 0,
+      "tickets": 0,
+      "completions": 1,
+      "obligations": 1
+    },
+    {
+      "case": "bounded refund failure",
+      "result": "FAILED retained for investigation",
+      "attempts": 3,
+      "obligations": 1
+    }
+  ],
+  "security": {
+    "initialOSV": "FAIL: 6 advisories on lz4-java1.11.2/snappy-java1.1.10.7",
+    "patch": "lz4-java1.11.4/snappy-java1.1.10.9",
+    "finalOSV": "PASS:77 components,no issues found",
+    "gitleaks": "PASS: candidate tree, no leaks",
+    "npmAuditFrontend": "PASS:0 vulnerabilities",
+    "npmAuditContracts": "PASS:0 vulnerabilities",
+    "actionlint": "PASS",
+    "imageScan": "not performed"
+  },
+  "remoteCI": "not run; no commit or push",
+  "browserVisual": "not verified; jsdom with real HTTP used",
+  "testRunDate": "2026-11-12",
+  "finalizedDate": "2026-11-13",
+  "frontend": {
+    "unitTests": 26,
+    "failures": 0,
+    "build": "PASS: TypeScript and Vite",
+    "liveGA": "PASS: held3/sold0/capacity3; replay,409,history,CORS204",
+    "liveSeats": "PASS: A1+A2,expiry/rebook,GA capacity2,restart",
+    "liveKafkaCheckout": "PASS: GA3+seats2 produce5unique tickets; duplicate unchanged,failure,cancel,late0tickets,refundCOMPLETED,restart"
+  },
+  "contracts": {
+    "staticPayloadCases": 49,
+    "operations": 14,
+    "implemented": 13,
+    "liveResponses": 50,
+    "result": "PASS"
+  },
+  "windowsSmoke": {
+    "result": "PASS",
+    "bookingId": "415c2884-00c7-4198-896a-e8c4874dd1fa",
+    "state": "CONFIRMED",
+    "tickets": 2,
+    "sold": 2,
+    "paymentInbox": 1,
+    "projectionVersion": 3,
+    "replayRequestsSent": 2,
+    "replayAuditEntries": 1,
+    "unpublishedOutbox": 0
+  },
+  "demoSnapshot": {
+    "migrations": {
+      "1": 1,
+      "2": 1,
+      "3": 1,
+      "4": 1,
+      "5": 1,
+      "6": 1,
+      "7": 1,
+      "8": 1,
+      "9": 1
+    },
+    "publishedOutbox": 71,
+    "auditInbox": 71,
+    "paymentInbox": 15,
+    "completedCompensations": 5,
+    "gaOversellRows": 0,
+    "ticketsOnUnconfirmedBooking": 0
+  },
+  "limitations": [
+    "No remote CI for uncommitted changes",
+    "No browser visual QA; DOM/jsdom and real HTTP tested",
+    "One Kafka broker RF1, no disk-loss or multi-broker chaos validation",
+    "No real payment/refund provider",
+    "Exhausted refund/DLQ attempts retained for investigation; no forced side effects",
+    "No automatic retention cleanup for outbox/inbox/recovery"
+  ]
+}

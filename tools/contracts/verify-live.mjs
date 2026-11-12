@@ -50,16 +50,35 @@ assert.deepEqual(await check(paymentPath,'PaymentAccepted',202,{method:'POST',he
 await check(paymentPath,'Error',409,{method:'POST',headers:auth,body:JSON.stringify({...simulation,scenario:'FAILURE'})});
 await check(paymentPath,'Error',400,{method:'POST',headers:auth,body:JSON.stringify({...simulation,recordedAt:'2020-01-01T00:00:00Z'})});
 await check(paymentPath,'Error',403,{method:'POST',headers:admin,body:JSON.stringify(simulation)});
-const confirmed=await check('/api/bookings/'+seatBooking.bookingId,'Booking',200,{headers:auth});assert.equal(confirmed.status,'CONFIRMED');
+async function waitState(id,expected){
+    const deadline=Date.now()+20000;let body;
+    do{const response=await fetch(base+'/api/bookings/'+id,{headers:auth});assert.equal(response.status,200);body=await response.json();if(body.status===expected)break;await new Promise(resolve=>setTimeout(resolve,100));}while(Date.now()<deadline);
+    assert.equal(body.status,expected);return check('/api/bookings/'+id,'Booking',200,{headers:auth});
+}
+await waitState(seatBooking.bookingId,'CONFIRMED');
 const ticketSchema=api.paths['/api/bookings/{id}/tickets'].get.responses['200'].content['application/json'].schema;
 const issued=await check('/api/bookings/'+seatBooking.bookingId+'/tickets',ticketSchema,200,{headers:auth});assert.equal(issued.length,2);assert.equal(new Set(issued.map(t=>t.code)).size,2);assert(issued.every(t=>t.seatId&&t.seatLabel));
 await check('/api/bookings/'+seatBooking.bookingId+'/cancel','Error',409,{method:'POST',headers:auth});
 const gaCreated=await fetch(base+'/api/admin/events',{method:'POST',headers:admin,body:JSON.stringify({title:'Contract payment '+crypto.randomUUID(),description:'Payment contract fixture',venue:'Local',saleStartAt:'2020-01-01T00:00:00Z',saleEndAt:'2099-01-01T00:00:00Z',startsAt:'2099-01-02T00:00:00Z',status:'PUBLISHED',ticketTypes:[{name:'GA',mode:'GA',priceVnd:100000,capacity:6}]})});assert.equal(gaCreated.status,201);const gaEvent=await gaCreated.json();
 async function holdGa(){return check('/api/bookings','BookingAccepted',202,{method:'POST',headers:{...auth,'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify({eventId:gaEvent.id,ticketTypeId:gaEvent.ticketTypes[0].id,quantity:2})});}
 const failed=await holdGa();await check('/api/bookings/'+failed.bookingId+'/simulate-payment','PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify({scenario:'FAILURE',requestId:crypto.randomUUID()})});
-assert.equal((await check('/api/bookings/'+failed.bookingId,'Booking',200,{headers:auth})).status,'PAYMENT_FAILED');assert.equal((await check('/api/bookings/'+failed.bookingId+'/tickets',ticketSchema,200,{headers:auth})).length,0);
+await waitState(failed.bookingId,'PAYMENT_FAILED');assert.equal((await check('/api/bookings/'+failed.bookingId+'/tickets',ticketSchema,200,{headers:auth})).length,0);
 const cancellable=await holdGa();assert.equal((await check('/api/bookings/'+cancellable.bookingId+'/cancel','Booking',200,{method:'POST',headers:auth})).status,'CANCELLED');
 await check('/api/bookings/'+cancellable.bookingId+'/cancel','Booking',200,{method:'POST',headers:auth});
 await check('/api/bookings/'+cancellable.bookingId+'/cancel','Error',400,{method:'POST',headers:auth,body:'{}'});
 const delayed=await holdGa();await check('/api/bookings/'+delayed.bookingId+'/simulate-payment','PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify({scenario:'DELAY_TIMEOUT',requestId:crypto.randomUUID()})});
+const operations=await check('/api/admin/operations/outbox?size=100','OutboxPage',200,{headers:admin});
+await check('/api/admin/operations/outbox','Error',401);
+await check('/api/admin/operations/outbox','Error',403,{headers:auth});
+await check('/api/admin/operations/outbox?size=101','Error',400,{headers:admin});
+const original=operations.items.find(e=>e.bookingId===seatBooking.bookingId&&e.eventType==='BookingConfirmed');assert(original);
+const replayPath='/api/admin/operations/events/'+original.eventId+'/replay';
+const replayRequest={requestId:crypto.randomUUID(),reason:'Live contract replay notification'};
+const replayOptions={method:'POST',headers:admin,body:JSON.stringify(replayRequest)};
+const replayAccepted=await check(replayPath,'ReplayAccepted',202,replayOptions);
+assert.deepEqual(await check(replayPath,'ReplayAccepted',202,replayOptions),replayAccepted);
+await check(replayPath,'Error',409,{...replayOptions,body:JSON.stringify({...replayRequest,reason:'Different reason'})});
+await check(replayPath,'Error',403,{...replayOptions,headers:auth});
+await check(replayPath,'Error',400,{...replayOptions,body:'{}'});
+assert.deepEqual(await check('/api/bookings/'+seatBooking.bookingId+'/tickets',ticketSchema,200,{headers:auth}),issued);
 console.log(`PASS: ${checks} live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).`);

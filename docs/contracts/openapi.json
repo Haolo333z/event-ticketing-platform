@@ -1527,7 +1527,7 @@
       "get": {
         "operationId": "listOutbox",
         "summary": "listOutbox",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "T6 implemented; PostgreSQL audit and bounded replay. ",
         "tags": [
           "Admin"
         ],
@@ -1640,14 +1640,14 @@
           "local",
           "test"
         ],
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/admin/operations/events/{eventId}/replay": {
       "post": {
         "operationId": "replayEvent",
         "summary": "replayEvent",
-        "description": "Contract v0; implementation follows TASKS.  One event/request; requestId dedup, max 3 replay attempts per event, sequential, audit stored on outbox. Preserve original eventId; inbox dedup applies. Not a force re-execution of committed business effects.",
+        "description": "T6 implemented; PostgreSQL audit and bounded replay.  One event/request; requestId dedup, max 3 replay attempts per event, sequential, audit stored on outbox. Preserve original eventId; inbox dedup applies. Not a force re-execution of committed business effects.",
         "tags": [
           "Admin"
         ],
@@ -1822,7 +1822,7 @@
           "local",
           "test"
         ],
-        "x-implemented": false
+        "x-implemented": true
       }
     }
   },
