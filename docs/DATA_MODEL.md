@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Bản thiết kế v0.4; SQL migration chưa được triển khai. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
+> Bản thiết kế v0.4; T1.3 đã triển khai V1 tạo schema nền ticketing, chưa tạo bảng nghiệp vụ. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -72,7 +72,7 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 ## Migration và seed
 
-Migration phải thêm outbox schema và event envelope trước booking tuần 3. Gợi ý: V1 catalog/users; V2 inventory/booking/idempotency/outbox/payments; V3 tickets/payment_compensations/inbox; số thứ tự cuối chốt sau T1.4. Seed persona và sự kiện ở local/test riêng, không cho admin token hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
+Migration phải thêm outbox schema và event envelope trước booking tuần 3. V1 đã tạo schema ticketing ở T1.3; Flyway history cố định ở public. Catalog/users và các bảng nghiệp vụ bắt đầu từ V2 trở đi; số thứ tự cuối chốt sau T1.4. Seed persona và sự kiện ở local/test riêng, không cho admin token hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
 
 ## Dữ liệu giữ lại
 

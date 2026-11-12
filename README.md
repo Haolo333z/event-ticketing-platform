@@ -3,7 +3,13 @@ An event-driven ticketing platform supporting multiple ticket types, concurrency
 
 ## Trạng thái
 
-Khung dự án T1.2: backend Spring Boot và frontend React có build/test mẫu. Chưa có nghiệp vụ booking, REST API, health endpoint, PostgreSQL, Kafka hoặc migration chạy được. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md) và [ADR stack](docs/adr/0001-stack-and-local-environment.md).
+T1.2 đã đạt CI; T1.3 có PostgreSQL, backend health endpoint và Flyway migration nền. Chưa có nghiệp vụ booking hoặc Kafka. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [ADR stack](docs/adr/0001-stack-and-local-environment.md) và [lệnh chạy local](infra/README.md).
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
+# Terminal khác:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1
+```
 
 ## Yêu cầu
 
@@ -16,7 +22,7 @@ Khung dự án T1.2: backend Spring Boot và frontend React có build/test mẫu
 ```text
 backend/   Spring Boot, Maven Wrapper, module packages, test context
 frontend/  React + TypeScript + Vite, test render bằng Node test runner
-infra/     hướng dẫn và vị trí dành cho Compose về sau
+infra/     Compose PostgreSQL và script chạy/kiểm tra local
 docs/      thiết kế, ADR, task, tiến độ hiện có
 .github/   CI build/test, secret/dependency scan, Dependabot
 ```
@@ -39,7 +45,7 @@ Trên Linux/macOS, dùng `sh ./mvnw` và `npm`. Test backend hiện kiểm tra S
 
 ## Cấu hình và CI
 
-Sao chép `.env.example` thành `.env` khi cần cấu hình local và tự đặt mật khẩu DB. `.env` bị Git bỏ qua; hiện scaffold chưa tự nạp các biến này. Không đưa secret vào biến `VITE_*` vì các biến đó có thể xuất hiện trong bundle trình duyệt.
+Script local tự tạo `.env` với mật khẩu ngẫu nhiên nếu chưa có và nạp các biến cho Compose/backend. Nếu sao chép `.env.example` thủ công, phải đặt POSTGRES_PASSWORD trước khi chạy. `.env` bị Git bỏ qua. Không đưa secret vào biến `VITE_*` vì các biến đó có thể xuất hiện trong bundle trình duyệt.
 
 CI chạy khi push, pull request hoặc gọi thủ công: backend verify và CycloneDX SBOM; frontend `npm ci`, test, build và npm audit (fail từ mức high); OSV scan dependency backend từ SBOM; Gitleaks quét cả lịch sử Git và file hiện tại. Findings hoặc lỗi scanner làm job fail. Dependabot kiểm tra Maven/npm/Actions mỗi tuần. Các scanner cần kết nối dịch vụ advisory; báo cáo local chưa thay cho GitHub Actions run.
 
