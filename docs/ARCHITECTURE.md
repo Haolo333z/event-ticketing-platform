@@ -21,9 +21,9 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
-Phần3 đã hiện thực catalog read/admin, seed và identity mock local/test, error/CORS/body policy, cùng outbox writer nền. Phần4 thêm booking GA, idempotency, owner/history và UI dùng API thật. Migration V1–V6 có11bảng. Chưa có giữ ghế, expiry worker, payment processing hoặc Kafka. Triển khai và test tại [ADR0003](adr/0003-catalog-implementation.md), [ADR0004](adr/0004-ga-booking.md) và PROGRESS.
+Đến hết Phần5 đã có catalog/admin/auth demo, booking GA/SEATED, owner/history, UI API thật và expiry worker. Migration V1–V7 có11bảng; V7 siết owner ghế cùng event/type. Chưa có payment processing hoặc Kafka. Triển khai/test tại ADR0003/0004/[ADR0005](adr/0005-seats-and-expiry.md) và PROGRESS.
 
-BookingCommandService quản lý transaction/retry; controller chỉ chuyển HTTP. CatalogBookingAccess là hợp đồng nội bộ đọc/khóa catalog trong transaction bắt buộc, GaInventory giữ bộ đếm có điều kiện, OutboxWriter ghi BookingHeld. Luồng GA: reserve key → FOR SHARE event/type theo thứ tự admin → booking → conditional GA update → item/history/outbox/response → COMMIT →202. Transaction dùng READ COMMITTED; GET booking/mine dùng snapshot REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key đang gửi được giữ trong sessionStorage khi mất kết nối/503.
+BookingTransactions quản lý ranh giới transaction/retry chung cho command và expiry; controller chỉ chuyển HTTP. CatalogBookingAccess khóa SHARE event/type theo thứ tự admin; GaInventory conditional update hoặc SeatInventory khóa từng UUID rồi giữ tất cả/rollback. Item/history/BookingHeld/key/response cùng commit trước202. ExpiryService mỗi booking một transaction, kiểm tra state/due/payment trước InventoryRelease/history/BookingExpired. Isolation command/expiry READ COMMITTED; GET booking/mine REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key giữ qua network/503/reload.
 
 - Identity & Access: principal demo/seed, role CUSTOMER/ADMIN.
 - Event Catalog: sự kiện, mở bán, địa điểm, khu vực/giá.
@@ -77,6 +77,8 @@ Nếu Expiry Worker chưa commit việc nhả, API có thể trả 409 HOLD_EXPI
 ## 6. Expiry Worker và nhận lại inventory
 
 Expiry Worker tách biệt với lệnh tạo booking:
+
+Phần5 triển khai theo [ADR0005](adr/0005-seats-and-expiry.md): mỗi booking REQUIRES_NEW, lock booking SKIP LOCKED/recheck DB clock; khóa từng ghế tăng dần UUID hoặc GA trước release; state/history/outbox cùng commit. Scheduler5s/batch50; test profile tắt scheduler để gọi worker trực tiếp. Cho đến T5.2, result terminal đã recorded làm worker defer và giữ inventory; không thực hiện payment processing trước task. Quy tắc xử lý payment trong danh sách dưới là đích T5.
 
 1. Chọn batch booking PENDING_PAYMENT đến hạn theo đồng hồ PostgreSQL; worker song song dùng khóa/skip-locked phù hợp.
 2. Khóa booking, kiểm tra lại trạng thái, expires_at và payment result đã commit. Nếu có success với payments.recorded_at <= expires_at, dùng PaymentResultProcessor để confirm; không nhả.

@@ -19,7 +19,9 @@ check(create, fixtures.bookingGa, true);
 check(create, fixtures.bookingSeats, true);
 const activeRequest=api.paths['/api/bookings'].post.requestBody.content['application/json'].schema;
 check(activeRequest,fixtures.bookingGa,true);
-check(activeRequest,fixtures.bookingSeats,false);
+check(activeRequest,fixtures.bookingSeats,true);
+check(activeRequest,{...fixtures.bookingSeats,quantity:1},false);
+check(activeRequest,{...fixtures.bookingSeats,seatIds:[fixtures.bookingSeats.seatIds[0],fixtures.bookingSeats.seatIds[0]]},false);
 for (const value of [
   {...fixtures.bookingGa,quantity:0}, {...fixtures.bookingGa,quantity:7},
   {...fixtures.bookingGa,quantity:1.5}, {...fixtures.bookingGa,userId:fixtures.bookingGa.eventId},

@@ -1,10 +1,10 @@
 # Tài liệu đồ án đặt vé sự kiện
 
-Bản v0.4 là thiết kế mục tiêu, được cập nhật theo triển khai đến hết Phần4 (T3.5). Đã có PostgreSQL/Flyway11bảng,8API catalog/admin/booking GA và UI dùng API thật. Chưa có giữ ghế, expiry worker, thanh toán hoặc Kafka. Đọc [PROGRESS](PROGRESS.md) trước khi mở task; [README gốc](../README.md) có lệnh chạy/thử API.
+Bản v0.4 là thiết kế mục tiêu, được cập nhật đến hết Phần5 (T4.5). Đã có PostgreSQL/Flyway11bảng/V1–V7,8API catalog/admin/booking GA/SEATED, UI API thật và worker expiry. Chưa có thanh toán, phát vé hoặc Kafka. Đọc [PROGRESS](PROGRESS.md) trước khi mở task; [README gốc](../README.md) có lệnh chạy/thử API.
 
 ## Thứ tự đọc
 
-Hợp đồng T1.4: [OpenAPI 3.1](contracts/openapi.json), [event JSON Schema](contracts/events.schema.json), [state transitions](contracts/booking-transitions.json), [ADR 0002](adr/0002-api-domain-contract.md) và [bảng đối chiếu](TRACEABILITY.md). Kiểm tra lại bằng `npm ci --prefix tools/contracts` rồi `npm test --prefix tools/contracts` từ thư mục gốc. OpenAPI có x-implemented phân biệt8operation đã chạy với6operation tương lai; POST hiện chỉ nhận GA. [ADR0004](adr/0004-ga-booking.md) giải thích quyết định booking; [bằng chứng Phần4](evidence/part4-2026-11-12.json) lưu kết quả thật.
+Hợp đồng T1.4: [OpenAPI 3.1](contracts/openapi.json), [event JSON Schema](contracts/events.schema.json), [state transitions](contracts/booking-transitions.json), [ADR0002](adr/0002-api-domain-contract.md) và [bảng đối chiếu](TRACEABILITY.md). Kiểm tra bằng `npm ci --prefix tools/contracts` rồi `npm test --prefix tools/contracts`. x-implemented phân biệt8operation đã chạy với6operation tương lai; POST nhận GA hoặc SEATED theo oneOf. [ADR0005](adr/0005-seats-and-expiry.md) chốt worker/khóa ghế/ranh giới payment; [bằng chứng Phần5](evidence/part5-2026-11-12.json) lưu kết quả thật.
 
 1. [PRD](PRD.md): phạm vi, nghiệp vụ, acceptance.
 2. [ARCHITECTURE](ARCHITECTURE.md): ranh giới module, transaction, outbox/recovery.

@@ -1,0 +1,157 @@
+{
+  "date": "2026-11-12",
+  "baseHead": "cf6852568cc9a4da427ea7874fb9921c284f0d52",
+  "scope": "Uncommitted Part 5, T4.1-T4.5",
+  "environment": {
+    "os": "Windows",
+    "cpu": "Intel i5-11400H,6core/12logical",
+    "ramBytes": 16948453376,
+    "jdk": "Temurin25.0.5",
+    "postgres": "17.11",
+    "poolMax": 10,
+    "poolMinIdle": 2,
+    "poolAcquisitionMs": 2000,
+    "lockMs": 1500,
+    "statementMs": 5000,
+    "attemptMs": 5000,
+    "totalBudgetMs": 10000
+  },
+  "backend": {
+    "tests": 58,
+    "postgresTests": 57,
+    "h2Tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "lastFullBuildFinishedUtc": "2026-11-12T14:30:13Z",
+    "newSeatExpiryTests": 23,
+    "forcedSchedulerEnvironment": "EXPIRY_ENABLED=true; test properties force false; scheduler bean absent"
+  },
+  "frontend": {
+    "tests": 16,
+    "failures": 0,
+    "build": "passed"
+  },
+  "contracts": {
+    "operations": 14,
+    "implementedOperations": 8,
+    "staticCases": 32,
+    "liveHttpResponses": 22
+  },
+  "concurrency": [
+    {
+      "commands": 50,
+      "bookings": 1,
+      "customers": 2,
+      "scenario": "SEAT-01",
+      "success": 1,
+      "heldSeats": 2,
+      "conflict": 49
+    },
+    {
+      "scenario": "EXP-01",
+      "history": 2,
+      "workers": 20,
+      "expiredTransitions": 1,
+      "heldSeats": 0,
+      "outbox": 2
+    },
+    {
+      "scenario": "SEAT-IDEM",
+      "distinctIds": 1,
+      "distinctBodies": 1,
+      "heldSeats": 2,
+      "outbox": 1,
+      "commands": 20
+    },
+    {
+      "bookings": 1,
+      "scenario": "SEAT-01-HTTP",
+      "http202": 1,
+      "requests": 50,
+      "heldSeats": 1,
+      "http409": 49
+    },
+    {
+      "bookings": 1,
+      "customers": 2,
+      "scenario": "SEAT-partial-overlap",
+      "success": 1,
+      "heldSeats": 2,
+      "outbox": 1,
+      "conflict": 1
+    },
+    {
+      "deadlocks": 1,
+      "committed": 2,
+      "scenario": "real-40P01",
+      "attempts": 3,
+      "transactions": 2
+    }
+  ],
+  "expiry": {
+    "defaultHoldSeconds": 600,
+    "defaultIntervalSeconds": 5,
+    "batchLimit": 50,
+    "batch51Passes": [
+      50,
+      1,
+      0
+    ],
+    "timelyDurablePayment": "DEFERRED_PAYMENT; inventory preserved; T5 processor not implemented",
+    "repeatedDeadlockSqlStateMaxAttempts": 3,
+    "workerCommitGate": "new booking waits until release commits; old worker never releases new owner"
+  },
+  "liveUi": {
+    "runtime": "React jsdom + real HTTP/PostgreSQL",
+    "holdSeconds": 4,
+    "intervalSeconds": 1,
+    "seatLabels": [
+      "A1",
+      "A2"
+    ],
+    "serverTotalVnd": 400000,
+    "replay": "same response and booking",
+    "competingHttp": 409,
+    "scheduledExpiry": true,
+    "availableAfterExpiry": true,
+    "rebookNewId": true,
+    "secondExpiry": true,
+    "gaQuantity": 2,
+    "gaAvailableAfterExpiry": 2,
+    "sqlViolations": {
+      "orphanHold": 0,
+      "expiredSeatOwner": 0,
+      "gaOversell": 0,
+      "duplicateBookingExpired": 0
+    },
+    "restartSameDb": "healthUP; No migration necessary",
+    "gaPart4LiveRegression": "passed"
+  },
+  "windowsSmoke": {
+    "script": "infra/verify-part5.ps1 -WaitSeconds 45",
+    "holdSeconds": 20,
+    "intervalSeconds": 1,
+    "oldBookingId": "b949fc10-e49c-4a81-a58d-8be99c299700",
+    "rebookId": "f4a4b816-7109-4e34-a69f-4244cf1854af",
+    "result": "202,replay,EXPIREDonce,AVAILABLE,replay-old-key,new-booking;passed"
+  },
+  "limitations": [
+    "No native browser visual QA or screenshots",
+    "No new GitHub Actions run before commit/push",
+    "No latency/p95/TPS benchmark",
+    "No pool exhaustion, independent statement cancellation or lost connection at COMMIT fault injection",
+    "Payment processor/tickets/compensation/Kafka remain future tasks"
+  ],
+  "scans": {
+    "gitleaksCandidateFiles": 137,
+    "gitleaksHistoryCommits": 7,
+    "gitleaks": "no leaks found",
+    "npmAuditFrontend": 0,
+    "npmAuditContracts": 0,
+    "osvPackages": 69,
+    "osv": "No issues found",
+    "actionlint": "exit0",
+    "gitDiffCheck": "exit0"
+  }
+}

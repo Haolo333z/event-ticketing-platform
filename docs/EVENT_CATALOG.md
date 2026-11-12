@@ -2,7 +2,7 @@
 
 > PostgreSQL là nguồn sự thật. Outbox ghi cùng transaction nghiệp vụ; Kafka phân phối ít nhất một lần. Event mô tả sự kiện đã commit, không tự quyết định quyền sở hữu ghế.
 
-T2.5 đã có OutboxWriter bắt buộc transaction, version kiểm tra với booking row, envelope v1 và index pending. Phần4 đã có producer BookingHeld thật: mỗi booking GA thành công ghi một outbox aggregateVersion=1 cùng transaction với booking/item/GA/key/history. Lỗi sau append rollback toàn bộ; test gửi lặp chỉ có một outbox. Catalog create/patch không phát booking event giả. Publisher/consumer Kafka và producer payment/expiry vẫn thuộc task sau; outbox hiện ở PENDING, chưa được gửi broker.
+T2.5 có OutboxWriter bắt buộc transaction, envelope v1/index pending. Đến hết Phần5, booking GA/SEATED ghi BookingHeld aggregateVersion=1 cùng booking/item/inventory/key/history; worker expiry tăng version và ghi BookingExpired cùng release/state/history. expiredAt lấy DB clock và khớp booking/history; cause_event_id tham chiếu logic event đã ghi. Worker lặp không tạo thêm event hoặc release. Fault sau append rollback cả expiry và inventory. Không đổi schemaVersion hoặc payload; outbox vẫn PENDING, chưa có Kafka publisher/consumer hoặc payment producer. Catalog không phát event booking giả.
 
 ## Envelope
 

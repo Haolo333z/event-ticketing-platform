@@ -1,6 +1,6 @@
 # Hạ tầng local
 
-PostgreSQL17.11 chạy bằng Compose, backend bằng JDK25 trên host. Đến hết Phần4 có V1–V6, catalog/auth/admin, booking GA/idempotency/history và outbox BookingHeld. Chưa có expiry worker/payment/Kafka.
+PostgreSQL17.11 chạy Compose, backend JDK25 trên host. Đến hết Phần5 có V1–V7, booking GA/SEATED/idempotency/history và expiry worker/BookingExpired. Chưa có payment/Kafka.
 
 Từ thư mục gốc trên Windows:
 
@@ -9,6 +9,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
 ```
 
 Script tạo `.env` nếu chưa tồn tại với mật khẩu ngẫu nhiên, không ghi mật khẩu ra console; giữ file đã có. Nó nạp các dòng KEY=value vào môi trường process, đợi PostgreSQL healthy, build/test backend rồi chạy JVM foreground với timezone UTC. `ExecutionPolicy Bypass` chỉ áp dụng process được gọi, không đổi policy hệ thống. Ctrl+C dừng backend. Nếu backend đang chạy từ lần trước, dừng nó trước để tránh chiếm cổng 8080.
+
+Có thể dùng `-RestartExisting` để thay đúng JVM runtime của workspace khi cổng8080 bận; app khác bị từ chối. Build thành công trước khi thay JVM, không stop theo tên Java chung. `-HoldSeconds 20 -ExpiryIntervalSeconds 1` cho demo nhanh, chỉ override process sau khi đọc `.env`, không ghi lại file. Nếu không truyền, dùng TTL600s/interval5s mặc định hoặc cấu hình `.env`. Launcher chạy context test H2 khi thiếuPG_IT_URL; nghiệm thu đầy đủ phải dùng test-part5.ps1.
 
 Trong terminal khác:
 
@@ -53,3 +55,23 @@ npm.cmd run dev --prefix frontend
 Mở http://127.0.0.1:5173, chọn GA và đặt1..6vé. verify-part4 giữ1vé lần đầu, sau đó replay key cố định; contract live giữ thêm1vé bằng key khác. Các test cô lập không thay inventory demo. V5 tạo idempotency_keys/booking_status_history và deferred commit guard; V6 chặn initial history sai. Migrate lần hai không chạy lại version đã áp dụng. README gốc có ví dụ POST/replay/conflict/GET/history.
 
 test-part4-ui dùng cổng loopback tự chọn, JAR tạm và DB ticketing_ui_UUID do chính script tạo. finally dừng đúng process test, drop đúng DB đó; app demo8080 được giữ nguyên. Kết quả live là DOM+API/PostgreSQL thật, chưa phải browser visual QA. Không có worker nhả hold khi TTL qua hạn trong phần này.
+
+## Phần5 — Ghế và worker expiry
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5.ps1
+# Chỉ23test mới: thêm -Tests PostgresSeatExpiryTest
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1
+# Backend demo nhanh ở terminal riêng:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
+# Terminal khác:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part5.ps1 -WaitSeconds 45
+```
+
+test-part5.ps1 tái sử dụng runner DB UUID độc lập, toàn suite58test. test-part5-ui tạo DB/cổng riêng, TTL4s/worker1s, kiểm tra22response contract, chọn/giữ ghế trong React DOM qua HTTP thật, chờ schedulerEXPIRED/nhả/rebook, cả GA expiry; query invariant và restart JVM test cùng DB kiểm tra không migrate lại. Cuối cùng chỉ dọn process/JAR/DB do script tạo. Không reset demo hoặc stop runtime8080.
+
+Scheduler tắt trong test profile để test tự điều khiển, nhưng test-part5-ui bật bằng CLI. Local scheduler mặc định bật; EXPIRY_ENABLED=false chỉ để điều tra/test có kiểm soát, hold sẽ chưa nhả khi tắt. Mỗi booking một transaction; log pass có candidates/expired/deferredPayment/busy/failed. Result payment bền giữ inventory chờ T5.2; chưa có simulator/confirm/refund. V7 thêm composite owner FK; event payload/schemaVersion không đổi. verify-part4 vẫn kiểm tra replay GA gốc, GET sau expiry có thể làEXPIRED. Các ghi chú “chưa worker” trong mục Phần4 bên trên là phạm vi lịch sử, không phải hiện trạng Phần5.

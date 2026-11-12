@@ -1,8 +1,10 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
-> Gồm kế hoạch toàn dự án và kết quả đã chạy đến Phần4. Các ca ghế/expiry/payment/Kafka vẫn là kế hoạch; không coi chúng đã đạt. Kết quả thực tại PROGRESS và evidence/part4-2026-11-12.json.
+> Gồm kế hoạch toàn dự án và kết quả đến Phần5. Ghế/expiry đã có bằng chứng bên dưới; payment/Kafka vẫn là kế hoạch. Kết quả thực tại PROGRESS và evidence/part5-2026-11-12.json. Các số liệu trong gate Phần4 là lịch sử lần chạy đó.
 
 ## Nguyên tắc
+
+Phần5: infra/test-part5.ps1 chạy58test/0fail/0error/0skip (57PostgreSQL+1H2); PostgresSeatExpiryTest có23test mới. Frontend16test (5client/storage +11SSR/DOM), buildTypeScript/Vite; contract32ca/22response HTTP live. Test-part4-ui kiểm tra GA cũ, test-part5-ui kiểm tra ghế/scheduler/GA expiry/restart trên DB riêng sạch, không dùng mock DB hoặc mock HTTP response trong live tests. Test properties/CLI chốt scheduler tắt hoặc bật theo từng ca. Không nhận test skipped là pass.
 
 Đến hết Phần4 có35test backend (34 PostgreSQL integration +1 context H2) chạy qua infra/test-part4.ps1; DB riêng mới mỗi lần, không reset demo. PostgresBookingTest có16test mới. verify-part4.ps1 kiểm tra booking/replay/owner/history trên demo; tools/contracts verify-live.mjs kiểm tra15response HTTP theo schema. verify-part3.ps1 giữ tiêu chí seed GA100 ban đầu nên có thể không còn đạt sau khi đã đặt vé demo.
 
@@ -55,3 +57,18 @@ Không oversell, không partial hold, không vé trùng, không release lặp, k
 - T3.5:11test frontend đạt; ca live UI dùng API/DB thật capacity3 →held3/sold0 sau success/replay/conflict, CORS preflight204. Đã kiểm tra trạng thái/lỗi qua DOM; chưa kiểm tra bố cục thực trong Chrome.
 
 Máy chạy: Windows, Intel i5-11400H 6core/12logical, RAM16948453376byte (~15,78GiB), JDK25.0.5, PostgreSQL17.11, pool10/minIdle2/acquisition2s, lock1500ms/statement5s/attempt5s/total10s, không expiry worker. Bằng chứng từ working tree trên HEAD d476b78086b8d4daeacf4ed0060eba7d398684f2 (chưa commit thay đổi). Không có benchmark latency/p95/TPS trong Phần4. Pool exhaustion, statement cancel độc lập, mất kết nối đúng lúc COMMIT và deadlock40P01 thật chưa fault-inject; không báo các ca đó đã đạt.
+
+## Gate Phần5 đã chạy ngày 2026-11-12
+
+- T4.1: PostgreSQL unique label/state check/composite owner event/type FK; availability map id/label/status không công khai owner. V1–V7 từ DB sạch, migrate lại0; restart JAR cùng DB test “No migration necessary”. Không sửa V1–V6.
+- T4.2: HTTP202/Location/tổng400000 cho2ghế,2item/1history/1outbox, cùng owner/deadline; reject empty/duplicate/>6/mixed shape/type sai/UUID lạ. Khóa ghế thấp trước rồi gặp ghế cao đã giữ rollback ghế thấp/key/booking, retry an toàn.
+- T4.4 SEAT-01:50lệnh qua use case từ2customer, tập ghế đảo thứ tự →1success/49conflict/1booking/2HELD/cùng1owner.50HTTP tranh1ghế →1HTTP202/49HTTP409/1HELD/1booking.20duplicate đảo seatIds →1id/1body/1outbox/2HELD; cùng key đổi ghế409.
+- Ca giao nhau một phần A1+A2 với A2+A3:2customer/usecase đồng thời →1success/1conflict,2HELD/1owner/1booking/1outbox/2AVAILABLE; ghế riêng của bên thua không bị giữ dở.
+- T4.3/T4.4 EXP-01/SEAT-02:20worker tranh1booking →1EXPIRED,0HELD,history2/outbox2 (held+expired). Worker lặp no-op; replay key gốc sau expiry/rebook không lấy lại ghế owner mới. GA expiry giảm held đúng một lần và khách khác giữ lại toàn capacity. Due fixture chỉnh deadline trong DB test; live scheduler riêng đợi thời gian thật.
+- Worker có row lock booking thì worker khác SKIP LOCKED/BUSY; no-due/terminal không release. PostgreSQL advisory gate chặn worker sau release/outbox trước commit; command mới chưa hoàn tất, observer vẫn thấy booking PENDING/ghếHELD; mở gate thì worker commitEXPIRED rồi command mới thành công. Không chấp nhận ghế chỉ dựa deadline.
+- Guard payment: SUCCESS fixture recorded_at trước expires_at →DEFERRED_PAYMENT, giữ state/inventory/outbox. SCHEDULED/recorded_atNULL không cản expiry. Đây là kiểm tra an toàn ranh giới T4, không phải PAY-01 confirm/ticket/compensation của T5.
+- Batch51booking →pass đầu50,pass sau1,pass tiếp0;held về0. Một booking có trigger lỗi sau outbox không làm rollback booking khỏe trong cùng pass;failed1/expired1 được ghi log. Sau bỏ fault, booking còn lại expire được.
+- T4.5: giữ row ghế thứ2 bằng connection thật →POST503/Retry-After1/không partial hold;expiry gặp lock cũng rollback state/owner/history/outbox rồi retry được. Trigger lỗi sau booking/expiry outbox rollback toàn bộ. Tạo deadlock thật giữa2transaction cập nhật seat theo thứ tự đảo:SQLSTATE40P01 quan sát1lần,2transaction commit qua3attempt tổng;version cuối2 mỗi ghế,không hold/booking giả. Fault PostgreSQL phát40P01 liên tục tại bước lưu response →đúng3attempt/503,0hold/booking/outbox.
+- UI:16test đạt, gồm seat states/selection, stable key sau503+reload, conflictrefresh, countdown0 không tựEXPIRED. Live UI DB sạch TTL4s/worker1s:202 choA1+A2/tổng400000,replay,clash409,schedulerEXPIRED/ghếAVAILABLE,rebook mới,expire lần2;GA2vé hết hạn trả capacity2. SQL không orphanhold/ownerEXPIRED/oversell/duplicateBookingExpired. GA UI Phần4 cũng chạy lại đạt. Manual Windows launcher TTL20/worker1 và verify-part5 đã chạy đạt tương tự trên demo, không sửa `.env`.
+
+Máy/pool giống gatePhần4; baseHEAD cf6852568cc9a4da427ea7874fb9921c284f0d52 +working tree chưa commit. Scheduler mặc định5s/batch50; test gọi worker trực tiếp và force expiry.enabled=false qua test properties, đã chạy đủ58test ngay cả khi env EXPIRY_ENABLED=true. GA UI CLI false cũng đạt dưới env true. LiveTTL4/interval1/CLItrue và demoTTL20/interval1 ghi riêng, không gọi là số đo production. Chưa có browser visual QA, benchmark latency/p95/TPS, pool exhaustion/statement cancellation độc lập hoặc mất mạng đúng COMMIT; payment processing/Kafka thuộc phần sau. GitHub CI mới chưa chạy vì chưa commit/push.

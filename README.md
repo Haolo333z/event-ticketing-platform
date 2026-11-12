@@ -3,7 +3,7 @@ An event-driven ticketing platform supporting multiple ticket types, concurrency
 
 ## Trạng thái
 
-Phần 4 (T3.1–T3.5) đã có booking GA, chống gửi lặp, giữ tồn kho nguyên tử, API owner/history và giao diện dùng API thật. Chưa có chọn ghế, expiry worker, thanh toán hoặc Kafka publisher. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [quyết định booking](docs/adr/0004-ga-booking.md) và [lệnh chạy local](infra/README.md).
+Phần5 (T4.1–T4.5) đã có chọn/giữ ghế nguyên tử và expiry worker nhả ghế/GA đúng một lần; giữ các luồng GA/idempotency/owner/history. Giao diện dùng API thật. Chưa có thanh toán, phát vé hoặc Kafka. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [quyết định ghế/expiry](docs/adr/0005-seats-and-expiry.md) và [lệnh local](infra/README.md).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
@@ -13,11 +13,31 @@ npm.cmd ci --prefix frontend
 npm.cmd run dev --prefix frontend
 ```
 
-Mở **http://127.0.0.1:5173**, chọn sự kiện GA → chọn số lượng1..6 → **Giữ vé GA**. Kết quả mong đợi: bookingId, PENDING_PAYMENT, hạn giữ và tổng tiền server; bên dưới có lịch sử của khách demo. Frontend dùng localhost8080 mặc định (có thể đặt VITE_API_BASE_URL trước khi chạy Vite), cổng5173 cố định để khớp CORS. Token demo do API client gắn sẵn cho persona khách; không nhập userId/role.
+Mở **http://127.0.0.1:5173**. Với GA, chọn số lượng1..6 rồi **Giữ vé GA**. Với sự kiện ghế chỉ định, chọn1..6ghế trống rồi **Giữ ghế đã chọn**. Kết quả: bookingId, PENDING_PAYMENT, thời hạn/countdown và tổng server; bên dưới có lịch sử khách demo. Ghế có nhãn Trống/Đang giữ/Không khả dụng; trạng thái chỉ cập nhật theo API. Frontend dùng localhost8080, cổng5173 cố định cho CORS; có thể đặt VITE_API_BASE_URL trước chạy Vite. Không nhập userId/role.
 
 Nếu mất kết nối/503, bấm **Thử lại cùng yêu cầu**: key và nội dung được giữ trong sessionStorage cùng tab, kể cả reload. Không xóa storage hoặc tạo key mới khi chưa rõ kết quả. Sau thành công, bấm **Đặt thêm vé** để chủ động tạo booking mới. Availability chỉ tham khảo; server có thể trả409 khi hết vé. Giao diện hiển thị mã lỗi/correlationId, không tính tổng giá.
 
-TTL mặc định600s nhưng **chưa có expiry worker**: quá hạn chưa tự nhả vé hoặc đổi EXPIRED. Không dùng demo để kiểm thử tự hết hạn; phần đó thuộc T4.3. Mỗi booking thành công tăng held_count, sold_count vẫn0. Không reset DB/volume đang dùng.
+TTL mặc định600s, worker mỗi5s/batch50. Đến hạn, worker chuyển EXPIRED và nhả inventory cùng transaction; UI poll3s nên có thể chậm hơn deadline vài giây. Countdown0 chỉ báo đang chờ server, không tự cho ghế trống. Với GA, hold tăng held_count, expiry giảm held_count; sold_count không tăng vì chưa có payment. Worker tạm giữ nguyên nếu phát hiện payment result bền để chờ processor T5; không giả lập confirm hoặc refund.
+
+## Thử đặt ghế và hết hạn nhanh trên Windows
+
+Không cần sửa `.env`. Trong terminal backend, chạy:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
+```
+
+`-RestartExisting` chỉ được phép thay JVM đang dùng đúng infra/.local-runtime/backend.jar của workspace này; nếu cổng8080 thuộc app khác, script từ chối. Build đạt trước khi dừng JVM cũ. Hai tham số TTL/interval chỉ áp dụng process đang chạy, không ghi `.env`. Các booking đã tồn tại vẫn giữ expiresAt cũ.
+
+Trong UI5173 chọn sự kiện ghế mẫu, chọn A1/A2 nếu còn trống, gửi giữ ghế. Mong đợi202/PENDING_PAYMENT/tổng400000VND với giá seed; ghế đổi Đang giữ. Sau khoảng20s +worker1s +poll3s, GET/UI trả EXPIRED và ghế Trống. Bấm **Đặt thêm vé** để nhận booking mới. Hai lần bấm gửi của cùng thao tác không tạo thêm booking.
+
+Có thể tự động kiểm tra một lượt bằng terminal khác:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part5.ps1 -WaitSeconds 45
+```
+
+Script chọn hai ghế mẫu còn trống, POST/replay, chờ EXPIRED, kiểm tra một history hết hạn/ghế trống, replay key cũ rồi tạo booking mới. Booking mới đó tiếp tục hết hạn theo TTL. Nếu đang giữ ghế trên UI, hãy đợi chúng hết hạn trước; không reset DB. Với TTL mặc định600s, dùng ngân sách chờ mặc định660s thay cho45s. Chạy launcher không tham số TTL để quay lại cấu hình `.env`.
 
 ## Xem hai sự kiện mẫu
 
@@ -30,13 +50,13 @@ Sau khi backend chạy, xem giao diện tại5173 hoặc mở [danh sách sự k
 
 Availability chỉ là snapshot, không giữ vé. Seed idempotent chỉ local/test, không overwrite giá/capacity đã chỉnh. Không cần xóa volume demo để chạy test: script test tự tạo DB riêng và dọn đúng DB đó.
 
-## Tự kiểm tra Phần 4 trên Windows
+## Tự kiểm tra Phần5 trên Windows
 
 Mở Docker Desktop trước. Từ thư mục gốc:
 
 ```powershell
 # PostgreSQL thật, DB test riêng; build và toàn bộ test backend:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5.ps1
 npm.cmd ci --prefix frontend
 npm.cmd test --prefix frontend
 npm.cmd run build --prefix frontend
@@ -44,14 +64,16 @@ npm.cmd ci --prefix tools/contracts
 npm.cmd test --prefix tools/contracts
 # UI/HTTP thật với DB riêng sạch, tự chạy/dừng backend test:
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1
+# Ghế + scheduler thật (TTL4s/interval1s) và restart DB test riêng:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1
 # Backend local8080 cần đang chạy cho hai lệnh tiếp:
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part4.ps1
 npm.cmd run test:live --prefix tools/contracts
 ```
 
-Đã chạy:35test backend/0fail/0skip,11test frontend, build backend/frontend,30ca contract và15response HTTP theo schema. Hai ca50request/capacity10 đều cho10thành công/40conflict, held10; burst20request cùng key quantity2 chỉ có1booking/1outbox/held2. [Bằng chứng](docs/evidence/part4-2026-11-12.json) ghi máy/pool/kết quả; report chi tiết backend/target/surefire-reports và backend/target/part4-evidence.json được tạo lại khi test. UI live test dùng React trong jsdom và API/PostgreSQL thật, không mock response; chưa có kiểm tra bố cục trong trình duyệt thật.
+Suite Phần5 có58test backend (57PostgreSQL+1H2),16test frontend,32ca hợp đồng và22response HTTP live. Tranh2ghế:50lệnh/2customer chỉ1booking thắng/49conflict/2ghếHELD. Tranh1ghế qua HTTP:1HTTP202/49HTTP409.20lệnh trùng key/đảo thứ tự chỉ1booking/1outbox/2ghếHELD.20worker cùng booking chỉ1EXPIRED/1lần release. Deadlock40P01 thật được retry; fault lặp dừng3attempt/503. [Bằng chứng](docs/evidence/part5-2026-11-12.json), report backend/target/surefire-reports và part5-evidence.json. UI live dùng jsdom +HTTP/PostgreSQL thật, không mock response; chưa có browser visual QA.
 
-verify-part4 giữ1vé ở lần đầu, dùng lại key cố định để lần sau không tăng hold. Contract live cũng giữ1vé ở lần đầu bằng key riêng. Test backend/UI dùng DB test riêng và dọn đúng DB đó; không xóa volume demo. verify-part3 là kiểm tra seed cũ, có thể báo khác GA100 sau khi đã đặt vé. `mvnw verify` không có PG_IT_URL chỉ chạy context H2 và skip PostgreSQL; không dùng kết quả đó thay gate Phần4. CI có PostgreSQL17.11/PG_IT_URL và bước live UI/contract mới; chưa có GitHub CI cho working tree chưa commit.
+verify-part4 giữ1vé ở lần đầu, dùng lại key cố định về sau; sau expiry POST replay vẫnbodyPENDING_PAYMENT gốc, GET mới trảEXPIRED. Contract live tạo sự kiện ghế riêng mỗi lần, vì vậy nên chạy qua test-part5-ui để dùng DB riêng được dọn. Không xóa volume demo. `mvnw verify` thiếuPG_IT_URL chỉ kiểm tra context H2 và skip PostgreSQL; không dùng thay gate Phần5. CI có PostgreSQL và các bước GA UI/seat UI/scheduler, nhưng chưa chạy GitHub CI cho working tree chưa commit.
 
 ## Thử một booking GA bằng PowerShell
 
@@ -152,4 +174,4 @@ osv-scanner scan source --sbom backend/target/bom.json
 
 Không quét trực tiếp mọi file local bằng `gitleaks dir .` khi có `.env`/dependency/build ignored; để kiểm tra tập bàn giao, chép tập `git ls-files --cached --others --exclude-standard` sang thư mục scan tạm rồi quét thư mục đó. GitHub checkout sạch không có `.env` nên CI vẫn quét working tree đầy đủ.
 
-Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Bước kế tiếp theo TASKS là T4.1, chưa thực hiện. Chưa tự commit/push thay đổi Phần4.
+Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Bước kế tiếp là T5.1, chưa thực hiện. Chưa tự commit/push Phần5.

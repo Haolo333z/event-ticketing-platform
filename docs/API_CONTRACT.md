@@ -2,9 +2,11 @@
 
 > T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
-Đến hết Phần4 đã triển khai8operation (x-implemented=true trong OpenAPI):5catalog/admin và POST booking GA, GET booking, GET mine. Payment/cancel/tickets/admin bookings/replay endpoints vẫn là thiết kế cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003/0004 và README.
+Đến hết Phần5 đã triển khai8operation (x-implemented=true trong OpenAPI):5catalog/admin và POST booking GA/SEATED, GET booking, GET mine. Worker expiry là nội bộ, không thêm route. Payment/cancel/tickets/admin bookings/replay endpoints vẫn là thiết kế cho giai đoạn sau. Không có API xóa ghế/mode; xem ADR0003/0004/0005 và README.
 
 ## Quy tắc chung
+
+T4 mở POST theo CreateBooking oneOf đã chốt: GA quantity hoặc SEATED seatIds1..6 khác nhau, cùng event/type; không nhận cả hai. Hash GA giữ tương thích, seat hash chuẩn hóa UUID/sắp thứ tự. Public availability giữ schema cũ id/label/status, không công khai owner. HELD quá hạn chưa nhả trả409 HOLD_EXPIRY_PROCESSING hoặc INVENTORY_UNAVAILABLE; scheduler riêng nhả rồi GET trả EXPIRED. Replay sau expiry vẫn202/body gốc. Chi tiết tại ADR0005; không thêm endpoint expiry công khai.
 
 - Base path /api. API được bảo vệ nhận Authorization: Bearer demo-customer-token hoặc demo-admin-token trong local/test; server lấy account/role từ principal đã seed.
 - POST /api/bookings bắt buộc Idempotency-Key (1–128 ký tự). Key scope theo account và operation. Cùng key/payload sau khi booking commit trả cùng status/body/bookingId, kể cả booking hiện đã EXPIRED; GET booking trả trạng thái mới. Payload khác trả 409 IDEMPOTENCY_KEY_REUSED. Conflict inventory có thể retry không ghi kết quả terminal.
@@ -41,9 +43,9 @@
     Location: /api/bookings/booking-uuid
     {"bookingId":"booking-uuid","status":"PENDING_PAYMENT","expiresAt":"2026-11-12T09:10:00Z","totalAmountVnd":200000}
 
-Phần4 chỉ nhận GA quantity nguyên1..6, UUID chuẩn và đúng ba field trên. seatIds/type SEATED trả400; schema POST hiện trỏ GaSelection. Component CreateBooking/SeatSelection vẫn lưu thiết kế cho T4, chưa được nhận qua API. Hash chuẩn hóa thứ tự field, UUID hoa/thường và số nguyên JSON (2.0 tương đương2). Key chỉ gồm [A-Za-z0-9._:-].
+POST hiện nhận GA quantity nguyên1..6 hoặc SEATED seatIds1..6UUID khác nhau. Ví dụ ghế: {"eventId":"uuid","ticketTypeId":"uuid","seatIds":["seat-uuid-1","seat-uuid-2"]}. Schema POST trỏ CreateBooking oneOf; mode phải khớp type và mọi ghế cùng event/type. Không nhận cả quantity/seatIds, field lạ hoặc ghế trùng. Hash chuẩn hóa thứ tự field, UUID hoa/thường, số nguyên GA (2.0 tương đương2); seatIds sắp theo UUID string. Hash GA cũ không đổi. Key chỉ gồm [A-Za-z0-9._:-].
 
-GET booking trả bookingId/eventId/status/expiresAt/expiredAt/totalAmountVnd/history; customer khác trả404, ADMIN có thể xem. GET mine chỉ CUSTOMER, page0/size20/max100, sắp createdAt DESC/id DESC. Trạng thái lịch sử ban đầu NULL→PENDING_PAYMENT. expiresAt từ đồng hồ DB +TTL600s; chưa có worker nên không tự đổi trạng thái/nhả tồn kho khi qua hạn. Replay vẫn trả response202 gốc; muốn trạng thái hiện tại phải GET theo Location.
+GET booking trả bookingId/eventId/status/expiresAt/expiredAt/totalAmountVnd/history; customer khác trả404, ADMIN có thể xem. GET mine chỉ CUSTOMER, page0/size20/max100, sắp createdAt DESC/id DESC. Trạng thái lịch sử ban đầu NULL→PENDING_PAYMENT. expiresAt từ đồng hồ DB +TTL mặc định600s. Worker mặc định5s/batch50 chuyển EXPIRED và nhả inventory cùng commit; GET/UI không tự expiry. Ghế HELD quá hạn vẫn không được lấy lại trước commit release. Worker defer mọi result bền cho đến T5 processor, không confirm/fail/refund trước phạm vi. Replay vẫn trả response202 gốc; trạng thái hiện tại lấy từ GET theo Location.
 
 Phần dưới là hợp đồng payment dự kiến, chưa có endpoint chạy:
 

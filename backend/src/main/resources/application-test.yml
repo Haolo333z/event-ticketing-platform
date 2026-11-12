@@ -1,3 +1,5 @@
+expiry:
+  enabled: false
 demo:
   auth:
     enabled: true

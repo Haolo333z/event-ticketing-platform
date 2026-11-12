@@ -12,7 +12,7 @@ $runtime=Join-Path $env:TEMP ($name+'.jar')
 Copy-Item -LiteralPath $jar -Destination $runtime
 $process=$null
 try {
-    $process=Start-Process java -ArgumentList @('-Duser.timezone=UTC','-Xmx512m','-jar',$runtime,"--spring.datasource.url=jdbc:postgresql://127.0.0.1:$($env:DB_PORT)/$name",'--spring.profiles.active=test',"--server.port=$port") -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $env:TEMP ($name+'.log')) -RedirectStandardError (Join-Path $env:TEMP ($name+'.err'))
+    $process=Start-Process java -ArgumentList @('-Duser.timezone=UTC','-Xmx512m','-jar',$runtime,"--spring.datasource.url=jdbc:postgresql://127.0.0.1:$($env:DB_PORT)/$name",'--spring.profiles.active=test','--expiry.enabled=false',"--server.port=$port") -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $env:TEMP ($name+'.log')) -RedirectStandardError (Join-Path $env:TEMP ($name+'.err'))
     $env:API_BASE_URL="http://127.0.0.1:$port"
     $ready=$false
     for($i=0;$i -lt 100;$i++){

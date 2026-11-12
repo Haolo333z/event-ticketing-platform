@@ -14,7 +14,7 @@ public class BookingController {
     public BookingController(BookingCommandService commands,BookingQueryService queries){this.commands=commands;this.queries=queries;}
     @PostMapping("/api/bookings")
     public ResponseEntity<String> create(@AuthenticationPrincipal DemoPrincipal principal,@RequestHeader(name="Idempotency-Key",required=false) String key,@RequestBody Map<String,Object> body,HttpServletRequest request){
-        var result=commands.create(principal,key,GaBookingRequest.parse(body),UUID.fromString(request.getAttribute("correlationId").toString()));
+        var result=commands.create(principal,key,BookingRequest.parse(body),UUID.fromString(request.getAttribute("correlationId").toString()));
         return ResponseEntity.accepted().location(URI.create("/api/bookings/"+result.bookingId())).contentType(MediaType.APPLICATION_JSON).body(result.body());
     }
     @GetMapping("/api/bookings/{id}")

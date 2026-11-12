@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần4 — Booking GA, idempotency và concurrency đã hoàn thành
-- **Tiến độ:** T1.1–T3.5 Done; booking GA/UI/owner/history/idempotency/rollback/concurrency đã kiểm chứng PostgreSQL thật
+- **Giai đoạn:** Phần5 — Ghế, expiry worker và concurrency đã hoàn thành
+- **Tiến độ:** T1.1–T4.5 Done; GA/ghế/idempotency/expiry/rollback/concurrency/UI kiểm chứng PostgreSQL thật
 - **Task đang làm:** Chưa có
-- **Task tiếp theo:** T4.1 — Mô hình seat map (Todo, chưa bắt đầu)
-- **Blocker:** Không có blocker chức năng Phần4. Visual QA chưa làm vì kết nối trình duyệt không khả dụng; lệnh restart JVM demo bị approval policy từ chối. Chưa commit/push, chưa có GitHub Actions run cho thay đổi mới.
+- **Task tiếp theo:** T5.1 — Payment simulator (Todo, chưa bắt đầu)
+- **Blocker:** Không có blocker chức năng Phần5. Chưa browser visual QA hoặc GitHub CI cho thay đổi mới; chưa commit/push. Restart local/test đã chạy được bằng launcher an toàn trong Phần5, giới hạn restart Phần4 là lịch sử.
 
-- **Task trong TASKS:** 14/45 Done. Có11bảng nghiệp vụ/nền,8API đã triển khai và UI booking GA. Chưa có giữ ghế, expiry worker, thanh toán/phát vé hoặc Kafka.
+- **Task trong TASKS:** 19/45 Done.11bảng/V1–V7,8API,UI GA/ghế và expiry worker. Chưa có thanh toán/phát vé/compensation hoặc Kafka.
 
 ## Đã hoàn thành
 
@@ -35,13 +35,38 @@
 
 ## Rủi ro / việc cần xác nhận
 
-- T1.1 đã chốt version, TTL600s, worker5s/batch50, max6vé, pool10/2. Runtime đã có acquisition2s; T3 BookingPolicy dùng lock1500ms/statement5s/attempt5s/total10s, frontend abort15s. Worker chưa triển khai.
+- TTL mặc định600s, worker5s/batch50 đã hoạt động, max6vé, pool10/2/acquisition2s. BookingPolicy lock1500ms/statement5s/attempt5s/total10s, frontend abort15s. Demo hiện chạy TTL20s/worker1s bằng override process, không sửa `.env`.
 - Worker trễ có thể khiến inventory hết hạn chưa đặt lại được; API trả conflict có thể thử lại để giữ invariant.
-- Lock order, rollback nhiều ghế, race worker/payment và aggregate version cần được chứng minh bằng integration/concurrency tests.
-- Catalog và booking GA đã có migration/API/integration/concurrency tests. Expiry/payment processing/Kafka vẫn thuộc giai đoạn sau. Availability không hold vé; quá TTL chưa tự nhả tồn kho trong Phần4.
+- Lock order/multi-seat rollback/expiry retry/race booking mới và release commit đã có PostgreSQL tests. Race payment processing đầy đủ vẫn thuộc T5.
+- Catalog/booking GA/ghế/expiry đã kiểm chứng; availability không hold vé. Worker defer result bền giữ nguyên inventory cho đến T5.2; không coi đây là payment processing đã hoàn thành. Không tự lấy lại hold quá hạn trong command.
 - Lock timeout1500ms đã kiểm tra riêng inventory GA và unique idempotency key; HTTP503/Retry-After1 sau rollback, retry cùng key đạt. CORS/body policy có test HTTP, chưa thay toàn bộ security review T7. Pool exhaustion/statement cancel độc lập/mất kết nối lúc COMMIT/40P01 thật chưa fault-inject.
 
 ## Nhật ký
+
+### 2026-11-12 — Phần5 hoàn tất: T4.1–T4.5
+
+- **Phạm vi/quyết định:** từ HEAD cf6852568cc9a4da427ea7874fb9921c284f0d52, working tree sạch, giữ stack/repo/GA. ADR0005 và PRD/ARCHITECTURE/API đã ghi trước code: giữ hash GA, canonical seat hash; schema/event chỉ mở shape seat đã chốt và thêm V7 owner FK; result payment bền defer cho T5.2, không confirm/fail/refund. Không payment/Kafka, không commit/push.
+- **T4.1:** seats/availability hiện có đủ model/trạng thái, label unique; V7 thêm FK tổng hợp owner/event/type. Không sửa V1–V6. Map UI theo label/status từ public availability, không lộ owner/không tạo tọa độ venue giả. PostgreSQL test constraint duplicate label, HELD thiếu owner và owner khác type bị chặn; input/response schema đồng bộ OpenAPI.
+- **T4.2:** BookingRequest oneOf GA/SEATED, SeatBookingRequest1..6UUID khác nhau/sorted lowercase; đảo thứ tự replay cùng key. SeatInventory khóa từng immutable UUID tăng dần, chỉ nhận AVAILABLE; HELD quá hạn trả HOLD_EXPIRY_PROCESSING cho đến release commit. Booking/item/owner/deadline/history/BookingHeld/key/response cùng transaction. Giá tổng server;202/Location sau commit. GaBookingRequest hash cũ không đổi. BookingTransactions tách runner chung với budget/retry hiện có.
+- **T4.3:** ExpiryService lock booking SKIP LOCKED/recheck state/due bằng DB clock, kiểm tra result bền, InventoryRelease khóa ghế cùng thứ tự hoặc giảm GA có điều kiện, EXPIRED/expired_at/version/history/BookingExpired cùng commit. Scheduler mặc định5s/batch50, test profile tắt để test gọi có kiểm soát.20worker →1transition; repeat no-op, GA release/rebook đúng một lần; batch51→50/1/0; một lỗi không rollback booking khỏe. SUCCESS fixture recorded trước deadline →DEFERRED_PAYMENT/giữ hold, SCHEDULED chưa recorded vẫn expire. Processor T5 chưa triển khai.
+- **T4.4:**50lệnh use case/2customer tranh2ghế/đảo thứ tự →1success/49conflict/1booking/2HELD/1owner.50HTTP tranh1ghế →1HTTP202/49HTTP409/1HELD/1booking.20duplicate đảo thứ tự →1bookingId/1body/1outbox/2HELD; cùng key đổi ghế409. Advisory gate chặn worker sau release/outbox nhưng trước commit: observer còn thấy PENDING/HELD, command mới chưa hoàn tất; mở gate thì worker commit, command mới nhận ghế; worker cũ lặp không nhả owner mới. Replay key cũ sau expiry/rebook không lấy lại hold.
+- Ca overlap riêng2customer chọnA1+A2 vàA2+A3 đồng thời:1success/1conflict qua use case,2HELD/1owner/1booking/1outbox,2ghế cònAVAILABLE; không giữ dở ghế riêng của bên thua. Đây là test bổ sung sau các gate50request, không thay số đo HTTP50.
+- **T4.5:** ghế thứ2 bị lock thật →503BOOKING_BUSY/Retry-After1/rollback ghế trước/key/booking; expiry gặp lock cũng rollback state/owner/outbox/history, retry được. Fault sau booking/expiry outbox rollback toàn bộ. Deadlock40P01 thật giữa2transaction →quan sát1deadlock,2commit qua3attempt tổng,version mỗi ghế=2/không hold giả. Fault SQLSTATE40P01 lặp tại bước response →đúng3attempt/503 và0hold/booking/outbox. Không coi test này là bảo đảm không có deadlock ở mọi tải.
+- **Backend cuối:** `infra/test-part5.ps1` BUILD SUCCESS lúc2026-11-12T14:30:13Z,58tests/0failure/0error/0skip: Admin9/Booking16/Catalog2/Outbox4/ProductionProfile1/Schema1/SeatExpiry23/Seed1/Context1.57PostgreSQL thật+1H2. DB test UUID sạch mỗi lần, V1–V7, migrate lần2=0. GA35test cũ vẫn đạt; không reset demo. Lần cuối cố tình truyền EXPIRY_ENABLED=true: test properties chốt false và assert không có scheduler bean để tránh env local chen vào fixture; GA UI CLI false cũng chạy lại đạt dưới env true, seat live CLI true. Artifact tái tạo backend/target/part5-evidence.json; [bằng chứng lưu](evidence/part5-2026-11-12.json).
+- **Frontend/contract:** App/client/styles có chọn type/ghế, trạng thái Trống/Đang giữ/Không khả dụng, stable key/payload qua503/network/reload; poll booking/availability3s, countdown chỉ hiển thị, không tự đổi EXPIRED/AVAILABLE.16test frontend (5client/storage+11SSR/DOM) đạt; TypeScript/Vite build đạt. OpenAPI3.1/14operation/8implemented,32ca dương/âm và22response HTTP live GA/seat đúng schema. Không đổi event schemaVersion/payload hoặc thêm endpoint expiry công khai.
+- **Live UI/DB/restart:** `test-part4-ui.ps1` GA UI cũ đạt. `test-part5-ui.ps1` DB/cổng/JAR riêng, TTL4s/worker1s bật thật: chọnA1+A2/202/tổng400000/replay/clash409, schedulerEXPIRED, ghếAVAILABLE, rebookIDmới,expire lần2; GA2vé cũng hết hạn và available trở lại2. SQL0orphanhold/0ownerEXPIRED/0oversell/0duplicateBookingExpired, migrations7. Restart JVM test cùngDB →healthUP/No migration necessary; script dọn đúng process/JAR/DB của mình. Ca live không mock HTTP/DB.
+- **Windows/demo:** launcher hỗ trợ -RestartExisting (chỉ đúng runtime workspace, build đạt trước stop), -HoldSeconds20/-ExpiryIntervalSeconds1 chỉ override process. Backend mới8080/healthUP đã áp dụng V7 lên demo không reset, nhả4hold cũ đến hạn. `verify-part5.ps1 -WaitSeconds45` thực tế: booking b949fc10-e49c-4a81-a58d-8be99c299700 giữA1/A2/400000/replay; schedulerEXPIRED một lần/ghếtrống; replay keycũ vẫnbodygốc; rebook f4a4b816-7109-4e34-a69f-4244cf1854af, sau đó scheduler cũng expire. Frontend5173 tiếp tục chạy. `.env` giữ nguyên; tham số mặc định vẫn600s/5s.
+- **Lỗi phát hiện và sửa:** điều kiện PG_IT_URL trên lớp cha không được kế thừa khiến AdminTest chạy khi launcher không có DB test; thêm annotation trực tiếp, bộ58test vẫn chạy đủ. Launcher cũ stop trước build, nay build trước stop để build lỗi không làm mất runtime. Đọc restart log đang được process ghi bằng ReadAllText bị Windows khóa file; đổi Get-Content và chạy lại toàn kịch bản restart đạt. Lần smoke đầu do launcher lỗi không có server chưa được tính pass; các lệnh đã chạy lại đạt như trên.
+- **CI local/scan:** npm audit frontend/tools0vulnerabilities; CycloneDX SBOM BUILD SUCCESS, OSV2.7.1 scan69packages không có vấn đề, actionlint1.7.12 exit0. CI thêm bước seat UI/scheduler trên DB riêng sau GA live; chưa có GitHub Actions run cho working tree này. Gitleaks/diff check cuối ghi dưới đây.
+- **Kiểm tra bàn giao:** Gitleaks8.30.1 scan137file tracked/untracked không ignored (~648KB) và7commit lịch sử: no leaks found. `.env` được git check-ignore xác nhận; không đưa file này vào tập scan/bàn giao. git diff --check exit0, HEAD vẫncf68525/chưa commit/push. Frontend16test/build và contract32ca được chạy lại cuối vẫn đạt. Backend8080/healthUP, Vite5173 HTTP200; địa chỉ chỉ bind127.0.0.1. Không có cảnh báo scanner còn tồn đọng.
+- **Giới hạn:** không có công cụ/kết nối native browser để visual QA/screenshot, DOM/HTTP tests không chứng minh bố cục Chrome. Chưa benchmark latency/p95/TPS hoặc fault pool exhaustion/statement cancellation độc lập/mất mạng đúng lúc COMMIT. Payment processor/tickets/compensation/Kafka thuộc phần sau, không đánh dấu Done. Result payment bền được giữ an toàn chờ T5.2. Không có blocker chức năng T4; T5.1 vẫn Todo.
+
+T4.1–T4.5 Done theo các acceptance đã chạy,19/45task. README/infraREADME có lệnh Windows và cách xem ghế tự hết hạn; chưa tự commit/push.
+
+### 2026-11-12 — Bắt đầu Phần5, quyết định trước code
+
+- HEAD cf6852568cc9a4da427ea7874fb9921c284f0d52, working tree sạch; Docker Server29.9.1 đang chạy. Đọc RULES/PROGRESS/TASKS/PRD/ARCHITECTURE/DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN, DESIGN và code/migration/test Phần4.
+- ADR0005 chốt mở lại request SEATED đã thiết kế, giữ hash GA tương thích, thêm composite owner FK bằng migration mới, khóa từng ghế theo UUID string; worker mỗi booking một transaction, scheduler5s/batch50. Mâu thuẫn phạm vi payment T4.3/T5.2 giải quyết bằng defer result bền (giữ inventory), không implement payment trước; đồng bộ PRD/ARCHITECTURE/API trước code phụ thuộc. Chưa đánh dấu task T4 Done.
 
 ### 2026-11-12 — Phần4 hoàn tất: T3.1–T3.5
 

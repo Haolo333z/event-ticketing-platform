@@ -70,4 +70,4 @@ Transition late payment là EXPIRED -> REFUND_REQUIRED. Nếu cả hai transitio
 - Không hiển thị stack trace/token/dữ liệu nhạy cảm. UI chỉ trình bày kết quả server; backend quyết định inventory, giá, quyền và state.
 
 
-Thiết kế schema/transaction ở [DATA_MODEL](DATA_MODEL.md), event ở [EVENT_CATALOG](EVENT_CATALOG.md). Wireframe sẽ hoàn thiện khi làm UI, chưa được kiểm chứng thực tế.
+Phần5 đã có lưới ghế theo label API, nhãn Trống/Đang giữ/Không khả dụng và aria-pressed cho ghế đang chọn. Không bịa tọa độ venue; public map không lộ owner. Countdown đến0 chờ GET/availability thật; poll3s cập nhật EXPIRED và ghế trống sau worker commit. Có DOM interaction và UI HTTP/PostgreSQL integration, chưa kiểm tra layout trực quan trên browser thật. Các màn payment/admin/recovery chưa hoàn thiện. Schema/transaction tại DATA_MODEL, event tại EVENT_CATALOG.

@@ -82,6 +82,23 @@ jobs:
           if [ "$ready" != true ]; then cat /tmp/ticketing-ui.log; exit 1; fi
           API_BASE_URL=http://127.0.0.1:8080 npm run test:live --prefix frontend
           API_BASE_URL=http://127.0.0.1:8080 npm run test:live --prefix tools/contracts
+      - name: Seat UI and scheduled expiry with real PostgreSQL
+        shell: bash
+        run: |
+          docker exec ${{ job.services.postgres.id }} createdb -U ticketing ticketing_expiry_ci
+          java -jar backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ticketing_expiry_ci --spring.profiles.active=test --server.port=8081 --expiry.enabled=true --BOOKING_HOLD_TTL_SECONDS=4 --EXPIRY_INTERVAL_SECONDS=1 > /tmp/ticketing-expiry.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid"' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8081/api/events | grep -q '20000000-0000-4000-8000-000000000002'; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then cat /tmp/ticketing-expiry.log; exit 1; fi
+          API_BASE_URL=http://127.0.0.1:8081 npm run test:live:seats --prefix frontend
       - name: Install OSV Scanner
         shell: bash
         run: |

@@ -22,3 +22,11 @@ test('only the pending command is stored; malformed session data is ignored',()=
   saveAttempt(store,attempt);assert.deepEqual(readAttempt(store),attempt);assert(!value!.includes('token'));saveAttempt(store,null);assert.equal(readAttempt(store),null);
   value='{';assert.equal(readAttempt(store),null);value=JSON.stringify({...attempt,payload:{...attempt.payload,quantity:9}});assert.equal(readAttempt(store),null);
 });
+
+test('seat commands survive reload with the exact key and reject duplicate or mixed selections',()=>{
+  let value:string|null=null;const store={getItem:()=>value,setItem:(_key:string,v:string)=>{value=v;},removeItem:()=>{value=null;}};
+  const seats:Attempt={key:attempt.key,payload:{eventId:attempt.payload.eventId,ticketTypeId:attempt.payload.ticketTypeId,seatIds:['40000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000002']}};
+  saveAttempt(store,seats);assert.deepEqual(readAttempt(store),seats);
+  value=JSON.stringify({...seats,payload:{...seats.payload,quantity:1}});assert.equal(readAttempt(store),null);
+  value=JSON.stringify({...seats,payload:{...seats.payload,seatIds:[seats.payload.seatIds![0],seats.payload.seatIds![0]]}});assert.equal(readAttempt(store),null);
+});

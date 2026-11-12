@@ -3,7 +3,7 @@
   "info": {
     "title": "Event Ticketing API",
     "version": "0.1.0",
-    "description": "Contract v0. Part 4 implements GA booking create/read/mine, catalog and admin create/patch. Seat booking, payment and replay remain planned."
+    "description": "Contract v0. Part 5 implements GA and seated booking, owner/history, catalog/admin and expiry. Payment, tickets, cancel and Kafka remain planned."
   },
   "servers": [
     {
@@ -238,7 +238,7 @@
       "post": {
         "operationId": "createBooking",
         "summary": "createBooking",
-        "description": "Implemented in Part 4.  Same account/operation/key and canonical payload replays original 202/body even after expiry; key with changed payload returns 409. Commit hold before responding. Only GA quantity is implemented in Part 4; seatIds and SEATED types return 400 until T4.2. Inactive/not on sale returns INVENTORY_UNAVAILABLE; non-published (including CLOSED) or missing resources return 404.",
+        "description": "Implemented GA and SEATED booking. Same account/operation/key and canonical payload replays the original 202/body even after expiry. Seat UUIDs are sorted for hashing and locked individually in stable order; seatIds must be unique and belong to the event/type. Commit hold before responding. HELD seats remain unavailable until the expiry transaction commits. Overdue holds may return HOLD_EXPIRY_PROCESSING; inactive/not on sale returns INVENTORY_UNAVAILABLE; non-published/missing catalog returns404. Worker expires bookings with no durable payment result; recorded payment results are deferred until the T5 processor.",
         "tags": [
           "Bookings"
         ],
@@ -415,14 +415,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GaSelection"
+                "$ref": "#/components/schemas/CreateBooking"
               }
             }
           }
         },
         "x-max-body-bytes": 8192,
         "x-implemented": true,
-        "x-implemented-request-schema": "GaSelection"
+        "x-implemented-request-schema": "CreateBooking"
       }
     },
     "/api/bookings/{id}": {
@@ -1973,7 +1973,7 @@
             "$ref": "#/components/schemas/GaSelection"
           }
         ],
-        "description": "Planned combined GA/seat shape for T4; the currently implemented POST uses GaSelection only."
+        "description": "One GA quantity or one SEATED seatIds selection. Both are implemented; never mix the shapes. Server calculates price and identity."
       },
       "BookingAccepted": {
         "type": "object",

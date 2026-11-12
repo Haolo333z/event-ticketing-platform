@@ -25,3 +25,5 @@ management:
   endpoint:
     health:
       show-details: never
+expiry:
+  enabled: ${EXPIRY_ENABLED:true}

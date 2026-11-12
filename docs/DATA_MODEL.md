@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Đến hết Phần4 đã triển khai V1–V6, 11 bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events/idempotency_keys/booking_status_history. Booking GA đã có API; tickets/payment_compensations/inbox_events thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
+> Đến hết Phần5 đã triển khai V1–V7,11bảng: users/events/ticket_types/seats/inventory_ga/bookings/booking_items/payments/outbox_events/idempotency_keys/booking_status_history. Booking GA/SEATED và worker expiry đã chạy; tickets/payment_compensations/inbox_events thuộc task sau. [PRD](PRD.md) là nguồn quy tắc nghiệp vụ, [ARCHITECTURE](ARCHITECTURE.md) là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -86,7 +86,7 @@ Check constraint bảo vệ hàng GA nhưng không thay thế conditional UPDATE
 
 V1 tạo schema ticketing, history public. V2 catalog/users/inventory và bookings/items nền; V3 payments/outbox; V4 siết check JSON bookingId. V5 thêm idempotency/history, unique bookings(id,account_id) và FK tổng hợp để key không trỏ booking người khác. V6 siết initial history NULL→PENDING_PAYMENT. Các bảng tickets/compensation/inbox sẽ có migration tiếp theo đúng task. Seed persona/sự kiện nằm ngoài migration, chỉ local/test; admin token không hoạt động ngoài profile đó. Migration đã áp dụng không sửa lại; thêm migration mới.
 
-V5 cho booking_id/response_status/response_body NULL trong transaction đang reserve key. Deferred constraint trigger kiểm tra row cuối tại COMMIT: bắt buộc booking và response202/PENDING_PAYMENT với bookingId khớp. Vì vậy không có row STARTED hoặc response chưa hoàn chỉnh được commit. Hash GA chuẩn hóa UUID lowercase và quantity nguyên (2 và 2.0 cùng nội dung). Chưa nhận seatIds; việc sort seatIds thuộc T4. Xem [ADR0004](adr/0004-ga-booking.md).
+V5 cho booking_id/response_status/response_body NULL trong transaction đang reserve key. Deferred constraint trigger kiểm tra row cuối tại COMMIT: bắt buộc booking và response202/PENDING_PAYMENT với bookingId khớp. Vì vậy không có row STARTED hoặc response chưa hoàn chỉnh được commit. Hash GA chuẩn hóa UUID lowercase và quantity nguyên (2 và 2.0 cùng nội dung), giữ tương thích Phần4. Hash SEATED có prefix và danh sách UUID sắp thứ tự, đảo thứ tự ghế replay cùng key. V7 bổ sung FK seats(held_by_booking_id,event_id,ticket_type_id)→bookings(id,event_id,ticket_type_id), bảo vệ owner cùng event/type. Xem ADR0004/0005. Không có unique seat_id xuyên lịch sử vì ghế có thể đặt lại sau expiry.
 
 ## Dữ liệu giữ lại
 

@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import com.haolo.ticketing.shared.ApiException;
 
-public record GaBookingRequest(UUID eventId,UUID ticketTypeId,int quantity) {
+public record GaBookingRequest(UUID eventId,UUID ticketTypeId,int quantity) implements BookingRequest {
     public GaBookingRequest {if(eventId==null||ticketTypeId==null||quantity<1||quantity>6)throw ApiException.invalid();}
     public static GaBookingRequest parse(Map<String,Object> body){
         if(body==null||!body.keySet().equals(Set.of("eventId","ticketTypeId","quantity")))throw ApiException.invalid();

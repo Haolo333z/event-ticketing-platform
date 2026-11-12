@@ -7,12 +7,14 @@ import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import com.haolo.ticketing.identity.DemoSettings;
 import static org.junit.jupiter.api.Assertions.*;
 
+@EnabledIfEnvironmentVariable(named="PG_IT_URL",matches=".+")
 class PostgresAdminTest extends PostgresCatalogTest {
     @Autowired JdbcTemplate jdbc;
     static final String GA="30000000-0000-4000-8000-000000000002", EVENT="20000000-0000-4000-8000-000000000002";

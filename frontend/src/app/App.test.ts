@@ -60,3 +60,37 @@ test('sold-out availability disables booking and invalid quantities cannot be se
   await mount(fixture({availability:async()=>({eventId,asOf:'2026-11-12T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'GA',available:0}]})}));
   await selectGa();assert.match(document.body.textContent??'',/Hết vé/);assert.equal(button('Giữ vé GA').disabled,true);await quantity(7);assert.equal(button('Giữ vé GA').disabled,true);
 });
+
+const seatList=[
+  {id:'40000000-0000-4000-8000-000000000001',label:'A1',status:'AVAILABLE' as const},
+  {id:'40000000-0000-4000-8000-000000000002',label:'A2',status:'AVAILABLE' as const},
+  {id:'40000000-0000-4000-8000-000000000003',label:'A3',status:'HELD' as const},
+  {id:'40000000-0000-4000-8000-000000000004',label:'A4',status:'SOLD' as const},
+];
+function seated(overrides:Partial<Api>={}):Api{
+  const detail:Event={...event,title:'Sự kiện ghế',ticketTypes:[{...event.ticketTypes[0],mode:'SEATED'}]};
+  return fixture({events:async()=>({items:[detail]}),detail:async()=>detail,availability:async()=>({eventId,asOf:'2026-11-12T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'SEATED',seats:seatList}]}),...overrides});
+}
+function seat(label:string){return document.querySelector<HTMLButtonElement>(`button[aria-label^="Ghế ${label}:"]`)!;}
+test('seat map distinguishes available, held and sold and submits only selected IDs',async()=>{
+  const calls:Attempt[]=[];await mount(seated({create:async a=>{calls.push(a);return accepted;}}));await selectGa();
+  assert.equal(seat('A3').disabled,true);assert.equal(seat('A4').disabled,true);assert.equal(button('Giữ ghế đã chọn').disabled,true);
+  await settle(()=>seat('A2').click());await settle(()=>seat('A1').click());assert.equal(seat('A1').getAttribute('aria-pressed'),'true');
+  await settle(()=>button('Giữ ghế đã chọn').click());assert.equal(calls.length,1);assert.deepEqual(calls[0].payload,{eventId,ticketTypeId:typeId,seatIds:[seatList[0].id,seatList[1].id]});
+  assert.match(document.querySelector('.result')?.textContent??'',/499[.\s]999/);
+});
+test('seat 503 retry after reload preserves the original selection and key',async()=>{
+  const store=storage(),calls:Attempt[]=[];const first=await mount(seated({create:async a=>{calls.push(a);throw new ApiError('BOOKING_BUSY','Bận',503);}}),store);
+  await selectGa();await settle(()=>seat('A1').click());await settle(()=>button('Giữ ghế đã chọn').click());assert.equal(seat('A2').disabled,true);
+  await act(()=>first.root.unmount());roots.splice(roots.indexOf(first.root),1);first.container.remove();
+  await mount(seated({create:async a=>{calls.push(a);return accepted;}}),store);await settle(()=>button('Thử lại cùng yêu cầu').click());assert.deepEqual(calls[0],calls[1]);assert.equal(readAttempt(store),null);
+});
+test('overdue conflict refreshes seat map and clears the rejected selection',async()=>{
+  let rejected=false;await mount(seated({create:async()=>{rejected=true;throw new ApiError('HOLD_EXPIRY_PROCESSING','Đang nhả ghế',409);},availability:async()=>({eventId,asOf:'2026-11-12T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'SEATED',seats:seatList.map((s,i)=>({...s,status:rejected&&i===0?'HELD':s.status}))}]})}));
+  await selectGa();await settle(()=>seat('A1').click());await settle(()=>button('Giữ ghế đã chọn').click());assert.match(document.querySelector('[role=alert]')?.textContent??'',/HOLD_EXPIRY_PROCESSING/);assert.equal(seat('A1').disabled,true);assert.equal(button('Giữ ghế đã chọn').disabled,true);
+});
+test('countdown at zero never invents EXPIRED before a server response',async()=>{
+  await mount(seated({booking:async()=>({...accepted,status:'EXPIRED'})}));await selectGa();await settle(()=>seat('A1').click());await settle(()=>button('Giữ ghế đã chọn').click());
+  assert.match(document.querySelector('.hold-countdown')?.textContent??'',/Đang chờ máy chủ/);assert.match(document.querySelector('.result')?.textContent??'',/PENDING_PAYMENT/);
+  await settle(()=>button('Cập nhật booking').click());assert.match(document.querySelector('.result')?.textContent??'',/EXPIRED/);assert.equal(document.querySelector('.hold-countdown'),null);
+});

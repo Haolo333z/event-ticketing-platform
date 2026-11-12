@@ -22,3 +22,10 @@ T1.4 đã kiểm tra cú pháp OpenAPI/$ref, fixture GA/seat và payload sai,7 e
 - T3.1–T3.5: SET LOCAL timeout trong transaction; cố tình khóa unique key và inventory riêng, rollback trước503, retry cùng key không tạo hold dở. Phần4 đã đạt các ca này và GA-01/IDEM-01/02/03; bằng chứng ở TEST_PLAN/PROGRESS. Pool exhaustion/statement cancel độc lập và mất kết nối đúng lúc COMMIT còn là ca tăng cường cần thực hiện sau; frontend đã kiểm tra giữ nguyên command khi network error/503, chưa thay cho fault injection COMMIT trên DB.
 - T5.1–T5.5/T6.1–T6.5: result scheduling bền, aggregateId/result đúng booking, null recorded_at lúc scheduled, chỉ DB clock khi kết quả bền, timestamp không do client quyết định; replay giữ eventId và không bỏ inbox.
 - Khi sửa contract chạy `npm ci --prefix tools/contracts` và `npm test --prefix tools/contracts`; các thay đổi schema/event/version phải review cùng PRD.
+
+## Bằng chứng triển khai Phần5
+
+- T4.1: V7 composite owner FK; test unique label/state/owner, availability không lộ owner; UI seat status từ API.
+- T4.2/T4.4 SEAT-01: khóa từng UUID, đảo thứ tự và overlap,50lệnh/2customer và50HTTP chỉ1booking thắng;20duplicate chỉ1booking/1outbox. Input sai, multi-seat conflict và lỗi sau outbox không giữ một phần.
+- T4.3/T4.4 EXP-01/SEAT-02:20worker/1transition; GA release/rebook; worker chưa commit thì command mới đợi và chỉ nhận ghế sau commit, worker cũ không nhả owner mới. RunOnce batch50+1, một lỗi không rollback booking khác. Result SUCCESS ghi trước hạn được defer/giữ tồn kho (T5.2 chưa triển khai).
+- T4.5: lock timeout ghế/expiry rollback;40P01 thật retry (2transaction/3attempt tổng), SQLSTATE40P01 lỗi liên tục dừng3attempt/503; không partial hold. UI/live scheduler, restart DB test cùng FlywayV7 đạt; bằng chứng tại TEST_PLAN/PROGRESS/evidence.

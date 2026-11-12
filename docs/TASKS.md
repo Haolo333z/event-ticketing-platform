@@ -95,27 +95,27 @@
 
 ## Tuần 4 — Ghế, Expiry Worker và concurrency
 
-- [ ] **T4.1 — Mô hình seat map** và trạng thái ghế.
+- [x] **T4.1 — Mô hình seat map (Done, 2026-11-12):** tái sử dụng seats/availability, V7 composite owner event/type FK; unique label/state/owner kiểm tra PostgreSQL thật. UI map theo label và trạng thái API, không lộ owner. Xem ADR0005/PROGRESS.
   - **Mục tiêu/phạm vi:** Mô hình seat map và trạng thái ghế.
   - **Phụ thuộc:** T3.5. **Module/file:** seats/expiry/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** unique seat label, trạng thái owner nhất quán; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T4.2 — Giữ nhiều ghế nguyên tử:** khóa ID tăng dần, rollback nếu một ghế không còn.
+- [x] **T4.2 — Giữ nhiều ghế nguyên tử (Done, 2026-11-12):** SeatBookingRequest/SeatInventory khóa từng UUID tăng dần; booking/item/owner/deadline/key/history/outbox cùng transaction. POST oneOf GA/seat, canonical seat hash,202/Location. Multi-seat conflict/rollback/duplicate/input sai đều đạt; GA giữ tương thích.
   - **Mục tiêu/phạm vi:** Giữ nhiều ghế nguyên tử: khóa ID tăng dần, rollback nếu một ghế không còn.
   - **Phụ thuộc:** T4.1. **Module/file:** seats/expiry/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** SEAT-01 đảo thứ tự, all-or-nothing; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T4.3 — Expiry Worker:** mỗi booking một transaction, recheck payment result bền trước release; nhả toàn bộ inventory, chuyển PENDING_PAYMENT -> EXPIRED và ghi history/outbox. Booking mới không tự nhận hold cũ.
+- [x] **T4.3 — Expiry Worker (Done, 2026-11-12):** ExpiryService/Scheduler/InventoryRelease, mỗi booking REQUIRES_NEW, DB clock/booking lock/SKIP LOCKED, batch50/interval5s; nhả GA/ghế, state/history/BookingExpired cùng commit.20worker/lặp/rebook/GA expiry/batch51/fault một booking đạt. Result bền được defer/giữ inventory theo ADR0005; PaymentResultProcessor vẫn thuộc T5.2, chưa nghiệm thu payment.
   - **Mục tiêu/phạm vi:** Expiry Worker: mỗi booking một transaction, recheck payment result bền trước release; nhả toàn bộ inventory, chuyển PENDING_PAYMENT -> EXPIRED và ghi history/outbox. Booking mới không tự nhận hold cũ.
   - **Phụ thuộc:** T4.2. **Module/file:** seats/expiry/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** EXP-01 và payment result bền trước expiry; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T4.4 — Concurrency test ghế/worker:** tập ghế giao nhau, thứ tự yêu cầu ngược nhau và hai request cùng idempotency key trên ghế; chạy worker cạnh booking mới. Booking mới chỉ thành công sau commit nhả, nếu không thì conflict thử lại; không có hai owner/nhả lặp.
+- [x] **T4.4 — Concurrency test ghế/worker (Done, 2026-11-12):** PostgresSeatExpiryTest:50lệnh/2customer/2ghế chỉ1winner;50HTTP/1ghế chỉ1winner;20duplicate đảo thứ tự chỉ1booking/1outbox;20worker chỉ1EXPIRED. Gate trước commit chứng minh command mới đợi, chỉ nhận ghế sau release commit, worker cũ không nhả owner mới. [Bằng chứng](evidence/part5-2026-11-12.json).
   - **Mục tiêu/phạm vi:** Concurrency test ghế/worker: tập ghế giao nhau và thứ tự yêu cầu ngược nhau; chạy worker cạnh booking mới. Booking mới chỉ thành công sau commit nhả, nếu không thì conflict thử lại; không có hai owner/nhả lặp.
   - **Phụ thuộc:** T4.3. **Module/file:** seats/expiry/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** SEAT-01/02, EXP-01; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T4.5 — Rollback/lock contention:** không để booking nhiều ghế giữ một phần; ghi kết quả và giới hạn môi trường.
+- [x] **T4.5 — Rollback/lock contention (Done, 2026-11-12):** timeout ghế thứ2/expiry trả503 sau rollback; fault sau outbox không partial hold/state. Deadlock PostgreSQL40P01 thật retry đạt, fault40P01 liên tục dừng3attempt/503. Full58backend/16frontend/build/32contract/22live +GA UI/seat UI/scheduler/restart/manual Windows đạt; giới hạn browser/benchmark/fault mạng ghi PROGRESS. Chưa làm T5.1.
   - **Mục tiêu/phạm vi:** Rollback/lock contention: không để booking nhiều ghế giữ một phần; ghi kết quả và giới hạn môi trường.
   - **Phụ thuộc:** T4.4. **Module/file:** seats/expiry/bookings; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

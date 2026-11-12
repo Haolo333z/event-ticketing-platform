@@ -14,7 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import com.haolo.ticketing.messaging.OutboxWriter;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.NONE,properties={"spring.datasource.url=${PG_IT_URL}"})
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.NONE,properties={"spring.datasource.url=${PG_IT_URL}","expiry.enabled=false"})
 @ActiveProfiles("test") @EnabledIfEnvironmentVariable(named="PG_IT_URL",matches=".+")
 class PostgresOutboxTest {
     @Autowired JdbcTemplate jdbc;@Autowired OutboxWriter writer;@Autowired PlatformTransactionManager manager;
