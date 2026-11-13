@@ -1,0 +1,249 @@
+{
+  "stage": "Phan8 / T7.1-T7.4",
+  "date": "2026-11-13",
+  "baseCommit": "4a89926fc2514cf829ca198aa042191df9280340",
+  "scopeNote": "TASKS has no T7.5; T8 observability not implemented",
+  "backend": {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1",
+    "tests": 116,
+    "failures": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.haolo.ticketing.DemoAuthConfigurationTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.525"
+      },
+      {
+        "name": "com.haolo.ticketing.KafkaRecoveryTest",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "48.807"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresAdminTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "3.581"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresBookingTest",
+        "tests": "16",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "5.369"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresCatalogTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.089"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresDashboardSecurityTest",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.956"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresOutboxTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.486"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresPaymentTest",
+        "tests": "30",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "7.609"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.629"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSchemaTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.215"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "8.272"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeedTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.032"
+      },
+      {
+        "name": "com.haolo.ticketing.TicketingApplicationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.33"
+      }
+    ],
+    "log": "backend/target/part8-backend-final.log",
+    "logSHA256": "089f395fe5fad25706d24512927984cf04a7c1ed44af8b0cda756f1da92c9746"
+  },
+  "frontend": {
+    "unitTests": 48,
+    "failures": 0,
+    "build": "PASS TypeScript/Vite",
+    "log": "frontend/part8-unit-final.log",
+    "previousUnitTests": 45
+  },
+  "contracts": {
+    "operations": 16,
+    "implemented": 16,
+    "staticPayloadCases": 58,
+    "liveHttpResponses": 66,
+    "result": "PASS"
+  },
+  "dashboardLive": {
+    "result": "PASS",
+    "eventId": "4f9b1538-8e37-46e8-a024-99d96d6d0a20",
+    "bookingId": "4600b6b4-9561-406e-8d40-61cac4a50aed",
+    "gaTypeId": "1f28c8ab-c0f6-45bb-9680-dbcdeba5bc5b",
+    "tests": [
+      "persona switch",
+      "pagination",
+      "create draft GA+seats",
+      "private catalog",
+      "publish",
+      "GA2 via customer UI",
+      "inventory held2/available4",
+      "capacity conflict",
+      "price snapshot200000",
+      "booking filter/history",
+      "empty state",
+      "outbox held/confirmed",
+      "Kafka confirm2tickets"
+    ],
+    "writeCount": 26,
+    "uiCreateCalls": 1,
+    "pagination": {
+      "total": 25,
+      "firstPageCount": 20,
+      "secondPageCount": 5,
+      "overlap": 0,
+      "domMatchesApi": true
+    }
+  },
+  "packagedStartup": {
+    "prodWithMockEnabled": "PASS: refused startup with expected guard message",
+    "backendBinding": "PASS:127.0.0.1 only",
+    "logTokenScan": "PASS:no fixture token or Authorization header logged"
+  },
+  "postgresAssertions": {
+    "tickets": 2,
+    "sold": 2,
+    "paymentInbox": 1,
+    "oversellRows": 0,
+    "ticketsOnInvalidStates": 0,
+    "migrationCount": 9
+  },
+  "regressions": {
+    "ga": "PASS:quantity2,total140000,replay,409,CORS204;held3/sold0/capacity3",
+    "seats": "PASS:A1+A2,expiry,rebook,GA capacity2,0orphan/oversell/duplicate expiry,restart",
+    "paymentKafka": "PASS:GA3+seats2 produce5unique tickets;duplicate unchanged;failure/cancel release;late0tickets;refundCOMPLETED;restart"
+  },
+  "windowsSmoke": {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part8.ps1 -CreatePaginationFixtures",
+    "result": "PASS",
+    "demoPagination": {
+      "total": 21,
+      "firstPageCount": 20,
+      "secondPageCount": 1,
+      "overlap": 0
+    },
+    "roleChecks": "401/403",
+    "queryValidation": "400",
+    "backendBinding": "127.0.0.1"
+  },
+  "security": {
+    "negativeTests": "PASS HTTP bodies/errors, auth DB fault and SQL secret-marker log capture",
+    "osv": "PASS:77 components,no issues found",
+    "npmAuditFrontend": "PASS:0 vulnerabilities",
+    "npmAuditContracts": "PASS:0 vulnerabilities",
+    "actionlint": "PASS (ShellCheck not installed locally)",
+    "powershellSyntax": "PASS",
+    "gitleaks": "PASS:candidate tree187 files and10 Git commits,no leaks"
+  },
+  "fixedFailures": [
+    "Live pagination script dereferenced missing nav during loading; now waits and compares DOM rows with actual API page",
+    "Script assumed GA at index0; now uses response ID/mode",
+    "Reopening same event reused old inventory; now GET fresh snapshot",
+    "Clicking active tab cleared data without triggering fetch; now no-op",
+    "Changing tabs/saving cannot render previous tab data",
+    "DEBUG exception resolver leaked database error marker; framework logs constrained and negative tests pass"
+  ],
+  "limitations": [
+    "No Chrome/mobile visual QA; native Computer Use stopped in previous turn because browser URL could not be verified",
+    "No GitHub Actions run for these uncommitted changes; workflow lint and equivalent local checks passed",
+    "No real payment/refund or production authentication",
+    "No multi-broker/disk-loss/long network chaos verification",
+    "Test topics remain on local broker with seven-day message retention; no demo volume/database reset"
+  ],
+  "committed": false,
+  "pushed": false,
+  "formVisibilityFix": {
+    "date": "2026-11-13",
+    "cause": "Editor rendered after the long table and pagination, with no reveal/focus behavior",
+    "changes": [
+      "Editor moved next to create trigger and before table",
+      "Scroll panel into view on open and focus title when ready",
+      "Top close action during loading/error; bottom cancel; no submit on close"
+    ],
+    "dashboardTests": {
+      "tests": 14,
+      "failures": 0,
+      "command": "node --test frontend/src/app/AdminDashboard.test.ts"
+    },
+    "allFrontendTests": {
+      "tests": 48,
+      "failures": 0,
+      "command": "npm.cmd test --prefix frontend"
+    },
+    "build": "PASS: npm.cmd run build --prefix frontend",
+    "interactionCoverage": [
+      "20-row list: create form precedes table, is unhidden, scroll requested and title focused/editable",
+      "Close and Cancel remove form without create/patch calls",
+      "Edit shows chosen second event data after asynchronous inventory loading, with focus",
+      "Close remains available on inventory load error"
+    ],
+    "verificationLimit": "jsdom DOM/order/focus/scroll-call verification; no Chrome visual QA in this follow-up",
+    "backendRetested": false
+  }
+}

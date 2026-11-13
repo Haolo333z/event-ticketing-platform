@@ -25,6 +25,25 @@ afterEach(async()=>{for(const root of roots.splice(0))await act(()=>root.unmount
 test('SSR shows a loading state, not fabricated catalog or bookings',()=>{
   const html=renderToStaticMarkup(createElement(App,{api:fixture(),store:storage()}));assert.match(html,/Đang tải sự kiện/);assert.doesNotMatch(html,/Ngày hội GA|50000000/);
 });
+test('empty catalog and empty history are explicit and distinct from API failure',async()=>{
+  await mount(fixture({events:async()=>({items:[]})}));assert.match(document.body.textContent!,/Chưa có sự kiện đang mở/);assert.match(document.body.textContent!,/Chưa có booking nào/);assert.equal(document.querySelector('[role=alert]'),null);
+});
+test('failed catalog is not presented as an empty successful list',async()=>{
+  await mount(fixture({events:async()=>{throw new ApiError('UNAUTHENTICATED','Cần đăng nhập',401,'trace-catalog');}}));assert.match(document.body.textContent!,/Không tải được danh sách/);assert.doesNotMatch(document.body.textContent!,/Chưa có sự kiện đang mở/);assert.match(document.querySelector('[role=alert]')!.textContent!,/trace-catalog/);
+});
+test('failed history offers a retry instead of claiming there are no bookings',async()=>{
+  await mount(fixture({mine:async()=>{throw new ApiError('NETWORK_ERROR','Mất kết nối');}}));assert.match(document.body.textContent!,/Không tải được lịch sử/);assert.doesNotMatch(document.body.textContent!,/Chưa có booking nào/);assert.equal(button('Tải lại lịch sử').disabled,false);
+});
+test('detail loading disables submission until the real catalog and inventory arrive',async()=>{
+  let finish!:(value:Event)=>void;const pending=new Promise<Event>(resolve=>{finish=resolve;});await mount(fixture({detail:()=>pending}));await selectGa();assert.match(document.body.textContent!,/Đang tải chi tiết và tồn kho/);assert.equal(button('Giữ vé GA').disabled,true);await settle(()=>finish(event));assert.doesNotMatch(document.body.textContent!,/Đang tải chi tiết và tồn kho/);assert.equal(button('Giữ vé GA').disabled,false);
+});
+test('refund-required booking retains expired history and never asks for confirmed tickets',async()=>{
+  let ticketReads=0;const refund:Booking={...accepted,status:'REFUND_REQUIRED',history:[{fromStatus:null,toStatus:'PENDING_PAYMENT',occurredAt:'2026-11-13T00:00:00Z'},{fromStatus:'PENDING_PAYMENT',toStatus:'EXPIRED',occurredAt:'2026-11-13T00:10:00Z'},{fromStatus:'EXPIRED',toStatus:'REFUND_REQUIRED',occurredAt:'2026-11-13T00:11:00Z'}]};
+  await mount(fixture({mine:async()=>({items:[refund]}),booking:async()=>refund,tickets:async()=>{ticketReads++;return[];}}));await settle(()=>document.querySelector<HTMLButtonElement>('.history-list button')!.click());assert.equal(ticketReads,0);assert.equal(document.querySelector('.ticket-list'),null);assert.match(document.querySelector('.checkout')!.textContent!,/nghĩa vụ bù trừ/);assert.deepEqual([...document.querySelectorAll('.timeline li')].map(li=>li.textContent?.split(' · ')[1]),['PENDING_PAYMENT','EXPIRED','REFUND_REQUIRED']);
+});
+test('failed availability refresh marks retained snapshot as stale',async t=>{
+  t.mock.timers.enable({apis:['setInterval']});let calls=0;await mount(fixture({availability:async()=>{if(++calls>1)throw new ApiError('NETWORK_ERROR','Mất kết nối');return{eventId,asOf:'2026-11-13T00:00:00Z',ticketTypes:[{ticketTypeId:typeId,mode:'GA',available:10}]};}}));await selectGa();await settle(()=>t.mock.timers.tick(3000));assert.match(document.body.textContent!,/Snapshot có thể đã cũ/);assert.match(document.body.textContent!,/Còn 10 vé tham khảo/);
+});
 test('select quantity and show the exact server total and status, then fetch history',async()=>{
   const attempts:Attempt[]=[];let created=false;
   await mount(fixture({create:async attempt=>{attempts.push(attempt);created=true;return accepted;},mine:async()=>({items:created?[accepted]:[]}),booking:async()=>({...accepted,status:'EXPIRED'})}));

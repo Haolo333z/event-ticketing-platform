@@ -2,7 +2,7 @@
 
 > T1.4 đã chốt OpenAPI 3.1 tại [contracts/openapi.json](contracts/openapi.json). File là hợp đồng cho triển khai, không chứng minh endpoint nghiệp vụ đã chạy. Quyết định chi tiết tại [ADR 0002](adr/0002-api-domain-contract.md); thay đổi phải cập nhật đồng bộ.
 
-Đến hết Phần6 có11operation đã chạy:5catalog/admin,POST booking GA/SEATED,GET booking/mine,simulate-payment/cancel/tickets. Worker expiry/payment maintenance là nội bộ. Admin bookings/replay/outbox3route còn là thiết kế T6/T7. Không thêm provider callback hoặc check-in ngoài task; xem ADR0006/README.
+Đến T7 có16operation: catalog public/admin, booking GA/SEATED/mine/admin, simulate-payment/cancel/tickets, outbox/replay. T7 hoàn thiện admin bookings và thêm hai API đọc catalog/inventory private theo ADR0008; worker vẫn nội bộ. Không thêm provider callback/check-in hoặc đổi state machine.
 
 ## Quy tắc chung
 
@@ -18,6 +18,8 @@ T4 mở POST theo CreateBooking oneOf đã chốt: GA quantity hoặc SEATED sea
 - Timeout khi chờ khóa trong transaction booking phải rollback. Khi chưa xác định được chính xác nguồn tranh chấp, trả 503 BOOKING_BUSY cùng Retry-After; client thử lại cùng Idempotency-Key. 409 IDEMPOTENCY_IN_PROGRESS chỉ dùng nếu implementation chứng minh được key đó vẫn đang được xử lý; không suy ra từ mọi lock timeout. Ngưỡng chờ và cách phân loại chốt ở T1.4, kiểm chứng IDEM-03.
 
 ## Danh mục endpoint
+
+T7 bổ sung hai API đọc ADMIN theo ADR0008: GET `/api/admin/events` phân trang trả EventPage gồm mọi trạng thái, và GET `/api/admin/events/{id}/inventory` trả snapshot GA capacity/held/sold/available hoặc seats id/label/status, kể cả inactive/DRAFT/CLOSED. Không trả owner/account. GET `/api/admin/bookings` dùng BookingPage hiện có, filter status đúng6state; public catalog/availability giữ nguyên.
 
 | Method/path | Role | Ý nghĩa/response |
 |---|---|---|

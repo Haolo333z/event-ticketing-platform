@@ -18,11 +18,11 @@ export interface Api{
   create(attempt:Attempt):Promise<Booking>;booking(id:string):Promise<Booking>;mine():Promise<{items:Booking[]}>;
   simulate(attempt:PaymentAttempt):Promise<{paymentIntentId:string;status:'ACCEPTED'}>;cancel(id:string):Promise<Booking>;tickets(id:string):Promise<Ticket[]>;
 }
-export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):Api{
+export function demoTransport(base:string,fetcher:typeof fetch,token:string){
   async function call<T>(path:string,init:RequestInit={}):Promise<T>{
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
     try{
-      const response=await fetcher(base+path,{...init,signal:controller.signal,headers:{Authorization:'Bearer demo-customer-token',...init.headers}});
+      const response=await fetcher(base+path,{...init,signal:controller.signal,headers:{...init.headers,Authorization:'Bearer '+token}});
       let body:Record<string,unknown>;
       try{body=await response.json();}catch{throw new ApiError('NETWORK_ERROR','Chưa xác định được kết quả. Hãy thử lại cùng yêu cầu.');}
       if(!response.ok)throw new ApiError(String(body.code??'INTERNAL_ERROR'),String(body.message??'Không thể hoàn tất yêu cầu'),response.status,body.correlationId as string|undefined);
@@ -30,6 +30,10 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
     }catch(error){if(error instanceof ApiError)throw error;throw new ApiError('NETWORK_ERROR','Không nhận được phản hồi. Hãy thử lại cùng yêu cầu.');}
     finally{clearTimeout(timer);}
   }
+  return call;
+}
+export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):Api{
+  const call=demoTransport(base,fetcher,'demo-customer-token');
   return{events:()=>call('/api/events?size=100'),detail:id=>call('/api/events/'+encodeURIComponent(id)),availability:id=>call('/api/events/'+encodeURIComponent(id)+'/availability'),
     create:attempt=>call('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':attempt.key},body:JSON.stringify(attempt.payload)}),
     booking:id=>call('/api/bookings/'+encodeURIComponent(id)),mine:()=>call('/api/me/bookings?size=100'),

@@ -180,22 +180,22 @@
 
 ## Tuần 7 — UI và rà soát auth
 
-- [ ] **T7.1 — Rà auth demo:** token seed chỉ local/test, token lạ bị từ chối, role admin kiểm tra server-side.
+- [x] **T7.1 — Rà auth demo (Done, 2026-11-13):** token lạ401/customer→admin403, không tin role/userId client; local/test và profile trộn được kiểm tra. Packaged prod+mock từ chối startup đúng guard; listener127.0.0.1. [Bằng chứng T7](evidence/part8-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Rà auth demo: token seed chỉ local/test, token lạ bị từ chối, role admin kiểm tra server-side.
   - **Phụ thuộc:** T6.5. **Module/file:** frontend/identity; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** SEC-01 và cổng bind localhost; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T7.2 — UI customer:** ghế/GA, loading/error/empty/expired/refund required.
+- [x] **T7.2 — UI customer (Done, 2026-11-13):** loading/error/empty/detail/history/snapshot cũ và EXPIRED/REFUND_REQUIRED; persona giữ pending key. DOM và GA/seat/payment/expiry/Kafka UI thật đạt; chưa visual QA Chrome. [Bằng chứng](evidence/part8-2026-11-13.json).
   - **Mục tiêu/phạm vi:** UI customer: ghế/GA, loading/error/empty/expired/refund required.
   - **Phụ thuộc:** T7.1. **Module/file:** frontend/identity; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** màn ghế/GA và trạng thái lỗi; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T7.3 — Dashboard admin:** sự kiện, inventory, booking, outbox.
+- [x] **T7.3 — Dashboard admin (Done, 2026-11-13):** catalog mọi trạng thái/create/edit, inventory mới khi mở lại, booking filter/history/pagination/outbox qua API thật. Trang20+5 khớp response/không trùngID; capacity conflict và giá snapshot đạt. [Bằng chứng](evidence/part8-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Dashboard admin: sự kiện, inventory, booking, outbox.
   - **Phụ thuộc:** T7.2. **Module/file:** frontend/identity; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** dashboard theo API, không tự ghi DB; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T7.4 — Rà validation, log/secret, giới hạn request và lỗi API.**
+- [x] **T7.4 — Rà validation, log/secret, giới hạn request và lỗi API (Done, 2026-11-13).** HTTP/log negative tests, UTF-8/size/depth/duplicate/trailing/field giả/overflow/CORS/correlation và auth DB fault đạt. Full116backend/45frontend/58contract/66HTTP, dependency scan và lint đạt. [Bằng chứng](evidence/part8-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Rà validation, log/secret, giới hạn request và lỗi API. 
   - **Phụ thuộc:** T7.3. **Module/file:** frontend/identity; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

@@ -7,7 +7,7 @@ import type {Api,Attempt,Availability,Booking,Event,Store} from '../api/client.t
 const vnd=(value:number)=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(value);
 const date=(value:string)=>new Date(value).toLocaleString('vi-VN');
 const labels:Record<string,string>={PENDING_PAYMENT:'Đang chờ thanh toán',CONFIRMED:'Đã xác nhận',PAYMENT_FAILED:'Thanh toán thất bại',CANCELLED:'Đã hủy',EXPIRED:'Đã hết hạn',REFUND_REQUIRED:'Cần hoàn tiền'};
-export function App({api,store}:{api:Api;store:Store}){
+export function App({api,store,embedded=false}:{api:Api;store:Store;embedded?:boolean}){
   const[pending,setPending]=useState<Attempt|null>(()=>readAttempt(store));
   const[events,setEvents]=useState<Event[]>([]);const[loading,setLoading]=useState(true);
   const[selected,setSelected]=useState(pending?.payload.eventId??'');const[detail,setDetail]=useState<Event|null>(null);
@@ -18,23 +18,25 @@ export function App({api,store}:{api:Api;store:Store}){
   const[history,setHistory]=useState<Booking[]>([]);const[error,setError]=useState<ApiError|null>(null);
   const[notice,setNotice]=useState('');const[busy,setBusy]=useState(false);const submitting=useRef(false);
   const[catalogVersion,setCatalogVersion]=useState(0);
+  const[catalogFailed,setCatalogFailed]=useState(false),[detailLoading,setDetailLoading]=useState(false),[detailFailed,setDetailFailed]=useState(false);
+  const[historyLoading,setHistoryLoading]=useState(true),[historyFailed,setHistoryFailed]=useState(false),[availabilityStale,setAvailabilityStale]=useState(false);
   const[completed,setCompleted]=useState('');
   function fail(value:unknown){setError(value instanceof ApiError?value:new ApiError('CLIENT_ERROR','Không thể tải dữ liệu. Hãy thử lại.'));}
-  async function historyRefresh(){try{setHistory((await api.mine()).items);}catch(value){fail(value);}}
-  useEffect(()=>{let active=true;setLoading(true);api.events().then(data=>{if(active){setEvents(data.items);setError(null);}}).catch(value=>{if(active)fail(value);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[api,catalogVersion]);
+  async function historyRefresh(){setHistoryLoading(true);try{setHistory((await api.mine()).items);setHistoryFailed(false);}catch(value){setHistoryFailed(true);fail(value);}finally{setHistoryLoading(false);}}
+  useEffect(()=>{let active=true;setLoading(true);setCatalogFailed(false);api.events().then(data=>{if(active){setEvents(data.items);setError(null);}}).catch(value=>{if(active){setCatalogFailed(true);fail(value);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[api,catalogVersion]);
   useEffect(()=>{void historyRefresh();},[api]);
   useEffect(()=>{let active=true;const payment=readPaymentAttempt(store);if(payment)api.booking(payment.bookingId).then(value=>{if(active)setBooking(value);}).catch(value=>{if(active)fail(value);});return()=>{active=false;};},[api,store]);
   useEffect(()=>{
-    let active=true;setDetail(null);setAvailability(null);
+    let active=true;setDetail(null);setAvailability(null);setDetailLoading(!!selected);setDetailFailed(false);setAvailabilityStale(false);
     if(selected)Promise.all([api.detail(selected),api.availability(selected)]).then(([event,snapshot])=>{
       if(!active)return;setDetail(event);setAvailability(snapshot);
       setTypeId(current=>event.ticketTypes.some(t=>t.id===current&&t.active)?current:(event.ticketTypes.find(t=>t.active)?.id??''));
-    }).catch(value=>{if(active)fail(value);});return()=>{active=false;};
+    }).catch(value=>{if(active){setDetailFailed(true);fail(value);}}).finally(()=>{if(active)setDetailLoading(false);});return()=>{active=false;};
   },[api,selected,catalogVersion]);
   useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
   useEffect(()=>{
     if(!selected)return;let active=true;
-    const timer=setInterval(()=>{api.availability(selected).then(value=>{if(active)setAvailability(value);}).catch(()=>{/* Last known snapshot stays explicitly advisory. */});},3000);
+    const timer=setInterval(()=>{api.availability(selected).then(value=>{if(active){setAvailability(value);setAvailabilityStale(false);}}).catch(()=>{if(active)setAvailabilityStale(true);});},3000);
     return()=>{active=false;clearInterval(timer);};
   },[api,selected]);
   useEffect(()=>{
@@ -70,7 +72,7 @@ export function App({api,store}:{api:Api;store:Store}){
   const canBook=!!pending||!!(detail&&type&&type.active&&validSelection&&completed!==JSON.stringify(currentPayload));
   const remaining=booking?Math.max(0,Math.ceil((Date.parse(booking.expiresAt)-now)/1000)):0;
   return h('div',{className:'shell'},
-    h('header',{className:'topbar'},h('a',{href:'/',className:'brand'},'EventFlow',h('span',null,'Vé sự kiện')),h('span',{className:'persona'},'Khách hàng demo')),
+    !embedded&&h('header',{className:'topbar'},h('a',{href:'/',className:'brand'},'EventFlow',h('span',null,'Vé sự kiện')),h('span',{className:'persona'},'Khách hàng demo')),
     h('main',null,
       h('section',{className:'intro'},h('p',{className:'eyebrow'},'KHÁM PHÁ · CHỌN VÉ · GIỮ CHỖ'),h('h1',null,'Một trải nghiệm mới đang chờ bạn.'),h('p',null,'Chọn vé GA hoặc ghế cụ thể. Giá, tồn kho và booking được cập nhật từ máy chủ.')),
       error&&h('div',{role:'alert',className:'alert error'},h('strong',null,error.code==='INVENTORY_UNAVAILABLE'?'Không còn đủ vé':error.code==='BOOKING_BUSY'?'Hệ thống đang bận':error.message),h('p',null,error.message),h('small',null,'Mã lỗi: '+error.code),error.correlationId&&h('small',null,' · Mã tra cứu: '+error.correlationId)),
@@ -78,9 +80,12 @@ export function App({api,store}:{api:Api;store:Store}){
       pending&&h('div',{className:'alert pending',role:'status'},'Có yêu cầu chưa xác định kết quả. Giữ nguyên lựa chọn và thử lại cùng yêu cầu để tránh giữ vé lần hai.'),
       h('div',{className:'workspace'},
         h('section',{'aria-labelledby':'catalog-heading',className:'catalog'},h('div',{className:'section-heading'},h('h2',{id:'catalog-heading'},'Sự kiện'),h('button',{type:'button',className:'quiet',disabled:busy,onClick:()=>setCatalogVersion(x=>x+1)},'Tải lại sự kiện')),
-          loading?h('p',{role:'status'},'Đang tải sự kiện…'):events.length===0?h('p',null,'Chưa có sự kiện đang mở.'):h('div',{className:'event-grid'},...events.map(event=>h('article',{key:event.id,className:'event-card'+(selected===event.id?' selected':'')},
+          loading?h('p',{role:'status'},'Đang tải sự kiện…'):catalogFailed?h('p',null,'Không tải được danh sách. Bấm Tải lại sự kiện để thử lại.'):events.length===0?h('p',null,'Chưa có sự kiện đang mở.'):h('div',{className:'event-grid'},...events.map(event=>h('article',{key:event.id,className:'event-card'+(selected===event.id?' selected':'')},
             h('div',{className:'event-mark'},event.ticketTypes.some(t=>t.mode==='GA')?'GA':'GHẾ CHỈ ĐỊNH'),h('h3',null,event.title),h('p',null,event.venue),h('p',{className:'muted'},date(event.startsAt)),h('button',{type:'button',disabled:busy||!!pending,onClick:()=>{setSelected(event.id);setQuantity(1);setSeatIds([]);setError(null);}},selected===event.id?'Đang xem':'Xem sự kiện'))))),
         h('aside',{className:'booking-panel','aria-label':'Đặt vé'},h('p',{className:'eyebrow'},'LỰA CHỌN CỦA BẠN'),h('h2',null,detail?.title??'Chọn một sự kiện'),detail&&h('p',{className:'muted'},detail.description),
+          detailLoading&&h('p',{role:'status'},'Đang tải chi tiết và tồn kho…'),detailFailed&&h('p',null,'Chưa tải được chi tiết. Chọn lại hoặc tải lại sự kiện.'),
+          availability&&h('p',{className:'snapshot-note'},'Tồn kho tham khảo lúc '+date(availability.asOf)),availabilityStale&&h('p',{role:'status',className:'alert pending'},'Chưa cập nhật được tồn kho. Snapshot có thể đã cũ; máy chủ sẽ kiểm tra lại khi đặt.'),
+          detail&&detail.ticketTypes.every(t=>!t.active)&&h('p',{className:'empty-state'},'Sự kiện chưa có loại vé đang mở.'),
           h('form',{onSubmit:submit},h('label',{htmlFor:'ticket-type'},'Loại vé'),h('select',{id:'ticket-type',value:typeId,disabled:busy||!!pending||!detail,onChange:(event:ChangeEvent<HTMLSelectElement>)=>{setTypeId(event.target.value);setSeatIds([]);}},h('option',{value:''},'Chọn loại vé'),...(detail?.ticketTypes.filter(t=>t.active)??[]).map(t=>h('option',{key:t.id,value:t.id},t.name))),
             type&&h('p',{className:'unit-price'},vnd(type.priceVnd),h('small',null,' / vé · giá từ máy chủ')),
             type?.mode==='SEATED'?h('div',{className:'seat-section'},h('p',{className:'seat-legend'},'Trống · Đang giữ · Không khả dụng (đã bán). Chọn tối đa 6 ghế.'),h('div',{className:'seat-map','aria-label':'Sơ đồ ghế'},...seatMap.map(seat=>h('button',{key:seat.id,type:'button','data-seat-id':seat.id,'aria-label':'Ghế '+seat.label+': '+(seat.status==='AVAILABLE'?'Trống':seat.status==='HELD'?'Đang giữ':'Không khả dụng'),'aria-pressed':seatIds.includes(seat.id),className:'seat '+seat.status.toLowerCase()+(seatIds.includes(seat.id)?' chosen':''),disabled:busy||!!pending||seat.status!=='AVAILABLE'||seatIds.length>=6&&!seatIds.includes(seat.id),onClick:()=>setSeatIds(current=>current.includes(seat.id)?current.filter(id=>id!==seat.id):[...current,seat.id])},h('strong',null,seat.label),h('small',null,seat.status==='AVAILABLE'?'Trống':seat.status==='HELD'?'Đang giữ':'Không khả dụng')))),h('p',{'aria-live':'polite'},'Đã chọn '+seatIds.length+' ghế')):h('div',null,
@@ -91,8 +96,9 @@ export function App({api,store}:{api:Api;store:Store}){
       booking&&h('section',{className:'result','aria-label':'Kết quả booking'},h('div',{className:'section-heading'},h('h2',null,'Booking của bạn'),h('span',{className:'status-pill'},labels[booking.status]??booking.status)),
         h('dl',null,h('dt',null,'Mã booking'),h('dd',{className:'booking-id'},booking.bookingId),h('dt',null,'Trạng thái máy chủ'),h('dd',null,booking.status),h('dt',null,'Tổng tiền máy chủ'),h('dd',null,vnd(booking.totalAmountVnd)),h('dt',null,'Hạn giữ chỗ'),h('dd',null,date(booking.expiresAt))),
         booking.status==='PENDING_PAYMENT'&&h('p',{className:'hold-countdown','data-countdown':true},remaining>0?'Còn '+remaining+' giây giữ chỗ':'Đã đến hạn. Đang chờ máy chủ xác nhận và nhả vé.'),
+        booking.status==='EXPIRED'&&h('p',{className:'alert pending'},'Máy chủ xác nhận giữ chỗ đã hết hạn. Booking này không có vé; bạn có thể chọn đặt lại theo tồn kho mới.'),
         h('button',{type:'button',className:'quiet',onClick:()=>void openBooking(booking.bookingId)},'Cập nhật booking'),h('button',{type:'button',className:'quiet',disabled:busy||!!pending,onClick:()=>{setCompleted('');setBooking(null);setNotice('');}},'Đặt thêm vé'),booking.history&&h('ul',{className:'timeline'},...booking.history.map((item,i)=>h('li',{key:i},date(item.occurredAt)+' · '+item.toStatus))),
         h(Checkout,{key:booking.bookingId,api,store,booking,onChange:(value:Booking)=>{setBooking(value);void historyRefresh();if(selected)void api.availability(selected).then(setAvailability).catch(()=>{});}})),
       h('section',{className:'history','aria-labelledby':'history-heading'},h('div',{className:'section-heading'},h('h2',{id:'history-heading'},'Lịch sử của tôi'),h('button',{type:'button',className:'quiet',onClick:()=>void historyRefresh()},'Tải lại lịch sử')),
-        history.length===0?h('p',{className:'muted'},'Chưa có booking nào.'):h('ul',{className:'history-list'},...history.map(item=>h('li',{key:item.bookingId},h('button',{type:'button',onClick:()=>void openBooking(item.bookingId)},h('span',{className:'booking-id'},item.bookingId),h('span',null,labels[item.status]??item.status),h('strong',null,vnd(item.totalAmountVnd)))))))));
+        historyLoading?h('p',{role:'status'},'Đang tải lịch sử…'):historyFailed?h('p',null,'Không tải được lịch sử. Dùng nút Tải lại lịch sử để thử lại.'):history.length===0?h('p',{className:'muted'},'Chưa có booking nào.'):h('ul',{className:'history-list'},...history.map(item=>h('li',{key:item.bookingId},h('button',{type:'button',onClick:()=>void openBooking(item.bookingId)},h('span',{className:'booking-id'},item.bookingId),h('span',null,labels[item.status]??item.status),h('strong',null,vnd(item.totalAmountVnd)))))))));
 }

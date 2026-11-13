@@ -1,5 +1,14 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T7 — Auth, UI và HTTP/log negative tests
+
+- DemoAuthConfigurationTest: mock bật được trong local/test; profile rỗng/prod/trộn bị từ chối, prod mặc định tắt. PostgresDashboardSecurityTest kiểm tra token lạ401/customer→admin403, giả userId/role không cấp quyền, owner sai404, admin service cũng chặn customer.
+- API private: DRAFT/CLOSED/inactive chỉ admin xem, inventory không có owner, booking filter6state/pagination/validation; capacity conflict không ghi giá hoặc thay snapshot booking.
+- HTTP policy: giới hạn8192/131072byte, UTF-8 sai/multibyte/depth/key lặp/trailing JSON/content-type/encoding; field giả/overflow bị chặn, CORS chỉ5173; lỗi chuẩn/correlationId, kể cả lỗi auth database. Inject lỗi SQL chứa marker và kiểm tra marker không xuất hiện ở response hoặc log. Replay reason500Unicode code point.
+- Customer DOM: loading/error/empty/history/detail, snapshot cũ, EXPIRED/REFUND_REQUIRED, retry cùng command và không hiển thị vé cho booking mất hold. Admin DOM: pagination có delay, bấm lại tab, đổi tab, mở lại tồn kho, create/edit/unknown outcome/duplicate click/XSS/persona không mất key.
+- `infra/test-part8-ui.ps1`: React/jsdom + HTTP/PostgreSQL/Kafka thật, so hàng trang2 với response thật và không trùng ID; DRAFT→PUBLISHED, GA/ghế, held/capacity conflict/giá snapshot, booking history/filter/outbox, confirm2vé và SQL. Packaged prod+mock phải fail startup, server chỉ bind127.0.0.1. Không coi đây là Chrome visual QA.
+- `infra/test-part8.ps1` chạy lại toàn backend cũ và mới với tài nguyên test riêng; `verify-part8.ps1` kiểm tra demo Windows qua API, tùy chọn thêm DRAFT đủ21 để thử phân trang trong Chrome. Chưa làm T8 hoặc tự tạo T7.5.
+
 ## Gate T6 — Kafka/PostgreSQL thật
 
 `infra/test-part7.ps1` chạy15ca KafkaRecoveryTest cộng88ca backend cũ trong DB riêng: migration sạch/rerun, schema/inbox unique/hash, async paymentversion2, duplicate/restart consumer, stop/startbroker, version1→2→3, ACK thành công nhưngDBmarkfail, inbox/businessrollback+đo3delivery bằng sequence ngoài rollback, gap3trước1/2, poisonrecord+đọcKafkaDLQ thật, replay401/403/profile/audit/limit3, paymentđúnghạn khiKafkachưađến, late success/refund12caller concurrent/historyrollback/bounded3failure, duplicate failure/expiry không nhả holdkhác, sessionleader chống publisherthứ2.

@@ -1,5 +1,14 @@
 # Hạ tầng local
 
+## T7 — UI và rà auth/validation
+
+- Backend đầy đủ, gồm Kafka/PostgreSQL regression: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1` (tái sử dụng harness T6 có DB/broker riêng).
+- Dashboard thực: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1` (DB riêng; Kafka topic/group riêng trên broker local, không stop broker demo). Kiểm tra phân trang, tạo/sửa DRAFT/PUBLISHED, held/capacity/price snapshot, booking/outbox, Kafka confirm, SQL và packaged prod+mock auth phải fail startup.
+- Sau khi backend local chạy: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part8.ps1`. Thêm `-CreatePaginationFixtures` để thêm số DRAFT còn thiếu tới21 cho thử Chrome; không xóa dữ liệu cũ.
+- Frontend `npm.cmd run dev --prefix frontend`, http://127.0.0.1:5173. Chọn **Quản trị demo**; hướng dẫn từng bước trong README gốc. OpenAPI có16operation public/customer/admin; public catalog không lộ DRAFT/CLOSED.
+
+UI test proof: frontend/reports/part8-live.json; log JVM trong TEMP với tiền tố ticketing_t8ui_UUID. Kết thúc script dọn JVM/DB/copyJAR do nó tạo; topic test còn trên broker để kiểm tra và có retention7ngày. No-op khi bấm tab hiện tại; mở lại tồn kho luôn GET snapshot mới. Không đánh giá layout trình duyệt từ jsdom.
+
 ## T6 — Kafka và test cô lập
 
 Local: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1`; frontend `npm.cmd run dev --prefix frontend`, http://127.0.0.1:5173. Giữ `.env` hiện có; local bật messaging mặc định, bootstrap127.0.0.1:9092. Đổi cổng cần đổi đồng bộ KAFKA_PORT/bootstrap.

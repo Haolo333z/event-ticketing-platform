@@ -23,7 +23,7 @@ public class ReplayService {
         return new Page(items,page,size,jdbc.queryForObject("SELECT count(*) FROM ticketing.outbox_events",Integer.class));
     }
     public Accepted replay(DemoPrincipal principal,UUID event,UUID request,String reason){
-        authorize(principal);if(request==null||reason==null||reason.isBlank()||reason.length()>500)throw ApiException.invalid();
+        authorize(principal);if(request==null||reason==null||reason.isBlank()||reason.codePointCount(0,reason.length())>500)throw ApiException.invalid();
         return tx.run(()->{
             var rows=jdbc.queryForList("SELECT replay_requests::text AS audit FROM ticketing.outbox_events WHERE id=? FOR UPDATE",event);
             if(rows.isEmpty())throw ApiException.missing();

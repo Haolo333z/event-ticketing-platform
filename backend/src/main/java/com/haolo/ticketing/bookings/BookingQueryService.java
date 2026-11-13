@@ -32,4 +32,12 @@ public class BookingQueryService {
         long count=jdbc.queryForObject("SELECT count(*) FROM ticketing.bookings WHERE account_id=?",Long.class,principal.accountId());
         return new Page(jdbc.query("SELECT * FROM ticketing.bookings WHERE account_id=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,principal.accountId(),size,page*size),page,size,count);
     }
+    public Page admin(DemoPrincipal principal,int page,int size,String status){
+        if(principal==null||!principal.role().equals("ADMIN"))throw new ApiException(403,"FORBIDDEN","Chỉ quản trị viên được xem danh sách booking");
+        if(page<0||page>10000||size<1||size>100||status!=null&&!Set.of("PENDING_PAYMENT","CONFIRMED","PAYMENT_FAILED","CANCELLED","EXPIRED","REFUND_REQUIRED").contains(status))throw ApiException.invalid();
+        String filter=status==null?"":" WHERE status=?";var args=new ArrayList<Object>();if(status!=null)args.add(status);
+        long total=jdbc.queryForObject("SELECT count(*) FROM ticketing.bookings"+filter,Long.class,args.toArray());
+        args.add(size);args.add(page*size);
+        return new Page(jdbc.query("SELECT * FROM ticketing.bookings"+filter+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,args.toArray()),page,size,total);
+    }
 }

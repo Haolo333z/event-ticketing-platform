@@ -136,6 +136,34 @@ jobs:
           done
           if [ "$ready" != true ]; then cat /tmp/ticketing-payment.log; exit 1; fi
           API_BASE_URL=http://127.0.0.1:8082 npm run test:live:payments --prefix frontend
+      - name: Admin dashboard with real API and Kafka; production auth guard
+        shell: bash
+        run: |
+          docker exec ${{ job.services.postgres.id }} createdb -U ticketing ticketing_admin_ci
+          KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-admin up -d --wait kafka
+          java -jar backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ticketing_admin_ci --spring.profiles.active=test --server.port=8083 --expiry.enabled=true --BOOKING_HOLD_TTL_SECONDS=60 --EXPIRY_INTERVAL_SECONDS=1 --messaging.enabled=true --messaging.bootstrap-servers=127.0.0.1:19092 --messaging.topic=ticketing.admin.booking.v1 --messaging.dlq-topic=ticketing.admin.booking.dlq.v1 --messaging.group-prefix=ticketing-admin-ci > /tmp/ticketing-admin.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid"; KAFKA_PORT=19092 docker compose -f infra/docker-compose.yml -p ticketing-kafka-it-admin down --volumes' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8083/api/events | grep -q '20000000-0000-4000-8000-000000000002'; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then cat /tmp/ticketing-admin.log; exit 1; fi
+          API_BASE_URL=http://127.0.0.1:8083 npm run test:live:admin --prefix frontend
+          if timeout 30s java -jar backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar --spring.main.web-application-type=none --spring.datasource.url=jdbc:postgresql://127.0.0.1:5432/ticketing_admin_ci --spring.profiles.active=prod --demo.auth.enabled=true --messaging.enabled=false --expiry.enabled=false > /tmp/ticketing-prod-guard.log 2>&1; then
+            echo 'FAIL: production accepted mock auth'
+            exit 1
+          fi
+          grep -q 'Mock auth is allowed only in local/test profiles' /tmp/ticketing-prod-guard.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-ui-test-evidence
+          path: frontend/reports/part8-live.json
       - name: Install OSV Scanner
         shell: bash
         run: |

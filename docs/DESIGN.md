@@ -1,5 +1,13 @@
 # DESIGN — Hướng dẫn giao diện demo
 
+## Hiện trạng T7
+
+Form Tạo/Sửa nằm ngay dưới nút Tạo sự kiện mới, trước bảng và phân trang. Khi mở, cuộn tới panel và focus tên sự kiện sau khi dữ liệu sẵn sàng; nút Đóng biểu mẫu ở đầu panel dùng được cả khi đang tải hoặc tải lỗi, nút Hủy ở cuối form. Việc mở/đóng không gửi lệnh tạo/sửa.
+
+DemoShell có hai persona khách/admin dùng fixture bearer riêng; chọn màn hình không cấp quyền. Customer giữ pending command khi đổi persona, không tự POST lại. AdminDashboard xem catalog mọi trạng thái, snapshot inventory, booking/history/filter/pagination và outbox qua API; EventEditor tạo/sửa catalog theo hợp đồng. Snapshot được lấy lại khi mở tồn kho, có thời điểm để phân biệt dữ liệu cũ. Chuyển tab không dùng lại dữ liệu của tab khác, bấm tab hiện tại không xóa trạng thái đang hiển thị.
+
+Customer có loading/error/empty riêng cho catalog/history/detail, báo snapshot cũ khi refresh lỗi, nhãn EXPIRED/REFUND_REQUIRED lấy từ server; không tự nhả hold theo countdown. DOM/HTTP tests không thay kiểm tra layout Chrome/mobile. Recovery UI và metrics thuộc T8, không có task T7.5 trong TASKS. Các ghi chú Phần5/6 dưới đây là lịch sử trước khi có dashboard.
+
 > Phiên bản: 0.4 · Mục đích: trình diễn nghiệp vụ và trạng thái backend rõ ràng
 
 ## 1. Phong cách

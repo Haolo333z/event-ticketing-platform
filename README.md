@@ -3,6 +3,32 @@ An event-driven ticketing platform supporting multiple ticket types, concurrency
 
 ## Trạng thái
 
+Phần8 triển khai **T7.1–T7.4** theo TASKS; tài liệu không có T7.5. Dashboard dùng API thật, không sửa trực tiếp database. Quyết định: [ADR0008](docs/adr/0008-demo-ui-and-security-review.md).
+
+```powershell
+# Docker Desktop đang chạy, từ thư mục gốc:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1
+# Demo: terminal1 chạy backend, terminal2 chạy frontend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 60 -ExpiryIntervalSeconds 1
+npm.cmd run dev --prefix frontend
+# Terminal khác: kiểm tra API/quyền, tùy chọn tạo đủ21sự kiện để thử phân trang:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part8.ps1 -CreatePaginationFixtures
+```
+
+**Tự thử trên Chrome:**
+
+1. Mở http://127.0.0.1:5173 và bấm **Quản trị demo**. Trong **Sự kiện**, bấm Trang sau/Trang trước khi có hơn20bản ghi. Chờ tải xong; dòng hiển thị phải đổi theo trang.
+2. Bấm **Tạo sự kiện mới**, điền tên/địa điểm/thời gian, cấu hình loại GA và thêm loại ghế với nhãn mỗi dòng. Lưu DRAFT: thấy ở admin, chưa có trong catalog khách. Sửa sang PUBLISHED để khách xem được.
+3. Sang **Khách hàng demo**, tải lại sự kiện, chọn GA/số lượng2 rồi giữ vé. Quay admin, mở **Tồn kho [tên]**: thấy held2 và available giảm2. Sửa capacity thấp hơn held+sold phải bị từ chối; sửa giá không đổi tổng tiền booking cũ.
+4. Mở **Booking**, chọn bộ lọc trạng thái, bấm Xem để đọc timeline. Mở **Outbox** để xem event/version/trạng thái gửi. Màn hình chỉ xem; replay API T6 giữ nguyên, recovery UI thuộc T8.
+5. Quay khách, mô phỏng SUCCESS và chờ CONFIRMED/2vé; làm mới outbox sẽ thấy PaymentResultRecorded/BookingConfirmed. DELAY_TIMEOUT dẫn đến EXPIRED rồi REFUND_REQUIRED/không vé; đây không phải thanh toán thật.
+
+`test-part8-ui.ps1` tạo DB/topic/group riêng, kiểm tra dashboard bằng React/jsdom với HTTP/PostgreSQL/Kafka thật và startup guard production; không thay kiểm tra hình ảnh bằng Chrome. `verify-part8.ps1 -CreatePaginationFixtures` chỉ thêm số DRAFT còn thiếu để đủ21, không reset dữ liệu. Persona UI dùng token fixture công khai, server quyết định quyền; không phải đăng nhập production.
+
 Lệnh kiểm tra Phần7 (Docker Desktop đang chạy, từ thư mục gốc):
 
 ```powershell

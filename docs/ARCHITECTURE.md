@@ -21,6 +21,8 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
+T7 UI/security review theo [ADR0008](adr/0008-demo-ui-and-security-review.md): admin query service đọc snapshot REPEATABLE_READ, frontend persona chỉ chọn token fixture; server giữ quyền. Không đổi transaction ghi inventory/payment/messaging, không thêm migration. TASKS không có T7.5; chỉ triển khai T7.1–T7.4, observability T8 chưa bắt đầu.
+
 Đến Phần6 có catalog/admin/auth demo,bookingGA/SEATED,expiry,payment simulator/shared processor,cancel,ticket/compensation vàUI thật. T6 bổ sung V9:18bảng/13API; Kafka/inbox/audit/recovery/refund worker theo ADR0007. Triển khai/test tại ADR0003–0006 và PROGRESS.
 
 BookingTransactions quản lý ranh giới transaction/retry chung cho command và expiry; controller chỉ chuyển HTTP. CatalogBookingAccess khóa SHARE event/type theo thứ tự admin; GaInventory conditional update hoặc SeatInventory khóa từng UUID rồi giữ tất cả/rollback. Item/history/BookingHeld/key/response cùng commit trước202. ExpiryService mỗi booking một transaction, kiểm tra state/due/payment trước InventoryRelease/history/BookingExpired. Isolation command/expiry READ COMMITTED; GET booking/mine REPEATABLE_READ. UI không tính tổng giá hay quyết định còn vé; payload/key giữ qua network/503/reload.

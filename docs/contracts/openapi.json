@@ -1221,6 +1221,142 @@
         },
         "x-max-body-bytes": 131072,
         "x-implemented": true
+      },
+      "get": {
+        "operationId": "listAdminEvents",
+        "summary": "listAdminEvents",
+        "description": "T7 admin query; private catalog and snapshot inventory, PostgreSQL read transaction.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "DemoBearer": []
+          }
+        ],
+        "x-role": "ADMIN",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VALIDATION_ERROR"
+            ]
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "FORBIDDEN"
+            ]
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "BOOKING_BUSY: database temporarily unavailable; retry after Retry-After.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "BOOKING_BUSY"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "const": 1
+                },
+                "description": "Seconds before retry with the SAME Idempotency-Key"
+              }
+            }
+          }
+        },
+        "x-implemented": true
       }
     },
     "/api/admin/events/{id}": {
@@ -1404,7 +1540,7 @@
       "get": {
         "operationId": "listAdminBookings",
         "summary": "listAdminBookings",
-        "description": "Contract v0; implementation follows TASKS. ",
+        "description": "T7 admin-only list, optional exact BookingStatus filter, PostgreSQL snapshot pagination.",
         "tags": [
           "Admin"
         ],
@@ -1518,9 +1654,31 @@
             "x-error-codes": [
               "INTERNAL_ERROR"
             ]
+          },
+          "503": {
+            "description": "BOOKING_BUSY: database temporarily unavailable; retry after Retry-After.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "BOOKING_BUSY"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "const": 1
+                },
+                "description": "Seconds before retry with the SAME Idempotency-Key"
+              }
+            }
           }
         },
-        "x-implemented": false
+        "x-implemented": true
       }
     },
     "/api/admin/operations/outbox": {
@@ -1822,6 +1980,133 @@
           "local",
           "test"
         ],
+        "x-implemented": true
+      }
+    },
+    "/api/admin/events/{id}/inventory": {
+      "get": {
+        "operationId": "getAdminInventory",
+        "summary": "getAdminInventory",
+        "description": "T7 admin query; private catalog and snapshot inventory, PostgreSQL read transaction.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "DemoBearer": []
+          }
+        ],
+        "x-role": "ADMIN",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInventory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VALIDATION_ERROR"
+            ]
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "FORBIDDEN"
+            ]
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          },
+          "503": {
+            "description": "BOOKING_BUSY: database temporarily unavailable; retry after Retry-After.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "BOOKING_BUSY"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "const": 1
+                },
+                "description": "Seconds before retry with the SAME Idempotency-Key"
+              }
+            }
+          }
+        },
         "x-implemented": true
       }
     }
@@ -2733,7 +3018,8 @@
           "reason": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 500
+            "maxLength": 500,
+            "pattern": "\\S"
           }
         },
         "required": [
@@ -2869,6 +3155,130 @@
           "page",
           "size",
           "totalElements"
+        ]
+      },
+      "AdminInventory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "ticketTypes": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ticketTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "const": "GA"
+                    },
+                    "capacity": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "held": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "sold": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "available": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  },
+                  "required": [
+                    "ticketTypeId",
+                    "mode",
+                    "capacity",
+                    "held",
+                    "sold",
+                    "available"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ticketTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "SEATED"
+                      ]
+                    },
+                    "seats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "AVAILABLE",
+                              "HELD",
+                              "SOLD"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "status"
+                        ]
+                      },
+                      "maxItems": 200,
+                      "minItems": 0
+                    }
+                  },
+                  "required": [
+                    "ticketTypeId",
+                    "mode",
+                    "seats"
+                  ]
+                }
+              ]
+            },
+            "maxItems": 20,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "eventId",
+          "asOf",
+          "ticketTypes"
         ]
       }
     }

@@ -50,6 +50,14 @@ check(eventSchema,{...fixtures.events[0],payload:{bookingId:'bad'}},false);
 check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'Broker restored'},true);
 for(const value of [{requestId:'bad',reason:'test'},{requestId:fixtures.bookingGa.eventId,reason:''},{requestId:fixtures.bookingGa.eventId,reason:'x'.repeat(501)},{requestId:fixtures.bookingGa.eventId,reason:'test',force:true}])check(api.components.schemas.ReplayRequest,value,false);
 for(const path of ['/api/admin/operations/outbox','/api/admin/operations/events/{eventId}/replay'])for(const op of Object.values(api.paths[path]))assert.equal(op['x-implemented'],true);
+const adminStock={eventId:fixtures.bookingGa.eventId,asOf:'2026-11-13T00:00:00Z',ticketTypes:[{ticketTypeId:fixtures.bookingGa.ticketTypeId,mode:'GA',capacity:6,held:2,sold:1,available:3}]};
+check(api.components.schemas.AdminInventory,adminStock,true);
+for(const key of ['capacity','held','sold','available'])check(api.components.schemas.AdminInventory,{...adminStock,ticketTypes:[{...adminStock.ticketTypes[0],[key]:-1}]},false);
+check(api.components.schemas.AdminInventory,{...adminStock,ticketTypes:[{...adminStock.ticketTypes[0],owner:'forbidden'}]},false);
+check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'🎟'.repeat(500)},true);
+check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'🎟'.repeat(501)},false);
+check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'   '},false);
+assert(api.paths['/api/admin/events'].get['x-implemented']);assert(api.paths['/api/admin/bookings'].get['x-implemented']);assert(api.paths['/api/admin/events/{id}/inventory'].get['x-implemented']);
 const ids = new Set(); let operations=0;
 for (const [path,item] of Object.entries(api.paths)) for (const [method,op] of Object.entries(item)) {
   assert(!ids.has(op.operationId)); ids.add(op.operationId); operations++;

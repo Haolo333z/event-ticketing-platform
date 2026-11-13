@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần7 — Kafka và phục hồi đã hoàn thành, đối chiếu ngày 2026-11-13
-- **Tiến độ:** T1.1–T6.5 Done; Kafka/PostgreSQL thật, GA/ghế/payment/expiry, inbox/replay và refund mô phỏng đã kiểm chứng
-- **Task đang làm:** Chưa có
-- **Task tiếp theo:** T7.1 (chưa bắt đầu, ngoài phạm vi yêu cầu này)
-- **Blocker:** Không còn blocker T6. Chưa remote CI cho thay đổi này, browser visual QA, cluster nhiều broker/mất đĩa hoặc chaos dài hạn. Không commit/push.
+- **Giai đoạn:** Phần8 — UI và rà auth, hoàn thành T7.1–T7.4 ngày2026-11-13
+- **Tiến độ:** T1.1–T7.4 Done; dashboard/customer UI và security kiểm chứng bằng HTTP/PostgreSQL/Kafka thật
+- **Task đang làm:** Không có; bàn giao working tree chưa commit
+- **Task tiếp theo:** T8.1 (chưa bắt đầu); TASKS không có T7.5
+- **Blocker:** Không còn blocker T7. Chưa visual QA Chrome/mobile hoặc remote CI của thay đổi này. Không commit/push.
 
-- **Task trong TASKS:** 29/45 Done.18bảng/V1–V9,13API đã triển khai; Kafka publisher/2consumer, recovery/DLQ/replay và refund worker. Các mục Phần3–6 dưới đây giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 33/45 Done.18bảng/V1–V9 giữ nguyên,16API đã triển khai; thêm dashboard/admin query và rà HTTP/log. Các mục Phần3–7 dưới đây giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -42,6 +42,45 @@
 - Lock timeout vàdeadlock40P01 thật đã kiểm tra;CORS/body/auth tests không thay security reviewT7. Chưa fault pool exhaustion/statementcancel độc lập/mất kết nối lúcCOMMIT. Compensation mớiPENDING,chưa hoàn tiền mô phỏng/T6.
 
 ## Nhật ký
+
+### 2026-11-13 — T7.3: form Tạo/Sửa xuất hiện trong vùng nhìn
+
+- **Nguyên nhân:** nút Tạo đã đổi state và render form, nhưng `editor-panel` nằm sau bảng/phân trang nên bị đẩy xuống cuối danh sách dài. Form Sửa cũng dùng vùng đó; trước đây không có scroll/focus khi mở.
+- **Sửa:** AdminDashboard đặt vùng editor ngay dưới nút Tạo và trước bảng; cuộn tới editor khi mở, focus `admin-title` khi form sẵn sàng. Sửa chờ inventory xong mới đưa focus vào dữ liệu đúng sự kiện; loading/lỗi vẫn có nút Đóng ở đầu panel. EventEditor có nút Hủy cuối form, cả hai thao tác đóng đều không submit. Bấm lại Tạo khi form đã mở cũng đưa người dùng về form.
+- **File:** `frontend/src/app/AdminDashboard.ts`, `EventEditor.ts`, `AdminDashboard.test.ts`, `frontend/src/styles.css`; cập nhật DESIGN và evidence hiện có. Không đổi backend/API/migration hoặc các thay đổi Phần8 trước đó.
+- **PASS** `node --test frontend/src/app/AdminDashboard.test.ts`: **14/14**. Ba ca mới kiểm tra danh sách20dòng/form đứng ngay sau nút và trước bảng, scroll/focus/nhập liệu, Đóng/Hủy gỡ form, Sửa với dữ liệu sự kiện thứ2 sau tải async và đóng được cả khi tải lỗi. Không phát sinh create/patch khi chỉ mở/đóng.
+- **PASS** `npm.cmd test --prefix frontend`: **48/48**,0fail/skip. **PASS** `npm.cmd run build --prefix frontend`: TypeScript/Vite thành công. Log tại frontend/part8-form-tests.log và part8-form-full.log (ignored). Chưa kiểm tra trực quan lại trên Chrome; jsdom xác nhận DOM/order/focus và lời gọi scroll, không có layout thật. Các kết quả116backend/66HTTP trước đó giữ nguyên, không tuyên bố đã chạy lại trong lần sửa UI này.
+- Không commit/push. Tự thử: tải lại http://127.0.0.1:5173 → Quản trị demo → Sự kiện → Tạo hoặc Sửa; form hiện trên bảng, tên sự kiện có focus; Đóng biểu mẫu/Hủy sẽ đóng form.
+
+### 2026-11-13 — Phần8: T7.1–T7.4 Done
+
+Tiếp tục các file đã sửa trên commit `4a89926`, không tạo dự án mới hoặc làm lại T6. TASKS chỉ có T7.1–T7.4; không tạo T7.5, không triển khai log cấu trúc/metrics/recovery UI T8. Quyết định trước code tại [ADR0008](adr/0008-demo-ui-and-security-review.md); bằng chứng tại [part8-2026-11-13.json](evidence/part8-2026-11-13.json).
+
+| Task | Thay đổi chính | Bằng chứng đủ tiêu chí |
+|---|---|---|
+| T7.1 | DemoShell chọn fixture khách/admin, không lưu token; quyền vẫn từ principal server. DemoAuthConfigurationTest/PostgresDashboardSecurityTest rà auth | 401 token lạ/thiếu,403 customer gọi admin dù giả role/userId; owner sai404; local/test bật được, prod/profile trộn bị chặn. JAR thật prod+mock fail startup đúng lý do. Listener test chỉ127.0.0.1 |
+| T7.2 | App/Checkout giữ GA/ghế/payment; tách loading/error/empty, history/detail loading, cảnh báo snapshot cũ, giải thích EXPIRED/REFUND_REQUIRED; đổi persona giữ pending command | 45test frontend (gồm toàn bộ26test cũ) đạt. GA/seat/payment UI HTTP thật chạy lại; countdown không tự đổi state, refund không hiển thị vé, gửi lặp không đặt lại |
+| T7.3 | AdminDashboard/EventEditor + admin API client. GET admin/events và inventory mới, GET admin/bookings hoàn thiện; phân trang/filter/history/outbox, form tạo/sửa GA/ghế | Dashboard qua HTTP/PostgreSQL/Kafka thật:25sự kiện → trang20+5,0ID trùng, DOM khớp response trang2. DRAFT không public, publish xem được; GA2 giữheld2/available4; capacity1 bị409, price mới không đổi tổng cũ200000; booking/outbox/2vé confirmed và SQL đạt |
+| T7.4 | Strict JSON object/key lặp/trailing, giới hạn byte/UTF-8/depth, lỗi DB ở auth filter theo API; reason replay đếm Unicode; chặn log framework lộ SQL | Negative tests cho body/quyền giả/overflow/CORS/error/correlation, inject SQL secret marker không lộ response/log; toàn backend116đạt. Gitleaks/dependency/lint theo mục dưới. Không thêm Redis/rate limit hoặc đổi event/schema/state |
+
+**Nguyên nhân pagination và các lỗi đã sửa:**
+
+- **Script**, không phải API: `.pagination` bị gỡ trong khoảng loading; script dùng non-null assertion rồi đọc textContent. Đã chờ node tồn tại/đúng trang, so hàng DOM với response200 page1, kiểm tra ID không trùng và quay lại trang1. Không dùng sleep cố định hoặc dữ liệu giả để làm test xanh.
+- **Script:** thứ tự loại vé theo UUID không bảo đảm GA ở index0. Đã lấy GA theo ID/mode cho cả lựa chọn khách và form sửa.
+- **UI:** mở lại cùng sự kiện dùng snapshot tồn kho trước khi có booking; nay mỗi lần mở tồn kho/sửa đều GET mới. Bấm lại tab đang mở trước đây xóa dữ liệu nhưng không kích hoạt effect; nay no-op. Đổi tab/lưu form không render dữ liệu của tab cũ. Có ba test hồi quy riêng cho delay phân trang, tab đang mở và snapshot mới.
+- **Log:** test fault SQL đã bắt được DEBUG ExceptionHandlerExceptionResolver lộ marker trong lượt đầu; đã chốt mức INFO cho framework web/JDBC/Hikari và chạy lại negative test/full suite đạt. Không xóa log lỗi cũ để che kết quả.
+
+**Các lệnh đã thực sự chạy và kết quả:**
+
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1`: **116/116**,0failure/error/skip; toàn bộ103test Phần7 +13auth/security mới. Kafka stop/start, duplicate/retry/replay/refund, payment/expiry và GA/ghế cũ vẫn đạt. Log `backend/target/part8-backend-final.log`, XML surefire; DB/broker test UUID được dọn, giữ demo.
+- **PASS** `npm.cmd test --prefix frontend`: **45/45**; **PASS** `npm.cmd run build --prefix frontend` (TypeScript/Vite). **PASS** `npm.cmd test --prefix tools/contracts`:16operation/58payload; mọi operation đã triển khai.
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1`: **66HTTP response** đúng OpenAPI, dashboard React/jsdom dùng API/Kafka/PG thật,25bản ghi/trang20+5; SQL2tickets/sold2/payment inbox1,0oversell/0vé sai trạng thái,9migration không thay. Packaged prod+mock từ chối startup, log không có token fixture/Authorization. Proof `frontend/reports/part8-live.json`, startup log trong TEMP tiền tố `ticketing_t8ui_7a2ec640346f401aaa32d0cc0b0df34f`.
+- **PASS** `infra/test-part4-ui.ps1`: GA quantity2/tổng140000/replay/conflict409/CORS204; held3/sold0/capacity3. **PASS** `infra/test-part5-ui.ps1`: ghếA1+A2/expiry/rebook/GAreturncapacity2,0orphan/oversell/duplicateexpiry, restart không migrate lại.
+- **PASS** `infra/test-part6-ui.ps1 -Kafka`: GA3+seats2 phát5vé unique; replay không đổi, failure/cancel nhả, late success0vé; restart phục hồi scheduled result/refundCOMPLETED; SQL0oversell/0vé sai/0compensation trùng, V1–V9. Hợp đồng HTTP hiện có66response.
+- **PASS** `infra/verify-part8.ps1 -CreatePaginationFixtures` trên demo: total21/page0=20/page1=1/0ID trùng; healthUP,401/403,validation400, snapshot inventory/booking filter/outbox, backend loopback. Chỉ thêm số DRAFT còn thiếu để đủ21 cho thử Chrome, không reset/xóa dữ liệu.
+- **PASS** npm audit frontend/contracts:0vulnerability; OSV77component không có vấn đề; actionlint CI và PowerShell syntax đạt (chưa có ShellCheck local). Gitleaks quét187file bàn giao và10commit lịch sử Git, không có leak; kết quả đã lưu trong evidence. `.env` ignored, không thuộc tập bàn giao; migration V1–V9 không đổi.
+
+**Hướng dẫn và giới hạn:** README gốc/infra README có lệnh Windows và các bước Chrome: chọn Quản trị demo → Sự kiện/trang trước-sau → tạoDRAFT/publish → khách giữGA/ghế → tồn kho/booking/outbox. Bộ chọn persona là demo, không thay xác thực production. CI đã thêm dashboard live/packaged guard và artifact, nhưng **chưa chạy GitHub Actions cho working tree này** vì chưa commit/push. Native Computer Use ở lượt trước bị dừng vì không xác minh được URL; không dùng công cụ khác để vượt chặn, chưa có visual QA Chrome/mobile. DOM/API tests không chứng minh layout, keyboard thực tế hoặc mọi browser. Chưa benchmark/cluster nhiều broker/mất đĩa/chaos dài hạn/real payment. Test topic còn trên broker local với retention7ngày; T7 không tự purge dữ liệu. Không làm T8, không commit/push.
 
 ### 2026-11-12 — Phần6 hoàn tất: T5.1–T5.5
 

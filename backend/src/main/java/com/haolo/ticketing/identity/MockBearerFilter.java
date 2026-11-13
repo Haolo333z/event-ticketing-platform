@@ -24,7 +24,13 @@ final class MockBearerFilter extends OncePerRequestFilter {
                 else if(token.equals(settings.adminToken))account="10000000-0000-4000-8000-000000000002";
             }
             if(account==null){errors.write(req,res,401,"UNAUTHENTICATED","Token không hợp lệ");return;}
-            var users=jdbc.query("SELECT id,demo_role FROM ticketing.users WHERE id=?",(r,n)->new DemoPrincipal(r.getObject(1,UUID.class),r.getString(2)),UUID.fromString(account));
+            List<DemoPrincipal> users;
+            try{users=jdbc.query("SELECT id,demo_role FROM ticketing.users WHERE id=?",(r,n)->new DemoPrincipal(r.getObject(1,UUID.class),r.getString(2)),UUID.fromString(account));}
+            catch(org.springframework.dao.DataAccessException ex){
+                String state=com.haolo.ticketing.bookings.BookingTransactions.sqlState(ex);
+                boolean busy=ex instanceof org.springframework.dao.TransientDataAccessException||state!=null&&(state.startsWith("08")||Set.of("55P03","57014","40P01","40001").contains(state));
+                errors.write(req,res,busy?503:500,busy?"BOOKING_BUSY":"INTERNAL_ERROR","Chưa thể xác thực tài khoản; hãy thử lại");return;
+            }
             if(users.isEmpty()){errors.write(req,res,401,"UNAUTHENTICATED","Tài khoản demo không tồn tại");return;}
             var user=users.getFirst();
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(user,null,List.of(new SimpleGrantedAuthority("ROLE_"+user.role()))));

@@ -13,7 +13,8 @@
     "test": "node --test src/app/*.test.ts src/api/*.test.ts",
     "test:live": "node tests/live-ui.ts",
     "test:live:seats": "node tests/live-seats.ts",
-    "test:live:payments": "node tests/live-payments.ts"
+    "test:live:payments": "node tests/live-payments.ts",
+    "test:live:admin": "node tests/live-admin.ts"
   },
   "dependencies": {
     "react": "19.3.1",

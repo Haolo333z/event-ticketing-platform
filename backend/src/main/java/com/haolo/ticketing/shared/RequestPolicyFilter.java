@@ -14,6 +14,9 @@ import com.haolo.ticketing.identity.DemoSettings;
 @Component @Order(Ordered.HIGHEST_PRECEDENCE+1)
 public class RequestPolicyFilter extends OncePerRequestFilter {
     private final ApiErrors errors;private final DemoSettings settings;
+    private static final tools.jackson.databind.ObjectMapper STRICT_JSON=tools.jackson.databind.json.JsonMapper.builder()
+        .enable(tools.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+        .enable(tools.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     private static final Set<String> ORIGINS=Set.of("http://127.0.0.1:5173","http://localhost:5173");
     private static final Set<String> HEADERS=Set.of("authorization","content-type","idempotency-key","x-correlation-id");
     public RequestPolicyFilter(ApiErrors errors,DemoSettings settings){this.errors=errors;this.settings=settings;}
@@ -53,6 +56,8 @@ public class RequestPolicyFilter extends OncePerRequestFilter {
             else if(b=='{'||b=='['){if(++depth>10){errors.write(req,res,400,"VALIDATION_ERROR","JSON lồng quá sâu");return;}}
             else if(b=='}'||b==']')depth--;
         }
+        try{if(!STRICT_JSON.readTree(bytes).isObject())throw new IllegalArgumentException();}
+        catch(RuntimeException ex){errors.write(req,res,400,"VALIDATION_ERROR","Body phải là một JSON object hợp lệ, không có key lặp");return;}
         chain.doFilter(new HttpServletRequestWrapper(req){
             public ServletInputStream getInputStream(){var input=new ByteArrayInputStream(bytes);return new ServletInputStream(){
                 public int read(){return input.read();}public boolean isFinished(){return input.available()==0;}public boolean isReady(){return true;}
