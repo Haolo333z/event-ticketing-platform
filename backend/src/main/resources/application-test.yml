@@ -1,5 +1,9 @@
 expiry:
   enabled: false
+management:
+  endpoint:
+    metrics:
+      access: read-only
 demo:
   auth:
     enabled: true

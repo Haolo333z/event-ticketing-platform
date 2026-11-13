@@ -21,8 +21,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,metrics
   endpoint:
+    metrics:
+      access: none
     health:
       show-details: never
       show-components: never
@@ -36,6 +38,9 @@ management:
       validate-group-membership: false
 expiry:
   enabled: ${EXPIRY_ENABLED:true}
+operations:
+  metrics:
+    snapshot-ttl-ms: 1000
 logging:
   config: classpath:logback-spring.xml
   structured:

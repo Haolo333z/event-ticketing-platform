@@ -1,0 +1,403 @@
+{
+  "date": "2026-11-13",
+  "task": "T8.2",
+  "baseCommit": "59e462175d80620378f3b37212d92f0f9daa448e",
+  "status": "Done locally; uncommitted",
+  "commands": [
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1 -FullSuite",
+      "result": "PASS",
+      "tests": 128,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": {
+        "path": "backend/target/t82-backend-pass.log",
+        "sha256": "433c392d2c008e6b31616a7f1a2c33ea5c13ab4ca266784095d2de4ccbabd05c"
+      }
+    },
+    {
+      "command": "./mvnw.cmd -B -ntp '-Dtest=TicketingApplicationTest,OperationsMetricsTest' test",
+      "result": "PASS",
+      "tests": 2,
+      "note": "Prod access=NONE plus snapshot TTL/failure/recovery, before final full suite",
+      "log": {
+        "path": "backend/target/t82-profile-cache.log",
+        "sha256": "899445d175afec776393b02f3886c11f7de47f5c5a02c1295bf9cd08872d98ef"
+      }
+    },
+    {
+      "command": "npm.cmd test --prefix tools/contracts",
+      "result": "PASS",
+      "cases": 58,
+      "operations": 16,
+      "log": {
+        "path": "backend/target/t82-contracts.log",
+        "sha256": "9ab112fba944fa53996ab4a920b5fac6b73c4fe890ea9dbf16c07fdd8f426570"
+      }
+    },
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1",
+      "result": "PASS",
+      "httpResponses": 66,
+      "checks": [
+        "real API/DOM/PostgreSQL/Kafka",
+        "pagination20/5 no overlap",
+        "GA inventory/capacity/price/history",
+        "two tickets and SQL invariants",
+        "production mock guard",
+        "no demo token in logs"
+      ],
+      "log": {
+        "path": "backend/target/t82-live-admin.log",
+        "sha256": "e98884ccde28eaa3c29d0bbab67aa84962cf1e3ea1f508445b871acc4b5fcbba"
+      }
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "suiteDetails": [
+    {
+      "name": "com.haolo.ticketing.DemoAuthConfigurationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.HealthEndpointTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.KafkaRecoveryTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.operations.OperationsMetricsTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresAdminTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresBookingTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresCatalogTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresMetricsTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresOutboxTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresPaymentTest",
+      "tests": "30",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSchemaTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeedTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TicketingApplicationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TraceContextTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "measuredPostgresCases": [
+    {
+      "case": "all six booking states via real services; committed-only snapshot and rollback",
+      "states": [
+        "PENDING_PAYMENT",
+        "CONFIRMED",
+        "PAYMENT_FAILED",
+        "CANCELLED",
+        "EXPIRED",
+        "REFUND_REQUIRED"
+      ],
+      "addedPerState": 1,
+      "result": "PASS"
+    },
+    {
+      "case": "FAILED outbox included; publication refreshes age",
+      "beforeSeconds": 20.009612,
+      "afterSeconds": 0.0,
+      "result": "PASS"
+    },
+    {
+      "totalTimeSeconds": 0.015161,
+      "case": "HTTP latency + admin-only metrics + bounded private-free tags",
+      "addedSuccessfulRequests": 2,
+      "result": "PASS",
+      "maxSeconds": 0.0091159
+    },
+    {
+      "pausedOverdue": 2.0,
+      "laterOldestSeconds": 0.715379,
+      "resumedOverdue": 0.0,
+      "pausedOldestSeconds": 0.076971,
+      "releasedOwnBookings": 2,
+      "result": "PASS",
+      "resumedOldestSeconds": 0.0,
+      "beforeOverdue": 0.0,
+      "case": "actual scheduler stopped/resumed, real GA and seated holds"
+    }
+  ],
+  "measuredKafkaDlqCase": {
+    "case": "T8.2 real DLQ failure then retry",
+    "acknowledgedDeliveries": 2.0,
+    "result": "PASS",
+    "retryDeliveries": 2.0,
+    "failedDeliveries": 2.0
+  },
+  "otherExecutedAssertions": [
+    "Outbox initial failed send does not increment retries; restored application send increments retry count",
+    "Three failed consumer deliveries increment retries by two; new replay initial delivery does not increment retry counter",
+    "Poison record adds two retries in each configured consumer, then actual Kafka DLQ is read",
+    "Metrics values compared with global committed SQL and per-fixture baseline, not fixed demo counts",
+    "All six booking states populated by real business services, each adds one to its pre-fixture baseline",
+    "Collector invoked inside an uncommitted business transaction sees committed state only; rollback not exposed",
+    "Pending/failed outbox age and durable recovery states are read-only SQL fixtures; Kafka retries/DLQ send use the real broker",
+    "HTTP API timer adds exactly two successful requests, TOTAL_TIME/MAX positive and measured in seconds",
+    "Labels inspected for UUIDs/token/query markers; route templates used",
+    "Anonymous401,customer403,admin200 on metrics; nonlocal/prod effective endpoint access NONE",
+    "Cache TTL1000ms tested with controlled clock, error returns NaN/available0, recovery refreshes values"
+  ],
+  "metricCatalog": [
+    {
+      "name": "ticketing.bookings",
+      "type": "gauge",
+      "unit": "bookings",
+      "labels": {
+        "status": [
+          "PENDING_PAYMENT",
+          "CONFIRMED",
+          "PAYMENT_FAILED",
+          "CANCELLED",
+          "EXPIRED",
+          "REFUND_REQUIRED"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.holds.overdue",
+      "type": "gauge",
+      "unit": "bookings",
+      "labels": {}
+    },
+    {
+      "name": "ticketing.holds.overdue.oldest.age",
+      "type": "gauge",
+      "unit": "seconds",
+      "labels": {}
+    },
+    {
+      "name": "ticketing.outbox.messages",
+      "type": "gauge",
+      "unit": "messages",
+      "labels": {
+        "status": [
+          "PENDING",
+          "PUBLISHED",
+          "FAILED"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.outbox.unpublished.oldest.age",
+      "type": "gauge",
+      "unit": "seconds",
+      "labels": {}
+    },
+    {
+      "name": "ticketing.outbox.attempts",
+      "type": "gauge",
+      "unit": "attempts",
+      "labels": {}
+    },
+    {
+      "name": "ticketing.messaging.failures",
+      "type": "gauge",
+      "unit": "messages",
+      "labels": {
+        "consumer": [
+          "payment-v1",
+          "booking-audit-v1"
+        ],
+        "status": [
+          "DEAD",
+          "RESOLVED"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.messaging.dlq.messages",
+      "type": "gauge",
+      "unit": "messages",
+      "labels": {
+        "state": [
+          "PENDING",
+          "PUBLISHED",
+          "EXHAUSTED"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.messaging.retries",
+      "type": "counter",
+      "unit": "retries",
+      "labels": {
+        "stage": [
+          "outbox",
+          "consumer",
+          "dlq"
+        ],
+        "consumer": [
+          "none",
+          "payment-v1",
+          "booking-audit-v1"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.messaging.dlq.deliveries",
+      "type": "counter",
+      "unit": "deliveries",
+      "labels": {
+        "outcome": [
+          "ACKNOWLEDGED",
+          "FAILED"
+        ]
+      }
+    },
+    {
+      "name": "ticketing.metrics.snapshot.available",
+      "type": "gauge",
+      "unit": "boolean",
+      "labels": {}
+    },
+    {
+      "name": "ticketing.metrics.snapshot.age",
+      "type": "gauge",
+      "unit": "seconds",
+      "labels": {}
+    },
+    {
+      "name": "http.server.requests",
+      "type": "timer",
+      "unit": "seconds",
+      "labels": {
+        "uri": "route template or fixed fallback",
+        "method": "standard HTTP method or UNKNOWN",
+        "status": "HTTP status",
+        "outcome": "standard outcome",
+        "error/exception": "exception type or none, not message"
+      }
+    }
+  ],
+  "sampling": {
+    "database": "one PostgreSQL SELECT on a separate read-only connection, database statement_timestamp",
+    "defaultCacheMs": 1000,
+    "testIntegrationCacheMs": 0,
+    "queryTimeoutSeconds": 2,
+    "poolAcquisitionSeconds": 2,
+    "ageWhenEmpty": 0,
+    "queryFailure": "NaN for business gauges, snapshot.available=0; snapshot.age since last success",
+    "independentOfExpiryWorker": true,
+    "countersAndTimers": "JVM-local; reset on restart; application delivery retries, not Kafka internal network retries"
+  },
+  "resolvedProblems": [
+    "New tests initially had a Timer import conflict and assumed SimpleMeterRegistry was AutoCloseable; fixed before execution",
+    "JdbcTemplate originally joined the caller transaction; switched to direct owned read-only connection; committed-only rollback assertion now passes",
+    "Backing metrics bean may exist even when access is NONE; checked effective EndpointAccessResolver instead of bean presence",
+    "Existing local harness loads SPRING_PROFILES_ACTIVE=local; nonlocal access test now explicitly uses prod instead of inheriting local"
+  ],
+  "environment": "Windows PowerShell, Temurin25.0.5+8, Boot4.1.2, PostgreSQL17.11, Kafka4.2.2; full backend suite UTC; owned UUID databases/broker",
+  "limits": [
+    "No remote GitHub Actions/Linux execution of uncommitted changes",
+    "No Prometheus/Grafana/dashboard/alerting or consumer lag metric; T8.3 onward untouched",
+    "Counters/timers best-effort process-local, not durable exact unique-message counts",
+    "Default DB snapshot cache up to1s; integration uses cache0, separate unit verifies cache1000ms",
+    "DB auth outage can prevent metrics HTTP; health remains the dependency check",
+    "Aggregate queries not benchmarked on a production-size dataset or multi-node cluster",
+    "Frontend source unchanged; live jsdom/API test run, frontend unit/build and visual Chrome QA not rerun"
+  ],
+  "schemaOrPayloadOrDependenciesChanged": false,
+  "demoDataModified": false,
+  "committedOrPushed": false
+}

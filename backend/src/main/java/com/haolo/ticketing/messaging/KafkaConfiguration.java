@@ -10,6 +10,7 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.*;
 import org.springframework.util.backoff.FixedBackOff;
 import org.apache.kafka.clients.admin.NewTopic;
+import com.haolo.ticketing.operations.MessagingMetrics;
 
 @Configuration @EnableKafka @ConditionalOnProperty(name="messaging.enabled",havingValue="true")
 public class KafkaConfiguration {
@@ -36,17 +37,23 @@ public class KafkaConfiguration {
     private ConcurrentKafkaListenerContainerFactory<String,String> listenerFactory(ConsumerFactory<String,String> factory,FailureStore failures,String group){
         var result=new ConcurrentKafkaListenerContainerFactory<String,String>();result.setConsumerFactory(factory);
         result.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        result.getContainerProperties().setDeliveryAttemptHeader(true);
         var errors=new DefaultErrorHandler((record,error)->failures.park(group,record,error),new FixedBackOff(250,2));
         // Application logs carry validated IDs; do not dump listener exceptions/records on retries.
         errors.setLogLevel(org.springframework.kafka.KafkaException.Level.DEBUG);
         errors.setClassifications(Map.of(Exception.class,true),true);result.setCommonErrorHandler(errors);return result;
     }
-    @Bean KafkaListeners eventListeners(EventConsumer consumer){return new KafkaListeners(consumer);}
+    @Bean KafkaListeners eventListeners(EventConsumer consumer,MessagingMetrics metrics){return new KafkaListeners(consumer,metrics);}
     public static class KafkaListeners {
-        private final EventConsumer consumer;KafkaListeners(EventConsumer consumer){this.consumer=consumer;}
+        private final EventConsumer consumer;private final MessagingMetrics metrics;
+        KafkaListeners(EventConsumer consumer,MessagingMetrics metrics){this.consumer=consumer;this.metrics=metrics;}
+        private void attempt(String group,org.apache.kafka.clients.consumer.ConsumerRecord<String,String> record){
+            var header=record.headers().lastHeader(org.springframework.kafka.support.KafkaHeaders.DELIVERY_ATTEMPT);
+            if(header!=null&&header.value()!=null&&header.value().length==4)metrics.consumerAttempt(group,java.nio.ByteBuffer.wrap(header.value()).getInt());
+        }
         @KafkaListener(id="payment-listener",groupId="${messaging.group-prefix}.payment-v1",topics="${messaging.topic}",containerFactory="paymentFactory")
-        public void payment(org.apache.kafka.clients.consumer.ConsumerRecord<String,String> record){consumer.accept(EventConsumer.PAYMENT,record.key(),record.value());}
+        public void payment(org.apache.kafka.clients.consumer.ConsumerRecord<String,String> record){attempt(EventConsumer.PAYMENT,record);consumer.accept(EventConsumer.PAYMENT,record.key(),record.value());}
         @KafkaListener(id="audit-listener",groupId="${messaging.group-prefix}.booking-audit-v1",topics="${messaging.topic}",containerFactory="auditFactory")
-        public void audit(org.apache.kafka.clients.consumer.ConsumerRecord<String,String> record){consumer.accept(EventConsumer.AUDIT,record.key(),record.value());}
+        public void audit(org.apache.kafka.clients.consumer.ConsumerRecord<String,String> record){attempt(EventConsumer.AUDIT,record);consumer.accept(EventConsumer.AUDIT,record.key(),record.value());}
     }
 }

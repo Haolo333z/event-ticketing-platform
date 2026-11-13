@@ -208,7 +208,7 @@
   - **Phụ thuộc:** T7.4. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** correlation ID xuyên API/outbox/consumer; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T8.2 — Metrics:** booking state, overdue hold count/oldest age, outbox age, retry/DLQ, API latency.
+- [x] **T8.2 — Metrics (Done, 2026-11-13):** gauges DB độc lập worker,6booking state, overdue/oldest age, unpublished outbox age kể cả FAILED, retry/DLQ và HTTP timer; đơn vị/label cố định ở ARCHITECTURE. Scheduler thật pause→overdue tăng→resume/EXPIRED/release→metric giảm;128backend/58contract/66HTTP đạt. [Bằng chứng](evidence/t8-2-metrics-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Metrics: booking state, overdue hold count/oldest age, outbox age, retry/DLQ, API latency.
   - **Phụ thuộc:** T8.1. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

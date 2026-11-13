@@ -1,5 +1,9 @@
 messaging:
   enabled: ${MESSAGING_ENABLED:true}
+management:
+  endpoint:
+    metrics:
+      access: read-only
 demo:
   auth:
     enabled: true

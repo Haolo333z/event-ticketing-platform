@@ -36,6 +36,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named="KAFKA_IT_BOOTSTRAP",matches=".+")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class KafkaRecoveryTest {
+    @Autowired io.micrometer.core.instrument.MeterRegistry metrics;
+    double retries(String stage,String consumer){return metrics.get("ticketing.messaging.retries").tags("stage",stage,"consumer",consumer).counter().count();}
+    double dlqDeliveries(String outcome){return metrics.get("ticketing.messaging.dlq.deliveries").tag("outcome",outcome).counter().count();}
+    double gauge(String name,String...tags){return metrics.get(name).tags(tags).gauge().value();}
     @Autowired JdbcTemplate jdbc;@Autowired BookingCommandService bookings;@Autowired PaymentSimulatorService simulator;
     @Autowired PaymentResultProcessor processor;@Autowired BookingCancelService cancel;@Autowired ExpiryService expiry;
     @Autowired OutboxPublisher publisher;@Autowired EventConsumer consumer;@Autowired EventCodec codec;
@@ -95,6 +99,7 @@ class KafkaRecoveryTest {
     @Test @Order(3) void brokerOffOnRetainsOutboxAndOrdersVersions(CapturedOutput output) throws Exception {
         String container=System.getenv("KAFKA_IT_CONTAINER");assertTrue(container!=null&&container.startsWith("ticketing-kafka-it-"));
         UUID b=booking(2);record(b,"SUCCESS");
+        double retriesBefore=retries("outbox","none");
         health("",200,"UP");health("/readiness",200,"UP");health("/liveness",200,"UP");
         docker("stop",container);
         try{
@@ -103,11 +108,13 @@ class KafkaRecoveryTest {
             assertEquals(1,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"BookingHeld")));
             assertEquals(0,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"PaymentResultRecorded")));
             assertEquals("PENDING_PAYMENT",state(b));assertEquals(0,tickets(b));
+            assertEquals(retriesBefore,retries("outbox","none"),"Initial failed send is not a retry");
             var failed=traceLines(output,eventId(b,"BookingHeld")).stream().filter(n->n.path("stage").asString().equals("outbox_publish_failed")).findFirst().orElseThrow();
             assertEquals(b.toString(),failed.path("bookingId").asString());assertEquals(publisher.event(eventId(b,"BookingHeld")).correlationId().toString(),failed.path("correlationId").asString());
         }finally{docker("start",container);}
         waitBroker(container);available();flush(b);await(()->state(b).equals("CONFIRMED"));flush(b);
         health("",200,"UP");health("/readiness",200,"UP");
+        assertTrue(retries("outbox","none")>=retriesBefore+1);assertEquals(2,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"BookingHeld")));
         await(()->count("SELECT count(*) FROM ticketing.projection_events WHERE aggregate_id=?",b)==3);
         assertEquals(List.of(1L,2L,3L),jdbc.queryForList("SELECT aggregate_version FROM ticketing.projection_events WHERE aggregate_id=? ORDER BY applied_at,aggregate_version",Long.class,b));
         assertEquals(2,tickets(b));evidence.add(Map.of("case","real broker stop/start","versions",List.of(1,2,3),"tickets",2,"retained",true));
@@ -124,6 +131,7 @@ class KafkaRecoveryTest {
     }
     @Test @Order(5) void paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka(CapturedOutput output){
         UUID b=booking(2);record(b,"SUCCESS");UUID id=eventId(b,"PaymentResultRecorded");
+        double retriesBefore=retries("consumer",EventConsumer.PAYMENT);
         String marker="private-sql-"+UUID.randomUUID();
         jdbc.execute("CREATE SEQUENCE ticketing.test_delivery_attempts");
         jdbc.execute("CREATE FUNCTION ticketing.test_ticket_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.booking_id='"+b+"'::uuid THEN PERFORM nextval('ticketing.test_delivery_attempts'); RAISE EXCEPTION '"+marker+"'; END IF; RETURN NEW; END $$");
@@ -134,6 +142,8 @@ class KafkaRecoveryTest {
             assertEquals(0,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=? AND type='BookingConfirmed'",b));
             assertEquals(3,count("SELECT attempts FROM ticketing.message_failures WHERE consumer=? AND event_id=?",EventConsumer.PAYMENT,id));
             assertEquals(3,count("SELECT last_value FROM ticketing.test_delivery_attempts"));
+            assertEquals(retriesBefore+2,retries("consumer",EventConsumer.PAYMENT));
+            await(()->gauge("ticketing.messaging.failures","consumer",EventConsumer.PAYMENT,"status","DEAD")==count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND status='DEAD'",EventConsumer.PAYMENT));
             var logs=traceLines(output,id).stream().filter(n->n.path("consumer").asString().equals(EventConsumer.PAYMENT)).toList();
             assertEquals(3,logs.stream().filter(n->n.path("stage").asString().equals("consumer_failed")).count());
             assertFalse(logs.stream().anyMatch(n->n.path("stage").asString().equals("consumer_processed")));
@@ -143,6 +153,8 @@ class KafkaRecoveryTest {
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND event_id=? AND status='RESOLVED'",EventConsumer.PAYMENT,id)==1);
         assertEquals(2,tickets(b));assertEquals(1,inbox(EventConsumer.PAYMENT,id));evidence.add(Map.of("case","consumer rollback + 3 deliveries + admin replay","tickets",2,"result","PASS"));
         assertFalse(output.getAll().contains(marker),"SQL error details must not reach logs");
+        assertEquals(retriesBefore+2,retries("consumer",EventConsumer.PAYMENT),"Replay at a new offset is an initial delivery");
+        await(()->gauge("ticketing.messaging.failures","consumer",EventConsumer.PAYMENT,"status","RESOLVED")==count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND status='RESOLVED'",EventConsumer.PAYMENT));
     }
     @Test @Order(6) void realGapIsParkedThenOrderedReplayRecoversWithoutIssuingTickets(){
         UUID b=booking(2);var result=record(b,"SUCCESS");processor.process(b,result.paymentId());
@@ -156,14 +168,37 @@ class KafkaRecoveryTest {
         evidence.add(Map.of("case","version 3 before 1/2, gap parked and replayed","ticketsBefore",2,"ticketsAfter",2));
     }
     @Test @Order(7) void malformedEventRetriesThenDurableRecoveryAndKafkaDlq() throws Exception {
+        double paymentRetries=retries("consumer",EventConsumer.PAYMENT),auditRetries=retries("consumer",EventConsumer.AUDIT),ackBefore=dlqDeliveries("ACKNOWLEDGED");
+        int publishedBefore=count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NOT NULL");
         String key=UUID.randomUUID().toString();kafka.send(topic,key,"{\"schemaVersion\":999}").get(8,TimeUnit.SECONDS);
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=?",key)==2);
+        assertEquals(paymentRetries+2,retries("consumer",EventConsumer.PAYMENT));assertEquals(auditRetries+2,retries("consumer",EventConsumer.AUDIT));
+        await(()->gauge("ticketing.messaging.dlq.messages","state","PENDING")==count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NULL AND dlq_attempts<3"));
         publisher.publishOnce();await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND dlq_published_at IS NOT NULL",key)==2);
+        assertEquals(count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NOT NULL")-publishedBefore,dlqDeliveries("ACKNOWLEDGED")-ackBefore);
         assertEquals(2,count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND attempts=3 AND raw_event=? AND event_id IS NULL",key,"{\"schemaVersion\":999}"));
         // Read the actual DLQ, not just its database delivery marker.
         try(var dlq=new org.apache.kafka.clients.consumer.KafkaConsumer<String,String>(Map.of("bootstrap.servers",System.getenv("KAFKA_IT_BOOTSTRAP"),"group.id","dlq-proof-"+UUID.randomUUID(),"auto.offset.reset","earliest","key.deserializer","org.apache.kafka.common.serialization.StringDeserializer","value.deserializer","org.apache.kafka.common.serialization.StringDeserializer"))){
             dlq.subscribe(List.of(topic+".dlq"));Set<String> found=new HashSet<>();await(()->{for(var r:dlq.poll(java.time.Duration.ofMillis(300)))if(r.value().contains(key))found.add(r.key());return found.size()==2;});
         }
+    }
+    @Test @Order(17) void realDlqOutageThenRetryUpdatesCountersAndDurableGauges()throws Exception{
+        // Flush old notifications first; no reset of counters or database-wide fixture deletion.
+        await(()->{publisher.publishOnce();return count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NULL AND dlq_attempts<3")==0;});
+        String key="metrics-dlq-"+UUID.randomUUID();kafka.send(topic,key,"{\"invalid\":true}").get(8,TimeUnit.SECONDS);
+        await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=?",key)==2);
+        double beforeRetries=retries("dlq","none"),beforeFailed=dlqDeliveries("FAILED"),beforeAck=dlqDeliveries("ACKNOWLEDGED");
+        String container=System.getenv("KAFKA_IT_CONTAINER");assertTrue(container.startsWith("ticketing-kafka-it-"));
+        docker("stop",container);
+        try{
+            publisher.publishOnce();assertEquals(2,count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND dlq_attempts=1 AND dlq_published_at IS NULL",key));
+            assertEquals(beforeFailed+2,dlqDeliveries("FAILED"));assertEquals(beforeRetries,retries("dlq","none"));
+        }finally{docker("start",container);}
+        waitBroker(container);available();jdbc.update("UPDATE ticketing.message_failures SET dlq_next_attempt_at=clock_timestamp() WHERE record_key=?",key);
+        publisher.publishOnce();assertEquals(2,count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND dlq_attempts=2 AND dlq_published_at IS NOT NULL",key));
+        assertEquals(beforeRetries+2,retries("dlq","none"));assertEquals(beforeAck+2,dlqDeliveries("ACKNOWLEDGED"));
+        await(()->gauge("ticketing.messaging.dlq.messages","state","PUBLISHED")==count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NOT NULL"));
+        evidence.add(Map.of("case","T8.2 real DLQ failure then retry","failedDeliveries",dlqDeliveries("FAILED")-beforeFailed,"retryDeliveries",retries("dlq","none")-beforeRetries,"acknowledgedDeliveries",dlqDeliveries("ACKNOWLEDGED")-beforeAck,"result","PASS"));
     }
     @Test @Order(8) void replayRoleProfileAuditValidationAndBoundedBudget() throws Exception {
         UUID b=booking(1),id=eventId(b,"BookingHeld"),request=UUID.randomUUID();String path="/api/admin/operations/events/"+id+"/replay";

@@ -1,5 +1,14 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T8.2 — Metrics
+
+- `PostgresMetricsTest`: pause lifecycle TaskScheduler thật, drain task đang chạy, tạo booking GA/ghế qua service thật, để deadline đi qua theo đồng hồ PG; metric overdue và oldest age phải tăng khi scheduler vẫn dừng. Resume scheduler, chờ EXPIRED/release thật và đối chiếu metric với SQL hiện trạng; không gọi expiry inline trong ca acceptance này.
+- Gauge state: tạo đủ6state bằng service booking/cancel/payment/expiry và so delta với baseline SQL; snapshot phải dùng connection riêng, không đọc thay đổi đang nằm trong transaction/rollback của thread gọi. Tuổi outbox bao gồm FAILED/PENDING và thay đổi sau PUBLISHED; tuổi rỗng=0. Gauge recovery/DLQ đi qua PENDING/EXHAUSTED/PUBLISHED/RESOLVED.
+- `KafkaRecoveryTest`: delivery lần đầu không tăng retry;3delivery lỗi payment tạo2retry, replay offset mới không tự tăng retry. Poison record được retry ở cả2consumer, recovery DB và Kafka DLQ thật được đối chiếu. Dừng broker riêng: DLQ send thất bại, restart/send lại làm retry/ACK counter tăng và gauge chuyển trạng thái.
+- Timer `http.server.requests`: gửi request API thật, kiểm tra COUNT tăng đúng số request tạo, TOTAL_TIME/MAX>0 và đơn vị seconds; uri là route mẫu, không có UUID/token/query/account trong tag. Metrics chỉ ADMIN local/test; anonymous401/customer403/admin200, mặc định ngoài local/test access=NONE dù bean backing có thể vẫn tồn tại.
+- `OperationsMetricsTest`: TTL cache không query liên tiếp trong cửa sổ; source lỗi làm gauge NaN/available0, age vẫn phản ánh snapshot thành công trước đó; phục hồi cập nhật số mới/available1. Không dùng zero giả khi query lỗi.
+- Chạy `infra/test-metrics.ps1` hoặc `-FullSuite`, contract và live HTTP gate liên quan; ghi số liệu đo thật, không cố định database demo. Giới hạn process-local counters, cache và SQL scan được ghi trong ARCHITECTURE/PROGRESS.
+
 ## Gate T8.1 — Log cấu trúc và health
 
 - `TraceContextTest`: thread dùng lại sau exception, scope lồng khôi phục MDC; HTTP correlation hợp lệ/không hợp lệ, route mẫu, không ghi token/body/query; request tiếp theo không có booking/event ID cũ.

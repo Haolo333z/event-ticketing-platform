@@ -280,4 +280,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
 npm.cmd test --prefix tools/contracts
 ```
 
-Khi dependency khỏe, cả ba probe trả200/UP. Khi Kafka lỗi và messaging bật, root/readiness trả503/DOWN nhưng liveness vẫn200/UP; messaging tắt bỏ yêu cầu Kafka. Không gửi token cho health. Không dùng liveness để suy rằng PostgreSQL/Kafka đang khỏe; readiness không kiểm tra backlog hoặc consumer lag (T8.2 chưa làm). Kiểm tra tự động bao gồm broker test stop/start, đối chiếu log từ HTTP tới Kafka và fault DB qua DataSource test; chi tiết/bằng chứng tại docs/PROGRESS.md.
+Khi dependency khỏe, cả ba probe trả200/UP. Khi Kafka lỗi và messaging bật, root/readiness trả503/DOWN nhưng liveness vẫn200/UP; messaging tắt bỏ yêu cầu Kafka. Không gửi token cho health. Không dùng liveness để suy rằng PostgreSQL/Kafka đang khỏe; readiness không kiểm tra backlog hoặc consumer lag. Metrics tồn đọng xem T8.2 bên dưới. Kiểm tra tự động bao gồm broker test stop/start, đối chiếu log từ HTTP tới Kafka và fault DB qua DataSource test; chi tiết/bằng chứng tại docs/PROGRESS.md.
+
+## T8.2 — Metrics local
+
+Micrometer/Actuator cung cấp metrics read-only cho ADMIN local/test. Tên và đơn vị đầy đủ tại [ARCHITECTURE — T8.2](docs/ARCHITECTURE.md#t82--hợp-đồng-metrics). Đếm hold theo booking PENDING_PAYMENT quá deadline DB; tuổi hold/outbox tính bằng **seconds**. Outbox chưa publish bao gồm PENDING/FAILED. Các count là hiện trạng DB; retry/DLQ delivery counter và HTTP timer là số liệu của JVM hiện tại, reset khi restart. Không dùng booking/user/message ID hoặc token làm label. HTTP timer `http.server.requests` dùng route mẫu và có COUNT/TOTAL_TIME/MAX; không có p95 ở cấu hình này.
+
+```powershell
+# Chạy từ thư mục gốc, Docker Desktop đang chạy
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1
+# Hoặc toàn bộ backend, gồm hồi quy GA/ghế/payment/Kafka/T8.1
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1 -FullSuite
+
+# Backend local đã chạy; token dưới đây là fixture công khai của demo
+$adminHeaders = @{ Authorization = 'Bearer demo-admin-token' }
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue.oldest.age -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.outbox.unpublished.oldest.age -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.messaging.retries -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/http.server.requests -Headers $adminHeaders
+```
+
+Test pause/resume scheduler trong context test riêng và stop/start broker UUID riêng; không dừng worker/broker demo. Snapshot SQL read-only độc lập worker, cache1s mặc định (`operations.metrics.snapshot-ttl-ms`); đọc lỗi báo gaugeNaN/available0, không giả số0. Health vẫn dùng để kiểm tra dependency; metrics chưa đo consumer lag hoặc cung cấp cảnh báo/dashboard ngoài. T8.3 trở đi chưa làm.

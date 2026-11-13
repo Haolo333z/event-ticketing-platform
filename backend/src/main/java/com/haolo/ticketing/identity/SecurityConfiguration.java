@@ -19,6 +19,7 @@ public class SecurityConfiguration {
         return http.csrf(c->c.disable()).requestCache(c->c.disable()).httpBasic(c->c.disable()).formLogin(c->c.disable())
             .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/actuator/health/liveness","/actuator/health/readiness","/error").permitAll()
+                .requestMatchers(HttpMethod.GET,"/actuator/metrics","/actuator/metrics/**").access((authentication,context)->new org.springframework.security.authorization.AuthorizationDecision(settings.safeProfile&&authentication.get().getAuthorities().stream().anyMatch(a->a.getAuthority().equals("ROLE_ADMIN"))))
                 .requestMatchers(HttpMethod.GET,"/api/events","/api/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.POST,"/api/bookings/*/simulate-payment","/api/bookings/*/cancel").hasRole("CUSTOMER")

@@ -161,7 +161,7 @@ Giữ ranh giới module khi scaffold; không dồn domain vào một bộ contr
 
 ## 11. Triển khai và quan sát
 
-Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện ích đã chốt T1.1. Local hiện chạy PostgreSQL/Kafka bằng Compose, backend JDK và frontend Vite chạy host; cổng demo bind127.0.0.1. Có health check, migration rõ thứ tự và seed riêng. Replay/simulator đã triển khai ở các phần trước; log/health T8.1 bên dưới. Metrics booking theo state, overdue hold count/oldest age, outbox pending/age, retry/DLQ và latency/lỗi API thuộc T8.2, chưa triển khai. Không log token hoặc bí mật.
+Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện ích đã chốt T1.1. Local hiện chạy PostgreSQL/Kafka bằng Compose, backend JDK và frontend Vite chạy host; cổng demo bind127.0.0.1. Có health check, migration rõ thứ tự và seed riêng. Replay/simulator đã triển khai ở các phần trước; log/health T8.1 và metrics T8.2 bên dưới. Không log token hoặc bí mật.
 
 
 Event producer/consumer và failure policy: [EVENT_CATALOG](EVENT_CATALOG.md). Test và recovery: [TEST_PLAN](TEST_PLAN.md), [DEMO_AND_RECOVERY](DEMO_AND_RECOVERY.md).
@@ -181,3 +181,25 @@ Các mốc `http_request`, `outbox_committed`, `outbox_published`, `outbox_publi
 Outbox committed chỉ log sau COMMIT; rollback không được báo thành công. Publisher dùng ID từ outbox bền, consumer dùng envelope đã validate; log consumer thành công sau inbox/nghiệp vụ commit, duplicate là outcome riêng. Không thay payload event hoặc ranh giới giao dịch. HTTP idempotency replay có correlation của request mới và tham chiếu event gốc; không sửa correlation bền của event cũ.
 
 `/actuator/health` là tổng hợp; `/actuator/health/liveness` chỉ phản ánh trạng thái tiến trình; `/actuator/health/readiness` gồm readinessState, PostgreSQL và Kafka khi messaging bật. Kafka lỗi làm tổng hợp/readiness trả503 DOWN nhưng liveness vẫn200 UP; messaging tắt thì không yêu cầu broker. Probe chỉ trả status, không công khai chi tiết cấu hình/lỗi/cluster. DB acquisition dùng timeout pool2s + validation1s; Kafka probe có timeout2s. Đây không phải kiểm tra backlog, độ trễ publisher, consumer đang tiến triển hay khả năng ghi mọi partition; các metric thuộc T8.2, chưa triển khai trong T8.1.
+
+## T8.2 — Hợp đồng metrics
+
+Dùng [Micrometer/Actuator](https://docs.spring.io/spring-boot/reference/actuator/metrics.html) đã có trong stack, không thêm registry/dịch vụ. GET `/actuator/metrics` và `/actuator/metrics/{name}` chỉ mở read-only ở local/test, yêu cầu ADMIN; profile khác mặc định access NONE, backing bean có thể vẫn tồn tại. Không đưa UUID, correlation, account, token, idempotency key, raw URI/query/payload vào label. Các tag tự thêm đều có tập giá trị cố định. Consumer attempt dùng [header do Spring Kafka container tạo](https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html#delivery-attempts-header); không đếm network retry bên trong Kafka producer.
+
+| Tên Micrometer | Loại / đơn vị | Label và cách đo |
+|---|---|---|
+| `ticketing.bookings` | Gauge / bookings | `status`:6state PRD, số booking đã commit hiện tại |
+| `ticketing.holds.overdue` | Gauge / bookings | Không label; PENDING_PAYMENT có expires_at <= DB statement_timestamp; đếm booking giữ chỗ, không đếm vé/ghế |
+| `ticketing.holds.overdue.oldest.age` | Gauge / seconds | Tuổi quá hạn lớn nhất = now-min(expires_at), rỗng=0 |
+| `ticketing.outbox.messages` | Gauge / messages | `status`:PENDING/PUBLISHED/FAILED |
+| `ticketing.outbox.unpublished.oldest.age` | Gauge / seconds | now-min(created_at) cho PENDING **hoặc FAILED**, kể cả event bị chặn version; rỗng=0, không âm |
+| `ticketing.outbox.attempts` | Gauge / attempts | Tổng attempts đang lưu, có thể giảm khi replay reset; không gọi là counter retry bền |
+| `ticketing.messaging.failures` | Gauge / messages | `consumer`:payment-v1/booking-audit-v1, `status`:DEAD/RESOLVED; từ recovery DB |
+| `ticketing.messaging.dlq.messages` | Gauge / messages | `state`:PENDING/PUBLISHED/EXHAUSTED; dlq_published_at có giá trị thì PUBLISHED, chưa gửi đủ3attempt thì EXHAUSTED, còn lại PENDING; bao gồm cả recovery đã RESOLVED |
+| `ticketing.messaging.retries` | Counter / retries | `stage`:outbox/consumer/dlq, `consumer`:none/payment-v1/booking-audit-v1; đếm **delivery bắt đầu sau lần đầu**. Outbox/DLQ dựa attempts trước send; consumer dựa header deliveryAttempt do container tạo. Duplicate/new replay lần đầu không tự tính là retry |
+| `ticketing.messaging.dlq.deliveries` | Counter / deliveries | `outcome`:ACKNOWLEDGED/FAILED; số lần send DLQ có/không ACK, không phải số message unique |
+| `ticketing.metrics.snapshot.available` | Gauge / boolean | 1 nếu snapshot DB mới nhất đọc được, 0 nếu lỗi |
+| `ticketing.metrics.snapshot.age` | Gauge / seconds | Thời gian JVM từ snapshot thành công gần nhất, NaN nếu chưa có |
+| `http.server.requests` | Timer / seconds | Timer Spring MVC sẵn có: COUNT, TOTAL_TIME, MAX; uri là route mẫu/nhãn fallback, method/status/outcome/error có giới hạn. Không dùng URI thực chứa ID. Chưa bật histogram/p95 |
+
+Snapshot DB là một SQL read-only dùng cùng đồng hồ/snapshot PostgreSQL, không gắn vào scheduler expiry. Cache tối đa1s mặc định (`operations.metrics.snapshot-ttl-ms`,0..5000ms), statement timeout2s/pool acquisition2s. Khi lỗi, các gauge nghiệp vụ trảNaN và available=0; không giả làm0 hoặc giữ giá trị cũ như mới. Snapshot age cho biết độ cũ, không phải tuổi hold/outbox. DB gauges phản ánh hiện trạng, không phải tổng số chuyển trạng thái từ khi chạy. Counter/timer là process-local, reset khi JVM restart; dùng gauges/recovery DB để đối soát bền. Một scrape nhiều endpoint có thể cắt qua các snapshot/cache khác nhau, không là transaction toàn bộ HTTP scrape. Không thay giao dịch booking, expiry, publisher/inbox hoặc retry budget.

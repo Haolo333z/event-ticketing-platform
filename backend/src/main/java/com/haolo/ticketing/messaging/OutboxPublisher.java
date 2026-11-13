@@ -13,6 +13,7 @@ import tools.jackson.core.type.TypeReference;
 import com.haolo.ticketing.bookings.BookingTransactions;
 import com.haolo.ticketing.operations.TraceContext;
 import com.haolo.ticketing.operations.TraceLog;
+import com.haolo.ticketing.operations.MessagingMetrics;
 
 /** Session leader only; send+ACK happens with NO business transaction or row lock. */
 @Service @ConditionalOnProperty(name="messaging.enabled",havingValue="true")
@@ -21,7 +22,8 @@ public class OutboxPublisher {
     private final DataSource source;private final JdbcTemplate jdbc;private final KafkaTemplate<String,String> kafka;
     private final ObjectMapper json;private final EventCodec codec;private final String topic,dlq;
     private final BookingTransactions tx;
-    public OutboxPublisher(DataSource source,JdbcTemplate jdbc,KafkaTemplate<String,String> kafka,ObjectMapper json,EventCodec codec,BookingTransactions tx,@Value("${messaging.topic}")String topic,@Value("${messaging.dlq-topic}")String dlq){this.source=source;this.jdbc=jdbc;this.kafka=kafka;this.json=json;this.codec=codec;this.tx=tx;this.topic=topic;this.dlq=dlq;}
+    private final MessagingMetrics metrics;
+    public OutboxPublisher(DataSource source,JdbcTemplate jdbc,KafkaTemplate<String,String> kafka,ObjectMapper json,EventCodec codec,BookingTransactions tx,MessagingMetrics metrics,@Value("${messaging.topic}")String topic,@Value("${messaging.dlq-topic}")String dlq){this.source=source;this.jdbc=jdbc;this.kafka=kafka;this.json=json;this.codec=codec;this.tx=tx;this.metrics=metrics;this.topic=topic;this.dlq=dlq;}
     public OutboxWriter.Event event(UUID id){
         return jdbc.queryForObject("SELECT * FROM ticketing.outbox_events WHERE id=?",(r,n)->new OutboxWriter.Event(id,r.getString("type"),r.getInt("schema_version"),r.getObject("aggregate_id",UUID.class),r.getLong("aggregate_version"),r.getTimestamp("created_at").toInstant().toString(),r.getObject("correlation_id",UUID.class),json.readValue(r.getString("payload"),new TypeReference<Map<String,Object>>(){})),id);
     }
@@ -33,8 +35,9 @@ public class OutboxPublisher {
                 int sent=0;
                 for(UUID id:ids){var event=event(id);boolean ack=false;
                     try(var context=TraceContext.open(event.correlationId(),event.aggregateId(),event.eventId())){
-                    int generation=jdbc.queryForObject("SELECT jsonb_array_length(replay_requests) FROM ticketing.outbox_events WHERE id=?",Integer.class,id);
-                    try{codec.decode(codec.encode(event),event.aggregateId().toString());kafka.send(topic,event.aggregateId().toString(),codec.encode(event)).get(6,java.util.concurrent.TimeUnit.SECONDS);ack=true;}
+                    var attempt=jdbc.queryForMap("SELECT attempts,jsonb_array_length(replay_requests) AS generation FROM ticketing.outbox_events WHERE id=?",id);
+                    int generation=((Number)attempt.get("generation")).intValue();
+                    try{codec.decode(codec.encode(event),event.aggregateId().toString());metrics.outboxAttempt(((Number)attempt.get("attempts")).intValue());kafka.send(topic,event.aggregateId().toString(),codec.encode(event)).get(6,java.util.concurrent.TimeUnit.SECONDS);ack=true;}
                     catch(Exception ex){if(ex instanceof InterruptedException){Thread.currentThread().interrupt();return sent;}}
                     // Serialize with admin replay. Do not overwrite a newer replay request (its attempts reset).
                     if(ack){int marked=tx.run(()->jdbc.update("UPDATE ticketing.outbox_events SET status='PUBLISHED',attempts=attempts+1,published_at=clock_timestamp(),last_error=NULL WHERE id=? AND jsonb_array_length(replay_requests)=?",id,generation));sent++;TraceLog.event("outbox_published",marked==1?"PUBLISHED":"ACKNOWLEDGED_REPLAY_PENDING",null);}
@@ -47,9 +50,10 @@ public class OutboxPublisher {
     }
     private void publishDlq(){
         for(var row:jdbc.queryForList("SELECT * FROM ticketing.message_failures WHERE dlq_published_at IS NULL AND dlq_attempts<3 AND dlq_next_attempt_at<=clock_timestamp() ORDER BY created_at LIMIT 10")){
-            boolean ack=false;try{var payload=new LinkedHashMap<String,Object>();for(String key:List.of("id","consumer","topic","partition_id","record_offset","record_key","raw_event","attempts","error"))payload.put(key,row.get(key));kafka.send(dlq,row.get("id").toString(),json.writeValueAsString(payload)).get(6,java.util.concurrent.TimeUnit.SECONDS);ack=true;}
+            boolean ack=false;try{var payload=new LinkedHashMap<String,Object>();for(String key:List.of("id","consumer","topic","partition_id","record_offset","record_key","raw_event","attempts","error"))payload.put(key,row.get(key));metrics.dlqAttempt(((Number)row.get("dlq_attempts")).intValue());kafka.send(dlq,row.get("id").toString(),json.writeValueAsString(payload)).get(6,java.util.concurrent.TimeUnit.SECONDS);ack=true;}
             catch(Exception ex){if(ex instanceof InterruptedException){Thread.currentThread().interrupt();return;}}
             boolean acknowledged=ack;
+            metrics.dlqResult(ack);
             tx.run(()->jdbc.update("UPDATE ticketing.message_failures SET dlq_attempts=dlq_attempts+1,dlq_published_at=CASE WHEN ? THEN clock_timestamp() ELSE NULL END,dlq_next_attempt_at=clock_timestamp()+make_interval(secs=>power(2,dlq_attempts)::int) WHERE id=?",acknowledged,row.get("id")));
         }
     }

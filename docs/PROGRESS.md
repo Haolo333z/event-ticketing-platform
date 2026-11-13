@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Quan sát/vận hành — chỉ T8.1, hoàn thành local ngày2026-11-13
-- **Tiến độ:** T1.1–T7.4 và T8.1 Done; log xuyên HTTP/PostgreSQL/Kafka và health đã có bằng chứng
-- **Task đang làm:** T8.1 đã kiểm chứng; tiếp tục từ HEAD4931d2f, working tree ban đầu sạch; chưa commit/push
-- **Task tiếp theo:** T8.2 (chưa bắt đầu)
-- **Blocker:** Không có blocker T8.1 local. Chưa chạy GitHub Actions/Linux cho thay đổi chưa commit/push; giới hạn health/DB fault/visual QA ghi ở nhật ký T8.1.
+- **Giai đoạn:** Quan sát/vận hành — T8.2 hoàn thành local ngày2026-11-13
+- **Tiến độ:** T1.1–T7.4 và T8.1–T8.2 Done; log/health/metrics đã có bằng chứng
+- **Task đang làm:** T8.2 đã kiểm chứng từ HEAD59e4621, working tree ban đầu sạch; chưa commit/push
+- **Task tiếp theo:** T8.3 (chưa bắt đầu)
+- **Blocker:** Không có blocker T8.2 local. Chưa chạy GitHub Actions/Linux cho thay đổi chưa commit/push; giới hạn counter/cache/SQL scale ghi ở nhật ký T8.2.
 
-- **Task trong TASKS:** 34/45 Done.18bảng/V1–V9 và16API nghiệp vụ giữ nguyên; T8.1 bổ sung log/health vận hành. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 35/45 Done.18bảng/V1–V9 và16API nghiệp vụ giữ nguyên; metrics dùng Micrometer/Actuator hiện có, không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -443,3 +443,57 @@ Invoke-RestMethod http://127.0.0.1:8080/actuator/health/readiness
 Mong đợi full121/121, health200/UP khi dependency khỏe. Muốn thử lỗi broker, dùng test tự động ở trên: test chỉ stop/start broker UUID riêng, không dừng broker demo. Lọc JSON backend theo correlationId/bookingId/eventId và stage; sample an toàn ở evidence. Không gửi token cho health.
 
 Chưa chạy GitHub Actions/Linux của thay đổi chưa commit/push; chưa visual QA Chrome (live UI dùng jsdom). DB fault được inject ở DataSource dùng H2 thật, chưa dừng PostgreSQL thật hoặc mô phỏng network partition PG ở T8.1. Kafka health chỉ chứng minh metadata broker truy cập được, không kiểm tra quyền ghi từng partition, publisher/consumer tiến triển, backlog/lag; các metric thuộc T8.2 chưa làm. Chưa thử cluster nhiều broker, benchmark hoặc mọi crash window. Các dòng rất sớm trước Boot có thể là text, log vận hành runtime là JSON. Không thêm Redis, dịch vụ log ngoài, payment thật hoặc metric. Không sửa dữ liệu demo/.env, không commit/push. T8.2 trở đi chưa bắt đầu.
+
+## 2026-11-13 — T8.2 Done: metrics độc lập worker
+
+HEAD ban đầu59e4621 (`feat: add structured tracing and health checks`), working tree sạch. Đã đọc RULES/TASKS/PROGRESS và T8.1, PRD/DESIGN/ARCHITECTURE, DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN liên quan, code expiry/publisher/consumer/recovery/security và migrationV1–V9. Micrometer có sẵn qua Actuator; HTTP timer đã được auto-instrument, nên không tạo timer trùng hoặc thêm dịch vụ. Hợp đồng tên, đơn vị, label, retry và cache ghi ở [ARCHITECTURE — T8.2](ARCHITECTURE.md#t82--hợp-đồng-metrics) trước code. [Bằng chứng T8.2](evidence/t8-2-metrics-2026-11-13.json) giữ số liệu thật, danh mục metrics và hash log.
+
+### File thay đổi và cách đo
+
+- `operations/OperationsMetrics.java` mới: một SQL read-only trên connection riêng, đồng hồ/snapshot PostgreSQL; gauge6state, overdue count/oldest age, outbox PENDING/PUBLISHED/FAILED và oldest unpublished, stored attempts, recovery/DLQ, snapshot availability/age. Không phụ thuộc `ExpiryScheduler`, publisher hay consumer có đang chạy. Gauge count dùng bookings/messages/attempts; mọi age dùng **seconds**, rỗng=0. Snapshot cache mặc định1s; query lỗi trảNaN/available0, không xuất số0 giả hoặc dữ liệu cũ như mới.
+- `operations/MessagingMetrics.java` mới: counter retry application delivery (bỏ lần đầu) và DLQ send ACK/FAILED; process-local. Chỉ stage outbox/consumer/dlq, consumer none/payment-v1/booking-audit-v1, outcome ACKNOWLEDGED/FAILED. Không dùng ID, topic/record key, error text, user hoặc token làm label.
+- `messaging/OutboxPublisher.java`: đo attempt trước send theo attempts bền, DLQ outcome theo ACK; không thay leader/transaction/retry budget. `messaging/KafkaConfiguration.java`: bật delivery-attempt header do container tạo, đếm consumer retry ở đầu listener; không đổi envelope/payload hoặc inbox.
+- `application.yml`, `application-local.yml`, `application-test.yml`, `identity/SecurityConfiguration.java`: metrics Actuator read-only chỉ ADMIN local/test; ngoài local/test access mặc định NONE, dù backing bean có thể vẫn tồn tại. Chỉ thêm exposure metrics, không mở endpoint Actuator khác. HTTP latency dùng `http.server.requests` sẵn có: COUNT/TOTAL_TIME/MAX, baseUnit seconds, uri template; không thêm meter gắn URI thực.
+- `PostgresMetricsTest.java` mới: scheduler lifecycle thật, fixture GA/ghế,6state qua service, snapshot commit/rollback, outbox/recovery fixtures, HTTP latency/security/tag privacy. `operations/OperationsMetricsTest.java` mới: cache TTL/failure/recovery. `KafkaRecoveryTest.java`: thêm assertion counter/gauge và ca DLQ broker outage/retry thật. `TicketingApplicationTest.java`: chỉ định prod rõ ràng, xác nhận effective metrics access NONE.
+- `infra/test-metrics.ps1` mới: tái sử dụng harness DB/broker UUID hiện có; default gate24test hoặc `-FullSuite`128test. `README.md`, `ARCHITECTURE.md`, `API_CONTRACT.md`, `TEST_PLAN.md`, `TASKS.md`, `PROGRESS.md`, evidence cập nhật phạm vi/cách chạy/đơn vị. Không thay schema/migration/dependency/frontend hay API nghiệp vụ.
+
+### Đối chiếu acceptance và số liệu thực tế
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Dừng Expiry Worker, deadline tự đi qua | Pause `ThreadPoolTaskScheduler`, drain task đang chạy; tạo GA+ghế thật TTL2s, không sửa deadline trong ca này. Đo overdue **0→2**, tuổi oldest **0,076971s→0,715379s** khi scheduler vẫn dừng và cả2booking vẫn PENDING_PAYMENT |
+| Chạy worker lại | Resume scheduler, để tick thật xử lý; cả2booking EXPIRED, GA held_count0/ghế AVAILABLE. Metric overdue **2→0**, oldest age **0s**, khớp SQL mới. Không gọi expiry inline trong ca acceptance; không dừng worker demo |
+| Booking theo6state | Tạo đủ6state qua booking/cancel/payment/expiry, mỗi state tăng1 so baseline SQL riêng. Snapshot gọi bên trong transaction có thay đổi chưa commit vẫn chỉ thấy dữ liệu đã commit; rollback không lộ state tạm; cancel commit cập nhật gauge |
+| Tuổi outbox và trạng thái recovery | Fixture test riêng đặt FAILED/PUBLISHED: oldest unpublished **20,009612s→0s**, so SQL; FAILED không bị bỏ quên. Stored attempts và recovery/DLQ PENDING/EXHAUSTED/PUBLISHED/DEAD/RESOLVED khớp DB. Việc đặt trạng thái outbox/DLQ bằng SQL chỉ là fixture kiểm tra gauge, không tuyên bố đó là ACK Kafka thật |
+| Retry/Kafka/DLQ thật | Send đầu lỗi không tăng retry;3consumer delivery lỗi tạo2retry; replay offset mới không tự tính retry. Poison record kiểm tra2consumer và đọc DLQ Kafka thật. Broker riêng stop/start: **2DLQ FAILED →2retry →2ACK**, durable dlq_attempts1→2 và gauge PUBLISHED khớp DB |
+| API latency/security/labels | Hai GET API thật làm COUNT tăng đúng2, TOTAL_TIME **0,015161s**, MAX **0,0091159s** ở series test. Anonymous/lạ token401, customer403, admin200; prod effective access NONE. Kiểm tra tất cả custom/HTTP meter tag không có UUID/token/private query/account; URI template giữ nguyên khi ID thay đổi |
+| Cache và lỗi collector | TTL1000ms bằng clock kiểm soát: không query lặp trong cửa sổ; source lỗi →NaN/available0 và snapshot.age tiếp tục tăng; phục hồi →giá trị mới/available1. Integration đặt cache0 để đối chiếu SQL tức thời; cấu hình runtime mặc định vẫn1000ms |
+
+Các số trên là snapshot của lượt chạy cuối, không là assertion cố định cho database demo. Assertions dùng fixture mới, delta/baseline và SQL hiện trạng. `eventId/bookingId/correlationId` tiếp tục nằm trong log T8.1 khi cần truy vết, không chuyển thành label metrics.
+
+### Lệnh đã chạy
+
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1 -FullSuite`: **128/128**,0failure/error/skip, Maven verify/package BUILD SUCCESS. Gồm121test nền +5PostgresMetrics +1cache +1Kafka DLQ mới; regression GA/ghế/payment/expiry/Kafka/log/health giữ xanh. PostgreSQL17.11/Kafka4.2.2 thật, Temurin25.0.5+8/Boot4.1.2, UTC; DB/project UUID được dọn đúng tài nguyên test. Log cuối `backend/target/t82-backend-pass.log`.
+- **PASS** `mvnw.cmd -B -ntp '-Dtest=TicketingApplicationTest,OperationsMetricsTest' test`: **2/2** trước full suite cuối; prod access NONE và cache. Log `backend/target/t82-profile-cache.log`. Lệnh default gate24 của script được cung cấp để chạy lại; lần nghiệm thu cuối chạy `-FullSuite`, không báo đã chạy riêng default gate.
+- **PASS** `npm.cmd test --prefix tools/contracts`: **58case/16operation**; không đổi response/schema nghiệp vụ. Log `backend/target/t82-contracts.log`.
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1`: **66HTTP response** đúng OpenAPI; real DOM/API/PG/Kafka, dashboard25booking→20/5/overlap0, GA2/capacity/price/history/outbox/phát2vé; SQL0oversell/0vé sai state và9migration không đổi; packaged production mock guard và log scan đạt. Log `backend/target/t82-live-admin.log`.
+- **PASS** `git diff --check`; evidence parse và tổng JUnit128 được đối chiếu. Raw report `backend/target/part82-metrics-evidence.json`/`part7-kafka-evidence.json` được tổng hợp vào evidence trước khi Surefire có thể bị ghi đè; target/log không đưa vào Git.
+
+Lỗi đã phát hiện và sửa: test mới trùng import Timer và hiểu nhầm registry AutoCloseable; collector JdbcTemplate tham gia transaction thread gọi, đã thay bằng direct read-only connection và giữ assertion rollback; kiểm tra bean backing không tương đương quyền truy cập Actuator; harness nạp profile local nên ca nonlocal phải chọn prod rõ ràng. Các lượt FAIL không tính nghiệm thu; kết quả cuối128/128 kể trên.
+
+### Cách tự thử và giới hạn
+
+Từ thư mục gốc, Docker Desktop đang chạy:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1 -FullSuite
+npm.cmd test --prefix tools/contracts
+# Sau khi backend local chạy; admin token là fixture công khai đã chốt
+$adminHeaders = @{ Authorization = 'Bearer demo-admin-token' }
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue.oldest.age -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.outbox.unpublished.oldest.age -Headers $adminHeaders
+Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/http.server.requests -Headers $adminHeaders
+```
+
+Metric count/age phản ánh dữ liệu hiện tại, không hứa giá trị2/0 trên demo; thử pause/resume dùng script để không ảnh hưởng demo. Retry ứng dụng không bao gồm network retry nội bộ Kafka producer. Counter/timer reset khi JVM restart, không là số event unique bền; cache tối đa1s mặc định và mỗi request metrics có thể ở snapshot khác nhau. DB auth lỗi có thể chặn metrics HTTP, dùng health để theo dõi dependency; gauge NaN/availability không thay health. Chưa benchmark aggregate SQL ở dữ liệu lớn, pool saturation, nhiều replica hoặc cluster Kafka; chưa có Prometheus/Grafana/alerting/consumer lag. Chưa GitHub Actions/Linux/visual Chrome; không chạy lại frontend unit/build vì không sửa frontend, nhưng live jsdom/API đã chạy. Không sửa `.env`, dữ liệu demo, schema hay event; chưa commit/push. T8.3 trở đi chưa thực hiện.
