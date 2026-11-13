@@ -37,6 +37,8 @@ public class KafkaConfiguration {
         var result=new ConcurrentKafkaListenerContainerFactory<String,String>();result.setConsumerFactory(factory);
         result.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         var errors=new DefaultErrorHandler((record,error)->failures.park(group,record,error),new FixedBackOff(250,2));
+        // Application logs carry validated IDs; do not dump listener exceptions/records on retries.
+        errors.setLogLevel(org.springframework.kafka.KafkaException.Level.DEBUG);
         errors.setClassifications(Map.of(Exception.class,true),true);result.setCommonErrorHandler(errors);return result;
     }
     @Bean KafkaListeners eventListeners(EventConsumer consumer){return new KafkaListeners(consumer);}

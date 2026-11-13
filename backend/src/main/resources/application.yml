@@ -25,15 +25,32 @@ management:
   endpoint:
     health:
       show-details: never
+      show-components: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,messaging
+      validate-group-membership: false
 expiry:
   enabled: ${EXPIRY_ENABLED:true}
 logging:
+  config: classpath:logback-spring.xml
+  structured:
+    format:
+      console: logstash
   level:
+    root: INFO
+    org.springframework: INFO
+    org.springframework.boot: INFO
     org.springframework.web: INFO
     org.springframework.jdbc: INFO
     org.springframework.jdbc.core.JdbcTemplate: INFO
     org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver: INFO
     com.zaxxer.hikari: INFO
+    org.springframework.kafka.listener: INFO
 messaging:
   enabled: ${MESSAGING_ENABLED:false}
   scheduling-enabled: true

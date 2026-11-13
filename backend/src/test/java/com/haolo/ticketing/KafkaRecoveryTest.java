@@ -16,6 +16,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.*;
 import com.haolo.ticketing.bookings.*;
 import com.haolo.ticketing.payments.*;
 import com.haolo.ticketing.expiry.ExpiryService;
@@ -30,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
     "spring.datasource.url=${KAFKA_IT_PG_URL:${PG_IT_URL}}","expiry.enabled=false","messaging.enabled=true","messaging.scheduling-enabled=false",
     "messaging.bootstrap-servers=${KAFKA_IT_BOOTSTRAP}","messaging.topic=${KAFKA_IT_TOPIC}","messaging.dlq-topic=${KAFKA_IT_TOPIC}.dlq",
     "logging.level.org.springframework.jdbc=INFO","logging.level.org.apache.kafka=WARN","messaging.group-prefix=${KAFKA_IT_TOPIC}","messaging.refund-simulated-failures=1"})
-@ActiveProfiles("test") @DirtiesContext
+@ActiveProfiles("test") @DirtiesContext @ExtendWith(OutputCaptureExtension.class)
 @EnabledIfEnvironmentVariable(named="KAFKA_IT_BOOTSTRAP",matches=".+")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class KafkaRecoveryTest {
@@ -90,17 +92,22 @@ class KafkaRecoveryTest {
         assertEquals(3,count("SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
         evidence.add(Map.of("case","Kafka payment v2, 10 duplicates, consumer restart, 5 confirmed replays","tickets",tickets(b),"confirmTransitions",1));
     }
-    @Test @Order(3) void brokerOffOnRetainsOutboxAndOrdersVersions() throws Exception {
+    @Test @Order(3) void brokerOffOnRetainsOutboxAndOrdersVersions(CapturedOutput output) throws Exception {
         String container=System.getenv("KAFKA_IT_CONTAINER");assertTrue(container!=null&&container.startsWith("ticketing-kafka-it-"));
         UUID b=booking(2);record(b,"SUCCESS");
+        health("",200,"UP");health("/readiness",200,"UP");health("/liveness",200,"UP");
         docker("stop",container);
         try{
+            health("",503,"DOWN");health("/readiness",503,"DOWN");health("/liveness",200,"UP");
             publisher.publishOnce();assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM ticketing.outbox_events WHERE id=?",String.class,eventId(b,"BookingHeld")));
             assertEquals(1,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"BookingHeld")));
             assertEquals(0,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"PaymentResultRecorded")));
             assertEquals("PENDING_PAYMENT",state(b));assertEquals(0,tickets(b));
+            var failed=traceLines(output,eventId(b,"BookingHeld")).stream().filter(n->n.path("stage").asString().equals("outbox_publish_failed")).findFirst().orElseThrow();
+            assertEquals(b.toString(),failed.path("bookingId").asString());assertEquals(publisher.event(eventId(b,"BookingHeld")).correlationId().toString(),failed.path("correlationId").asString());
         }finally{docker("start",container);}
         waitBroker(container);available();flush(b);await(()->state(b).equals("CONFIRMED"));flush(b);
+        health("",200,"UP");health("/readiness",200,"UP");
         await(()->count("SELECT count(*) FROM ticketing.projection_events WHERE aggregate_id=?",b)==3);
         assertEquals(List.of(1L,2L,3L),jdbc.queryForList("SELECT aggregate_version FROM ticketing.projection_events WHERE aggregate_id=? ORDER BY applied_at,aggregate_version",Long.class,b));
         assertEquals(2,tickets(b));evidence.add(Map.of("case","real broker stop/start","versions",List.of(1,2,3),"tickets",2,"retained",true));
@@ -115,10 +122,11 @@ class KafkaRecoveryTest {
         finally{jdbc.execute("DROP TRIGGER test_ack_failure ON ticketing.outbox_events");jdbc.execute("DROP FUNCTION ticketing.test_ack_failure()");}
         flush(b);assertEquals(1,inbox(EventConsumer.AUDIT,id));assertEquals(1,count("SELECT count(*) FROM ticketing.projection_events WHERE aggregate_id=?",b));
     }
-    @Test @Order(5) void paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka(){
+    @Test @Order(5) void paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka(CapturedOutput output){
         UUID b=booking(2);record(b,"SUCCESS");UUID id=eventId(b,"PaymentResultRecorded");
+        String marker="private-sql-"+UUID.randomUUID();
         jdbc.execute("CREATE SEQUENCE ticketing.test_delivery_attempts");
-        jdbc.execute("CREATE FUNCTION ticketing.test_ticket_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.booking_id='"+b+"'::uuid THEN PERFORM nextval('ticketing.test_delivery_attempts'); RAISE EXCEPTION 'test ticket failure'; END IF; RETURN NEW; END $$");
+        jdbc.execute("CREATE FUNCTION ticketing.test_ticket_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.booking_id='"+b+"'::uuid THEN PERFORM nextval('ticketing.test_delivery_attempts'); RAISE EXCEPTION '"+marker+"'; END IF; RETURN NEW; END $$");
         jdbc.execute("CREATE TRIGGER test_ticket_failure BEFORE INSERT ON ticketing.tickets FOR EACH ROW EXECUTE FUNCTION ticketing.test_ticket_failure()");
         try{
             flush(b);await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND event_id=?",EventConsumer.PAYMENT,id)==1);
@@ -126,10 +134,15 @@ class KafkaRecoveryTest {
             assertEquals(0,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=? AND type='BookingConfirmed'",b));
             assertEquals(3,count("SELECT attempts FROM ticketing.message_failures WHERE consumer=? AND event_id=?",EventConsumer.PAYMENT,id));
             assertEquals(3,count("SELECT last_value FROM ticketing.test_delivery_attempts"));
+            var logs=traceLines(output,id).stream().filter(n->n.path("consumer").asString().equals(EventConsumer.PAYMENT)).toList();
+            assertEquals(3,logs.stream().filter(n->n.path("stage").asString().equals("consumer_failed")).count());
+            assertFalse(logs.stream().anyMatch(n->n.path("stage").asString().equals("consumer_processed")));
+            for(var line:logs){assertEquals(b.toString(),line.path("bookingId").asString());assertEquals(publisher.event(id).correlationId().toString(),line.path("correlationId").asString());}
         }finally{jdbc.execute("DROP TRIGGER test_ticket_failure ON ticketing.tickets");jdbc.execute("DROP FUNCTION ticketing.test_ticket_failure()");jdbc.execute("DROP SEQUENCE ticketing.test_delivery_attempts");}
         replay.replay(admin,id,UUID.randomUUID(),"Remove injected database failure");flush(b);await(()->state(b).equals("CONFIRMED"));
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND event_id=? AND status='RESOLVED'",EventConsumer.PAYMENT,id)==1);
         assertEquals(2,tickets(b));assertEquals(1,inbox(EventConsumer.PAYMENT,id));evidence.add(Map.of("case","consumer rollback + 3 deliveries + admin replay","tickets",2,"result","PASS"));
+        assertFalse(output.getAll().contains(marker),"SQL error details must not reach logs");
     }
     @Test @Order(6) void realGapIsParkedThenOrderedReplayRecoversWithoutIssuingTickets(){
         UUID b=booking(2);var result=record(b,"SUCCESS");processor.process(b,result.paymentId());
@@ -242,5 +255,55 @@ class KafkaRecoveryTest {
             s.execute("SELECT pg_advisory_lock(7469636)");try{assertEquals(0,publisher.publishOnce());assertEquals(0,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",id));}finally{s.execute("SELECT pg_advisory_unlock(7469636)");}
         }
         flush(b);await(()->inbox(EventConsumer.AUDIT,id)==1);
+    }
+    void health(String path,int status,String expected)throws Exception{
+        var response=http("GET","/actuator/health"+path,null,null);assertEquals(status,response.statusCode(),response.body());
+        var body=json.readTree(response.body());assertEquals(expected,body.path("status").asString());assertFalse(body.has("components"));assertFalse(body.has("details"));
+    }
+    List<tools.jackson.databind.JsonNode> traceLines(CapturedOutput output,UUID eventId){
+        return output.getOut().lines().filter(s->s.startsWith("{")).map(s->{try{return json.readTree(s);}catch(Exception ex){throw new AssertionError("Invalid JSON log",ex);}})
+            .filter(n->n.path("eventId").asString().equals(eventId.toString())&&n.has("stage")).toList();
+    }
+    @Test @Order(16) void httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput output)throws Exception{
+        UUID correlation=UUID.randomUUID();String secret="private-payment-"+UUID.randomUUID();
+        var body=json.writeValueAsString(Map.of("eventId",event,"ticketTypeId",type,"quantity",1));
+        var request=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/bookings?private="+secret))
+            .header("Content-Type","application/json").header("Authorization","Bearer demo-customer-token")
+            .header("Idempotency-Key","trace-"+UUID.randomUUID()).header("X-Correlation-Id",correlation.toString())
+            .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+        var response=http.send(request,HttpResponse.BodyHandlers.ofString());assertEquals(202,response.statusCode(),response.body());
+        assertEquals(correlation.toString(),response.headers().firstValue("X-Correlation-Id").orElseThrow());
+        UUID booking=UUID.fromString(json.readTree(response.body()).path("bookingId").asString());UUID message=eventId(booking,"BookingHeld");
+        assertEquals(correlation,publisher.event(message).correlationId());flush(booking);await(()->inbox(EventConsumer.AUDIT,message)==1);
+        await(()->traceLines(output,message).stream().anyMatch(n->n.path("stage").asString().equals("consumer_processed")));
+        var lines=traceLines(output,message);var stages=lines.stream().map(n->n.path("stage").asString()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(stages.containsAll(Set.of("http_request","outbox_committed","outbox_published","consumer_processed")),stages.toString());
+        for(var line:lines){assertEquals(correlation.toString(),line.path("correlationId").asString());assertEquals(booking.toString(),line.path("bookingId").asString());}
+        consumer.accept(EventConsumer.AUDIT,booking.toString(),codec.encode(publisher.event(message)));
+        assertTrue(traceLines(output,message).stream().anyMatch(n->n.path("outcome").asString().equals("DUPLICATE")));
+        // Replay links the original message without replacing its durable correlation ID.
+        UUID retryCorrelation=UUID.randomUUID();var retry=http.send(HttpRequest.newBuilder(request.uri())
+            .header("Content-Type","application/json").header("Authorization","Bearer demo-customer-token")
+            .header("Idempotency-Key",request.headers().firstValue("Idempotency-Key").orElseThrow()).header("X-Correlation-Id",retryCorrelation.toString())
+            .POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+        assertEquals(202,retry.statusCode());assertEquals(response.body(),retry.body());assertEquals(correlation,publisher.event(message).correlationId());
+        assertTrue(traceLines(output,message).stream().anyMatch(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(retryCorrelation.toString())));
+        // Payment uses a new request correlation, including the actual payment consumer path.
+        var paymentResponse=http("POST","/api/bookings/"+booking+"/simulate-payment",json.writeValueAsString(Map.of("scenario","SUCCESS","requestId",UUID.randomUUID())),"demo-customer-token");
+        assertEquals(202,paymentResponse.statusCode(),paymentResponse.body());String paymentCorrelation=paymentResponse.headers().firstValue("X-Correlation-Id").orElseThrow();
+        UUID paymentMessage=eventId(booking,"PaymentResultRecorded");flush(booking);await(()->state(booking).equals("CONFIRMED"));
+        await(()->traceLines(output,paymentMessage).stream().anyMatch(n->n.path("consumer").asString().equals(EventConsumer.PAYMENT)&&n.path("stage").asString().equals("consumer_processed")));
+        var paymentLines=traceLines(output,paymentMessage);assertTrue(paymentLines.stream().map(n->n.path("stage").asString()).collect(java.util.stream.Collectors.toSet()).containsAll(Set.of("outbox_committed","outbox_published","consumer_processed")));
+        for(var line:paymentLines){assertEquals(paymentCorrelation,line.path("correlationId").asString());assertEquals(booking.toString(),line.path("bookingId").asString());}
+        assertTrue(output.getOut().lines().filter(s->s.startsWith("{")).map(json::readTree).anyMatch(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(paymentCorrelation)&&n.path("bookingId").asString().equals(booking.toString())));
+        // A real poison record must be retried/parked without dumping its raw payment/token fields.
+        String poisonKey="poison-trace-"+UUID.randomUUID();kafka.send(topic,poisonKey,"{\"token\":\""+secret+"\",\"paymentPayload\":\""+secret+"\"}").get(8,TimeUnit.SECONDS);
+        await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=?",poisonKey)==2);
+        assertFalse(output.getAll().contains(secret));assertFalse(output.getAll().contains("demo-customer-token"));assertFalse(output.getAll().contains("paymentPayload"));
+        // A separate request has a different correlation and no stale booking/message IDs.
+        var next=http("GET","/api/events",null,null);String nextId=next.headers().firstValue("X-Correlation-Id").orElseThrow();
+        var nextLog=output.getOut().lines().filter(s->s.startsWith("{")).map(json::readTree).filter(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(nextId)).findFirst().orElseThrow();
+        assertFalse(nextLog.has("bookingId"));assertFalse(nextLog.has("eventId"));
+        evidence.add(Map.of("case","T8.1 HTTP/outbox/Kafka JSON trace and poison redaction","correlationId",correlation,"bookingId",booking,"eventId",message,"paymentCorrelationId",paymentCorrelation,"paymentEventId",paymentMessage,"stages",stages,"result","PASS"));
     }
 }

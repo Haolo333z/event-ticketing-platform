@@ -96,6 +96,8 @@ MVP createEvent nhận catalog lồng ticketTypes/seats; patchEvent chỉ cập 
 
 ## T6 — Operations và xử lý bất đồng bộ
 
+Health vận hành T8.1 nằm ngoài16operation nghiệp vụ trong OpenAPI: GET `/actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness` công khai trên bind localhost và không cần bearer token. UP trả200, DOWN/OUT_OF_SERVICE trả503; chỉ status (root có thể thêm tên groups), không có components/details. Readiness yêu cầu PostgreSQL và Kafka khi messaging bật; liveness chỉ là trạng thái tiến trình. Health không bảo đảm mọi record đã xử lý hoặc backlog bằng0. X-Correlation-Id vẫn được trả và ghi log như request API.
+
 GET `/api/admin/operations/outbox?page=0&size=20` và POST `/api/admin/operations/events/{eventId}/replay` đã triển khai theo OpenAPI. Chỉ admin local/test. Replay body `{requestId,reason}` (UUID và1..500ký tự không chỉ khoảng trắng); cùngrequest/reason202 kết quả cũ, khácreason409IDEMPOTENCY_KEY_REUSED, quá3request409REPLAY_LIMIT_REACHED. Giữ nguyên eventID và inbox. Audit lưu admin/time/reason trong outbox. API không đợi Kafka và không hứa side effect chạy lại.
 
 Khi messaging bật, simulate-payment202 chỉ chứng nhận durable result đã commit. Khách poll GET booking/tickets; expiry dùng cùngprocessor có thể xử lý payment đúng hạn ngay khi broker chưa phục hồi. Không thay state machine hoặc payload event. REFUND_REQUIRED giữ nguyên sau refund mô phỏng; tiến độ kỹ thuật xem DB compensation/history (dashboard thuộc phần sau).

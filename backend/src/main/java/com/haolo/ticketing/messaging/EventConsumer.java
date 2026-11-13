@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.haolo.ticketing.bookings.*;
 import com.haolo.ticketing.payments.PaymentResultProcessor;
+import com.haolo.ticketing.operations.TraceContext;
+import com.haolo.ticketing.operations.TraceLog;
 
 @Service
 public class EventConsumer {
@@ -15,9 +17,14 @@ public class EventConsumer {
     public void accept(String consumer,String key,String raw){
         if(!Set.of(PAYMENT,AUDIT).contains(consumer))throw new IllegalArgumentException("Unknown consumer");
         final OutboxWriter.Event event;
-        try{event=codec.decode(raw,key);}catch(RuntimeException ex){throw new IllegalArgumentException("Invalid event envelope");}
+        try{event=codec.decode(raw,key);}catch(RuntimeException ex){
+            try(var context=TraceContext.open(null,null,null)){TraceLog.event("consumer_rejected","INVALID_ENVELOPE",consumer);}
+            throw new IllegalArgumentException("Invalid event envelope");
+        }
+        try(var context=TraceContext.open(event.correlationId(),event.aggregateId(),event.eventId())){
         if(consumer.equals(PAYMENT)&&!event.eventType().equals("PaymentResultRecorded"))return;
-        tx.run(()->{
+        try{
+        boolean applied=tx.run(()->{
             int inserted=jdbc.update("INSERT INTO ticketing.inbox_events(consumer,event_id,aggregate_id,aggregate_version,envelope_hash) VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING",consumer,event.eventId(),event.aggregateId(),event.aggregateVersion(),codec.hash(event));
             if(inserted==0){
                 String hash=jdbc.queryForObject("SELECT envelope_hash FROM ticketing.inbox_events WHERE consumer=? AND event_id=?",String.class,consumer,event.eventId());
@@ -43,7 +50,10 @@ public class EventConsumer {
                 }
             }
             jdbc.update("UPDATE ticketing.message_failures SET status='RESOLVED',resolved_at=clock_timestamp() WHERE consumer=? AND event_id=? AND status='DEAD'",consumer,event.eventId());
-            return null;
+            return inserted!=0;
         });
+        TraceLog.event("consumer_processed",applied?"APPLIED":"DUPLICATE",consumer);
+        }catch(RuntimeException ex){TraceLog.event("consumer_failed","ROLLED_BACK",consumer);throw ex;}
+        }
     }
 }

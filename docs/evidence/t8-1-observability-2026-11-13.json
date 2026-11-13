@@ -1,0 +1,363 @@
+{
+  "date": "2026-11-13",
+  "task": "T8.1",
+  "baseCommit": "4931d2f",
+  "status": "Done locally; uncommitted",
+  "commands": [
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1",
+      "result": "PASS",
+      "tests": 121,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": {
+        "path": "backend/target/t81-backend-verified.log",
+        "sha256": "be623e89783df5ad319bef701c2daa0e0e8f30b908729de4d5b10a01c84463df"
+      }
+    },
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1 -Tests 'KafkaRecoveryTest#httpOutboxAndRealKafkaCarrySameIdsAndSafeJson'",
+      "result": "PASS",
+      "tests": 1,
+      "note": "Focused trace test before adding further assertions; full final suite includes all final assertions",
+      "log": {
+        "path": "backend/target/t81-trace.log",
+        "sha256": "60b1bd459cf3dd539c029c603a8367c979d2ac2ec3f621a1ac465c4afb5efea4"
+      }
+    },
+    {
+      "command": "npm.cmd test --prefix tools/contracts",
+      "result": "PASS",
+      "cases": 58,
+      "operations": 16,
+      "log": {
+        "path": "backend/target/t81-contracts.log",
+        "sha256": "9ab112fba944fa53996ab4a920b5fac6b73c4fe890ea9dbf16c07fdd8f426570"
+      }
+    },
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1",
+      "result": "PASS",
+      "httpContractResponses": 66,
+      "pagination": {
+        "total": 25,
+        "firstPage": 20,
+        "secondPage": 5,
+        "overlap": 0,
+        "domMatchesApi": true
+      },
+      "checks": [
+        "real HTTP/DOM/PostgreSQL/Kafka",
+        "two tickets and SQL invariants",
+        "production mock auth guard",
+        "no token in application log"
+      ],
+      "log": {
+        "path": "backend/target/t81-live-admin.log",
+        "sha256": "dacc359decd903c1fddca7f1297ca47852fd22d45e28ff17844d8d70d8f4051c"
+      }
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "suiteDetails": [
+    {
+      "name": "com.haolo.ticketing.DemoAuthConfigurationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.HealthEndpointTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.KafkaRecoveryTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresAdminTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresBookingTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresCatalogTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresOutboxTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresPaymentTest",
+      "tests": "30",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSchemaTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeedTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TicketingApplicationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TraceContextTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "traceCase": {
+    "stages": [
+      "consumer_processed",
+      "outbox_committed",
+      "outbox_published",
+      "http_request"
+    ],
+    "paymentCorrelationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+    "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+    "result": "PASS",
+    "paymentEventId": "aa927e50-4b8c-448f-9621-0633feb2ede0",
+    "case": "T8.1 HTTP/outbox/Kafka JSON trace and poison redaction",
+    "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+    "eventId": "05180c69-2926-446a-837a-9169ad73dd07"
+  },
+  "traceSamples": [
+    {
+      "@timestamp": "2026-11-13T11:49:50.3010759Z",
+      "thread_name": "http-nio-127.0.0.1-auto-2-exec-2",
+      "stage": "outbox_committed",
+      "outcome": "COMMITTED",
+      "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.3175459Z",
+      "thread_name": "http-nio-127.0.0.1-auto-2-exec-2",
+      "stage": "http_request",
+      "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07",
+      "method": "POST",
+      "route": "/api/bookings",
+      "status": 202
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.3461761Z",
+      "thread_name": "main",
+      "stage": "outbox_published",
+      "outcome": "PUBLISHED",
+      "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.3539749Z",
+      "thread_name": "audit-listener-0-C-2",
+      "stage": "consumer_processed",
+      "outcome": "APPLIED",
+      "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07",
+      "consumer": "booking-audit-v1"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.4849566Z",
+      "thread_name": "main",
+      "stage": "consumer_processed",
+      "outcome": "DUPLICATE",
+      "correlationId": "bba0a7a5-49a8-4a49-a313-53185f0031be",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07",
+      "consumer": "booking-audit-v1"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.5053391Z",
+      "thread_name": "http-nio-127.0.0.1-auto-2-exec-3",
+      "stage": "http_request",
+      "correlationId": "0b6447c8-cf3e-4053-9b06-6f1ce6386e69",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "05180c69-2926-446a-837a-9169ad73dd07",
+      "method": "POST",
+      "route": "/api/bookings",
+      "status": 202
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.5437206Z",
+      "thread_name": "http-nio-127.0.0.1-auto-2-exec-4",
+      "stage": "outbox_committed",
+      "outcome": "COMMITTED",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "aa927e50-4b8c-448f-9621-0633feb2ede0"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.5488291Z",
+      "thread_name": "http-nio-127.0.0.1-auto-2-exec-4",
+      "stage": "http_request",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "method": "POST",
+      "route": "/api/bookings/{id}/simulate-payment",
+      "status": 202
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.5813635Z",
+      "thread_name": "main",
+      "stage": "outbox_published",
+      "outcome": "PUBLISHED",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "aa927e50-4b8c-448f-9621-0633feb2ede0"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.5945528Z",
+      "thread_name": "audit-listener-0-C-2",
+      "stage": "consumer_processed",
+      "outcome": "APPLIED",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "aa927e50-4b8c-448f-9621-0633feb2ede0",
+      "consumer": "booking-audit-v1"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.6217347Z",
+      "thread_name": "payment-listener-0-C-2",
+      "stage": "outbox_committed",
+      "outcome": "COMMITTED",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "3c2d20e5-e295-475c-bc1b-7506a9dff81a"
+    },
+    {
+      "@timestamp": "2026-11-13T11:49:50.6223839Z",
+      "thread_name": "payment-listener-0-C-2",
+      "stage": "consumer_processed",
+      "outcome": "APPLIED",
+      "correlationId": "cf2b6c19-ff7a-472b-82d2-3070f723c7fa",
+      "bookingId": "be6f59aa-4e4c-477c-a8b9-40f3aa7c83a2",
+      "eventId": "aa927e50-4b8c-448f-9621-0633feb2ede0",
+      "consumer": "payment-v1"
+    }
+  ],
+  "healthAssertions": {
+    "healthyPostgreSQLAndKafka": {
+      "root": "200/UP",
+      "readiness": "200/UP",
+      "liveness": "200/UP"
+    },
+    "realIsolatedKafkaStopped": {
+      "root": "503/DOWN",
+      "readiness": "503/DOWN",
+      "liveness": "200/UP"
+    },
+    "realIsolatedKafkaRestarted": {
+      "root": "200/UP",
+      "readiness": "200/UP"
+    },
+    "databaseConnectionFailureInjectedAtDataSource": {
+      "root": "503/DOWN",
+      "readiness": "503/DOWN",
+      "liveness": "200/UP",
+      "recovered": "200/UP",
+      "backend": "H2; no demo PostgreSQL shutdown"
+    },
+    "databaseValidationFalseOrSQLException": "DOWN, no exception details",
+    "messagingDisabled": "Readiness UP without messaging indicator/broker",
+    "responseDetails": "No components/details; root may include group names"
+  },
+  "securityAssertions": [
+    "Final full log contains none of the demo token or private marker strings",
+    "HTTP raw URI/query/headers/body omitted",
+    "Payment payload and poison record omitted",
+    "SQL failure marker omitted",
+    "MDC nested scopes/exceptions/reused thread restore IDs",
+    "Rollback does not log outbox_committed",
+    "Three failed payment deliveries log IDs but no payment consumer_processed before recovery",
+    "Duplicate event logs DUPLICATE after inbox check",
+    "YAML value dumping disabled during bootstrap and runtime"
+  ],
+  "initialProblemsResolved": [
+    "Docker engine initially unavailable; started Docker Desktop and reran",
+    "New test fixture sent unsupported mode field; corrected fixture to existing contract",
+    "Full-suite startup YAML DEBUG leaked demo token; early bootstrap configuration plus YAML logger policy fixed without removing assertion",
+    "Boot JSON encoder requires Environment; bootstrap uses text/INFO, runtime uses JSON after Environment exists"
+  ],
+  "environment": "Windows PowerShell, Temurin25.0.5+8, Boot4.1.2, PostgreSQL17.11, Kafka4.2.2; backend suite UTC",
+  "limits": [
+    "No remote GitHub Actions/Linux run of uncommitted changes",
+    "DB failure is injected at DataSource with real H2, not a real PostgreSQL server shutdown",
+    "Kafka readiness probes broker metadata connectivity, not every partition write, consumer progress/lag or backlog",
+    "No multi-node broker/failover/load benchmark",
+    "Very early bootstrap lines may be text; operational runtime logs are JSON",
+    "UI live test uses jsdom, not visual Chrome QA; no frontend source changes or new frontend unit/build run",
+    "Metrics and T8.2 onward not implemented"
+  ],
+  "schemaOrEventPayloadChanged": false,
+  "demoDataModified": false,
+  "committedOrPushed": false
+}

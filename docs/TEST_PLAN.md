@@ -1,5 +1,14 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T8.1 — Log cấu trúc và health
+
+- `TraceContextTest`: thread dùng lại sau exception, scope lồng khôi phục MDC; HTTP correlation hợp lệ/không hợp lệ, route mẫu, không ghi token/body/query; request tiếp theo không có booking/event ID cũ.
+- `PostgresOutboxTest`: rollback sau append không được log `outbox_committed`; assertion commit/rollback DB hiện có giữ nguyên.
+- `KafkaRecoveryTest`: HTTP tạo booking, đối chiếu correlationId/bookingId/eventId giữa log JSON HTTP, outbox sau commit, publisher và audit consumer trên PostgreSQL/Kafka thật. Kiểm tra payment HTTP → outbox → payment-v1, replay request giữ event/correlation bền ban đầu, duplicate có outcome riêng. Fault SQL sau append: ba log consumer_failed có đúng ID, chưa có payment consumer_processed khi rollback; không lộ marker SQL. Gửi poison record có marker token/payment và kiểm tra sau retry/park marker không xuất hiện trong log, kể cả token demo từ startup YAML.
+- Kafka stop/start trên broker test riêng: health tổng hợp và readiness đổi200 UP →503 DOWN →200 UP; liveness vẫn200 UP. Payload health không có components/details.
+- `HealthEndpointTest`: lỗi acquisition/validation DB trả DOWN không kèm exception nhạy cảm; HTTP readiness/tổng hợp503, liveness200, hồi phục200; messaging tắt không cần broker. Fault acquisition được inject ở DataSource test với H2 thật; không dừng PostgreSQL demo.
+- Chạy suite PostgreSQL/Kafka đầy đủ để giữ hồi quy GA/ghế/payment/expiry/replay và kiểm tra hợp đồng API. Không nghiệm thu metric/backlog hoặc độ ổn định nhiều node ở T8.1.
+
 ## Gate T7 — Auth, UI và HTTP/log negative tests
 
 - DemoAuthConfigurationTest: mock bật được trong local/test; profile rỗng/prod/trộn bị từ chối, prod mặc định tắt. PostgresDashboardSecurityTest kiểm tra token lạ401/customer→admin403, giả userId/role không cấp quyền, owner sai404, admin service cũng chặn customer.

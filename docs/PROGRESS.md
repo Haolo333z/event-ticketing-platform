@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phần8 — UI và rà auth, hoàn thành T7.1–T7.4 ngày2026-11-13
-- **Tiến độ:** T1.1–T7.4 Done; dashboard/customer UI và security kiểm chứng bằng HTTP/PostgreSQL/Kafka thật
-- **Task đang làm:** Đã sửa và kiểm chứng local lỗi CI#31 của de527c0: dọn fixture outbox theo UUID và kiểm tra pagination với dữ liệu nền; chưa commit/push
-- **Task tiếp theo:** T8.1 (chưa bắt đầu); TASKS không có T7.5
-- **Blocker:** Không còn lỗi tái hiện trong kiểm tra local. CI#31 trên commit cũ vẫn đỏ; chưa chạy GitHub Actions cho bản sửa chưa commit/push. Chưa visual QA Chrome/mobile.
+- **Giai đoạn:** Quan sát/vận hành — chỉ T8.1, hoàn thành local ngày2026-11-13
+- **Tiến độ:** T1.1–T7.4 và T8.1 Done; log xuyên HTTP/PostgreSQL/Kafka và health đã có bằng chứng
+- **Task đang làm:** T8.1 đã kiểm chứng; tiếp tục từ HEAD4931d2f, working tree ban đầu sạch; chưa commit/push
+- **Task tiếp theo:** T8.2 (chưa bắt đầu)
+- **Blocker:** Không có blocker T8.1 local. Chưa chạy GitHub Actions/Linux cho thay đổi chưa commit/push; giới hạn health/DB fault/visual QA ghi ở nhật ký T8.1.
 
-- **Task trong TASKS:** 33/45 Done.18bảng/V1–V9 giữ nguyên,16API đã triển khai; thêm dashboard/admin query và rà HTTP/log. Các mục Phần3–7 dưới đây giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 34/45 Done.18bảng/V1–V9 và16API nghiệp vụ giữ nguyên; T8.1 bổ sung log/health vận hành. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -387,3 +387,59 @@ Mỗi lượt full suite mong đợi116test,0failure/error/skip và BUILD SUCCES
 ### Giới hạn và bước tiếp theo
 
 GitHub Actions của bản sửa chưa commit/push chưa được chạy; run#31 trên commit cũ vẫn đỏ. Đã kiểm chứng tương đương suite/database/broker/UTC của CI trên Windows, chưa chạy lại runner Linux cho bản sửa này. UI kiểm tra bằng jsdom/HTTP thật; chưa visual QA Chrome/mobile và không chạy lại frontend unit/build vì không sửa frontend. Pagination được kiểm tra trên snapshot dữ liệu ổn định; không khẳng định OFFSET giữ nguyên tập trang khi có giao dịch khác ghi giữa hai request HTTP. Người dùng xem diff, tự commit/push và theo dõi CI mới. Chưa bắt đầu T8.1.
+
+## 2026-11-13 — T8.1 Done: log cấu trúc và health
+
+Tiếp tục từ HEAD4931d2f (bản sửa fixture CI đã commit), working tree ban đầu sạch. Đã đọc RULES/TASKS/PROGRESS/PRD/DESIGN/ARCHITECTURE, hợp đồng liên quan, ADR0007 và kiểm tra HTTP correlation, outbox/consumer, security, cấu hình Actuator và test hiện có. Correlation đã nằm trong HTTP/envelope và DB health đã có, nên chỉ bổ sung phần còn thiếu; không làm lại nghiệp vụ. Quyết định log/probe được ghi ở ARCHITECTURE trước code. [Bằng chứng T8.1](evidence/t8-1-observability-2026-11-13.json) có số liệu suite, ví dụ JSON an toàn và hash log.
+
+### Đối chiếu acceptance criteria
+
+| Tiêu chí T8.1 | Triển khai và bằng chứng |
+|---|---|
+| Correlation xuyên HTTP/outbox/consumer | Test HTTP thật đối chiếu correlationId/bookingId/message eventId trong response header, PostgreSQL envelope và log JSON ở HTTP, outbox_committed, outbox_published, audit consumer. Payment HTTP dùng correlation mới; log outbox/payment-v1 có cùng ID, booking CONFIRMED qua Kafka. HTTP replay giữ nguyên body/event và correlation bền của event gốc |
+| Log có cấu trúc, không lẫn context | JSON Logstash + SLF4J key-value/MDC; UUID validate, scope/finally khôi phục thread. Test scope lồng/exception/thread dùng lại và request tiếp theo không có booking/event ID cũ. Consumer đọc ID từ envelope đã validate, không lấy raw key/payload để ghi log |
+| Giữ đúng ranh giới giao dịch, log đúng kết quả | Outbox log sau COMMIT bằng TransactionSynchronization; rollback không có outbox_committed. Publisher ACK và đánh dấu DB xong mới log kết quả; consumer commit inbox/nghiệp vụ xong mới consumer_processed, duplicate có outcome riêng. Fault SQL thật:3delivery/3consumer_failed cùng ID, không có payment consumer_processed trước recovery, không lộ marker SQL |
+| Health phản ánh dependency cần theo dõi | Healthy PG/Kafka: root/readiness/liveness200 UP. Dừng broker test thật: root/readiness503 DOWN, liveness200 UP; khôi phục broker thì trở lại200 UP. DB acquisition fault ở DataSource test: root/readiness503, liveness200, sau phục hồi200. Validation false/SQLException đều DOWN không có chi tiết nhạy cảm. Messaging tắt không yêu cầu broker |
+| Không lộ token/payload | Token/body/header/query không đưa vào log HTTP; poison record chứa token/payment marker được retry/park nhưng marker không có trong log. Giữ assertion chống lộ demo token cả startup. Logger dump YAML bị tắt riêng; log nghiệp vụ/lỗi vẫn hoạt động. Health không có components/details hoặc exception text |
+
+`eventId` ở log là UUID message trong outbox/envelope, khác `eventId` của sự kiện bán vé. Request chưa có booking/message không sinh ID giả. HTTP tạo booking có cả ba ID; endpoint booking khác ghi booking UUID hợp lệ từ route, correlation nối sang event ID trong outbox. Với request replay, correlation HTTP mới không ghi đè correlation event đã bền. Các stage có thể xen kẽ giữa thread; không suy thứ tự toàn hệ thống từ vị trí dòng log.
+
+### File chính
+
+- `operations/TraceContext.java`, `TraceLog.java`: scope metadata và log có các trường cố định; không nhận body/header/payload vào logger.
+- `shared/CorrelationFilter.java`: context HTTP, log route mẫu/method/status và ID hợp lệ, luôn dọn sau request hoặc exception.
+- `bookings/BookingCommandService.java`, `BookingController.java`: result nội bộ bổ sung message ID để log HTTP tạo/replay; body/status API không đổi.
+- `messaging/OutboxWriter.java`, `OutboxPublisher.java`, `EventConsumer.java`, `FailureStore.java`, `KafkaConfiguration.java`: log commit/ACK/consumer/retry/park; giữ nguyên transaction, inbox, replay, event schema. Framework retry không dump record/exception ở mức mặc định.
+- `operations/DatabaseHealthIndicator.java`, `MessagingHealthIndicator.java`: DB connection validation và Kafka metadata probe timeout; không trả/log exception nhạy cảm. DB probe thay default theo tên bean để giữ contributor `db`, không tạo probe DB trùng.
+- `application.yml`, `logback.xml`, `logback-spring.xml`, `identity/SecurityConfiguration.java`: JSON, mức log an toàn từ bootstrap, health groups và quyền GET probe. Bootstrap trước Spring Environment dùng text/INFO; runtime chuyển JSON.
+- `TraceContextTest.java`, `HealthEndpointTest.java`, `KafkaRecoveryTest.java`, `PostgresOutboxTest.java`: các assertion ID/health/privacy/rollback thực thi cùng hồi quy cũ.
+- `README.md`, `ARCHITECTURE.md`, `API_CONTRACT.md`, `TEST_PLAN.md`, `TASKS.md`, `PROGRESS.md`, JSON evidence: cách dùng, semantics health ngoài16operation OpenAPI và bằng chứng. Không thay migration/schema/payload event/dependency/frontend.
+
+### Lệnh đã chạy và kết quả thật
+
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1`: **121/121**,0failure/error/skip, Maven verify/packaged JAR BUILD SUCCESS. Gồm116test nền +2TraceContext +2HealthEndpoint +1Kafka trace mới; các test cũ được bổ sung assertion vẫn giữ số lượng. PostgreSQL17.11/Kafka4.2.2 thật trong hai DB/project UUID riêng, UTC, Temurin25.0.5+8/Boot4.1.2. Log cuối `backend/target/t81-backend-verified.log`; surefire summary lưu trong JSON trước khi bị lần chạy khác ghi đè.
+- **PASS** ca riêng `infra/test-part8.ps1 -Tests 'KafkaRecoveryTest#httpOutboxAndRealKafkaCarrySameIdsAndSafeJson'`: **1/1**; sau đó chạy full121 với toàn bộ assertion cuối. Log `backend/target/t81-trace.log`.
+- **PASS** `npm.cmd test --prefix tools/contracts`: **58case/16operation**. Không đổi JSON response hoặc OpenAPI nghiệp vụ; health được mô tả ở API_CONTRACT. Log `backend/target/t81-contracts.log`.
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1`: **66HTTP response** đúng contract; admin/customer DOM dùng API/PG/Kafka thật, pagination25→20/5, overlap0; tạo/sửa catalog, GA2, capacity conflict/price snapshot/history, outbox/2vé, SQL0oversell/0vé sai trạng thái và9migration không đổi. Packaged prod+mock từ chối startup; scan application log không có demo token. Log `backend/target/t81-live-admin.log`.
+- **PASS** `git diff --check`; JSON evidence parse/đối chiếu summary đạt. Không chạy lại frontend unit/build vì không sửa frontend; DOM/API integration đã chạy trên JAR mới.
+
+Lượt đầu chưa chạy được tích hợp vì Docker engine đang tắt; đã khởi động Docker Desktop và chạy lại. Lượt full đầu phát hiện fixture test mới gửi thừa `mode`, API trả400 đúng contract; sửa fixture, không nới validation. Lượt sau phát hiện logger YAML DEBUG trước cấu hình Boot làm lộ token demo trong test startup; đã chặn đúng logger dump cấu hình và đặt bootstrap INFO, giữ nguyên negative assertion, chạy lại full121 và packaged live. JSON encoder của Boot cần Spring Environment nên chỉ khởi tạo sau bootstrap. Các lượt lỗi không được tính PASS; artifact cuối dùng log `t81-backend-verified.log`.
+
+### Tự kiểm tra Windows và giới hạn
+
+Từ thư mục gốc, Docker Desktop đã chạy và `.env` local có sẵn:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1
+
+# Khi backend local đã chạy
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health/liveness
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health/readiness
+```
+
+Mong đợi full121/121, health200/UP khi dependency khỏe. Muốn thử lỗi broker, dùng test tự động ở trên: test chỉ stop/start broker UUID riêng, không dừng broker demo. Lọc JSON backend theo correlationId/bookingId/eventId và stage; sample an toàn ở evidence. Không gửi token cho health.
+
+Chưa chạy GitHub Actions/Linux của thay đổi chưa commit/push; chưa visual QA Chrome (live UI dùng jsdom). DB fault được inject ở DataSource dùng H2 thật, chưa dừng PostgreSQL thật hoặc mô phỏng network partition PG ở T8.1. Kafka health chỉ chứng minh metadata broker truy cập được, không kiểm tra quyền ghi từng partition, publisher/consumer tiến triển, backlog/lag; các metric thuộc T8.2 chưa làm. Chưa thử cluster nhiều broker, benchmark hoặc mọi crash window. Các dòng rất sớm trước Boot có thể là text, log vận hành runtime là JSON. Không thêm Redis, dịch vụ log ngoài, payment thật hoặc metric. Không sửa dữ liệu demo/.env, không commit/push. T8.2 trở đi chưa bắt đầu.

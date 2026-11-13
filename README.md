@@ -263,4 +263,21 @@ osv-scanner scan source --sbom backend/target/bom.json
 
 Không quét trực tiếp mọi file local bằng `gitleaks dir .` khi có `.env`/dependency/build ignored; để kiểm tra tập bàn giao, chép tập `git ls-files --cached --others --exclude-standard` sang thư mục scan tạm rồi quét thư mục đó. GitHub checkout sạch không có `.env` nên CI vẫn quét working tree đầy đủ.
 
-Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Bước kế tiếp T6.1/inbox, chưa thực hiện; chưa tự commit/push Phần6.
+Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Tiến độ hiện tại xem [PROGRESS](docs/PROGRESS.md).
+
+## T8.1 — Theo dõi log và health local
+
+Backend ghi mỗi log thành JSON Logstash. Tìm theo `correlationId`, `bookingId`, `eventId` để nối các stage `http_request` → `outbox_committed` → `outbox_published` → `consumer_processed`. `eventId` là UUID message trong outbox/envelope, khác ID sự kiện bán vé. Có thể consumer xử lý trước khi publisher kịp ghi log ACK; dùng ID để nối, không suy thứ tự toàn hệ thống từ vị trí dòng log. Duplicate có outcome `DUPLICATE`; lỗi có stage riêng, không log body/token/payload thanh toán hoặc exception message ở các mốc nghiệp vụ. Giữ mức log Spring/Kafka mặc định khi kiểm tra dữ liệu nhạy cảm.
+
+```powershell
+# Backend đã chạy qua infra/start-local.ps1
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health/liveness
+Invoke-RestMethod http://127.0.0.1:8080/actuator/health/readiness
+
+# Từ thư mục gốc; test tạo DB/broker riêng, không dừng broker demo
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
+npm.cmd test --prefix tools/contracts
+```
+
+Khi dependency khỏe, cả ba probe trả200/UP. Khi Kafka lỗi và messaging bật, root/readiness trả503/DOWN nhưng liveness vẫn200/UP; messaging tắt bỏ yêu cầu Kafka. Không gửi token cho health. Không dùng liveness để suy rằng PostgreSQL/Kafka đang khỏe; readiness không kiểm tra backlog hoặc consumer lag (T8.2 chưa làm). Kiểm tra tự động bao gồm broker test stop/start, đối chiếu log từ HTTP tới Kafka và fault DB qua DataSource test; chi tiết/bằng chứng tại docs/PROGRESS.md.

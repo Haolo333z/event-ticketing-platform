@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Load before Spring's ConfigData/YAML parsing, including plain test contexts. -->
+    <!-- Boot's JSON encoder needs an Environment; Boot switches to logback-spring.xml later. -->
+    <appender name="BOOTSTRAP" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder><pattern>%level %logger - %msg%n</pattern></encoder>
+    </appender>
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.springframework.boot.env.OriginTrackedYamlLoader" level="OFF"/>
+    <root level="INFO"><appender-ref ref="BOOTSTRAP"/></root>
+</configuration>

@@ -13,7 +13,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class BookingCommandService {
-    public record Result(UUID bookingId,String body){}
+    public record Result(UUID bookingId,String body,UUID eventId){}
     private final JdbcTemplate jdbc;private final BookingTransactions transactions;private final BookingPolicy policy;
     private final CatalogBookingAccess catalog;private final GaInventory inventory;private final OutboxWriter outbox;private final ObjectMapper mapper;
     private final SeatInventory seats;
@@ -31,7 +31,9 @@ public class BookingCommandService {
         if(inserted==0){
             var row=jdbc.queryForMap("SELECT request_hash,booking_id,response_body::text AS body FROM ticketing.idempotency_keys WHERE account_id=? AND operation='CREATE_BOOKING' AND key=?",account,key);
             if(!hash.equals(row.get("request_hash")))throw new ApiException(409,"IDEMPOTENCY_KEY_REUSED","Mã yêu cầu đã được dùng cho nội dung khác");
-            return new Result((UUID)row.get("booking_id"),(String)row.get("body"));
+            UUID booking=(UUID)row.get("booking_id");
+            UUID event=jdbc.queryForObject("SELECT id FROM ticketing.outbox_events WHERE aggregate_id=? AND aggregate_version=1",UUID.class,booking);
+            return new Result(booking,(String)row.get("body"),event);
         }
         long price=catalog.lockPrice(request.eventId(),request.ticketTypeId(),request.mode());long total=Math.multiplyExact(price,request.quantity());
         if(total>1000000000000L)throw ApiException.invalid();
@@ -48,6 +50,6 @@ public class BookingCommandService {
         jdbc.update("INSERT INTO ticketing.booking_status_history(id,booking_id,from_status,to_status,occurred_at,cause_event_id) VALUES (?,?,NULL,'PENDING_PAYMENT',?,?)",UUID.randomUUID(),booking,times.get("created_at"),event.eventId());
         String body=mapper.writeValueAsString(Map.of("bookingId",booking,"status","PENDING_PAYMENT","expiresAt",expires,"totalAmountVnd",total));
         String saved=jdbc.queryForObject("UPDATE ticketing.idempotency_keys SET booking_id=?,response_status=202,response_body=CAST(? AS jsonb) WHERE account_id=? AND operation='CREATE_BOOKING' AND key=? RETURNING response_body::text",String.class,booking,body,account,key);
-        return new Result(booking,saved);
+        return new Result(booking,saved,event.eventId());
     }
 }

@@ -203,7 +203,7 @@
 
 ## Tuần 8 — Quan sát/vận hành
 
-- [ ] **T8.1 — Log cấu trúc** với correlation/booking/event ID và health check.
+- [x] **T8.1 — Log cấu trúc (Done, 2026-11-13):** JSON/correlation/booking/message ID xuyên HTTP → outbox sau commit → publisher → Kafka consumer; rollback/retry/duplicate và chống lộ log đã kiểm tra. Health tổng hợp/liveness/readiness theo DB/Kafka; full121backend,58contract,66HTTP/live admin đạt. [Bằng chứng](evidence/t8-1-observability-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Log cấu trúc với correlation/booking/event ID và health check.
   - **Phụ thuộc:** T7.4. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.type.TypeReference;
 import com.haolo.ticketing.bookings.BookingTransactions;
+import com.haolo.ticketing.operations.TraceContext;
+import com.haolo.ticketing.operations.TraceLog;
 
 /** Session leader only; send+ACK happens with NO business transaction or row lock. */
 @Service @ConditionalOnProperty(name="messaging.enabled",havingValue="true")
@@ -30,12 +32,14 @@ public class OutboxPublisher {
                 var ids=jdbc.queryForList("SELECT o.id FROM ticketing.outbox_events o WHERE o.status='PENDING' AND o.attempts<3 AND o.next_attempt_at<=clock_timestamp() AND NOT EXISTS(SELECT 1 FROM ticketing.outbox_events earlier WHERE earlier.aggregate_id=o.aggregate_id AND earlier.aggregate_version<o.aggregate_version AND earlier.status<>'PUBLISHED') ORDER BY o.created_at,o.id LIMIT 50",UUID.class);
                 int sent=0;
                 for(UUID id:ids){var event=event(id);boolean ack=false;
+                    try(var context=TraceContext.open(event.correlationId(),event.aggregateId(),event.eventId())){
                     int generation=jdbc.queryForObject("SELECT jsonb_array_length(replay_requests) FROM ticketing.outbox_events WHERE id=?",Integer.class,id);
                     try{codec.decode(codec.encode(event),event.aggregateId().toString());kafka.send(topic,event.aggregateId().toString(),codec.encode(event)).get(6,java.util.concurrent.TimeUnit.SECONDS);ack=true;}
                     catch(Exception ex){if(ex instanceof InterruptedException){Thread.currentThread().interrupt();return sent;}}
                     // Serialize with admin replay. Do not overwrite a newer replay request (its attempts reset).
-                    if(ack){tx.run(()->jdbc.update("UPDATE ticketing.outbox_events SET status='PUBLISHED',attempts=attempts+1,published_at=clock_timestamp(),last_error=NULL WHERE id=? AND jsonb_array_length(replay_requests)=?",id,generation));sent++;}
-                    else tx.run(()->jdbc.update("UPDATE ticketing.outbox_events SET attempts=attempts+1,status=CASE WHEN attempts+1>=3 THEN 'FAILED' ELSE 'PENDING' END,next_attempt_at=clock_timestamp()+make_interval(secs=>power(2,attempts)::int),last_error='Kafka send not acknowledged' WHERE id=? AND status='PENDING' AND jsonb_array_length(replay_requests)=?",id,generation));
+                    if(ack){int marked=tx.run(()->jdbc.update("UPDATE ticketing.outbox_events SET status='PUBLISHED',attempts=attempts+1,published_at=clock_timestamp(),last_error=NULL WHERE id=? AND jsonb_array_length(replay_requests)=?",id,generation));sent++;TraceLog.event("outbox_published",marked==1?"PUBLISHED":"ACKNOWLEDGED_REPLAY_PENDING",null);}
+                    else {tx.run(()->jdbc.update("UPDATE ticketing.outbox_events SET attempts=attempts+1,status=CASE WHEN attempts+1>=3 THEN 'FAILED' ELSE 'PENDING' END,next_attempt_at=clock_timestamp()+make_interval(secs=>power(2,attempts)::int),last_error='Kafka send not acknowledged' WHERE id=? AND status='PENDING' AND jsonb_array_length(replay_requests)=?",id,generation));TraceLog.event("outbox_publish_failed","NOT_ACKNOWLEDGED",null);}
+                    }
                 }
                 publishDlq();return sent;
             }finally{try(var unlock=leader.prepareStatement("SELECT pg_advisory_unlock(?)")){unlock.setLong(1,LEADER);unlock.execute();}}

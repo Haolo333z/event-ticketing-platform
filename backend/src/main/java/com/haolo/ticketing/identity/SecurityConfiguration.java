@@ -18,7 +18,7 @@ public class SecurityConfiguration {
     @Bean SecurityFilterChain chain(HttpSecurity http,DemoSettings settings,JdbcTemplate jdbc,ApiErrors errors) throws Exception {
         return http.csrf(c->c.disable()).requestCache(c->c.disable()).httpBasic(c->c.disable()).formLogin(c->c.disable())
             .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/error").permitAll()
+            .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/actuator/health/liveness","/actuator/health/readiness","/error").permitAll()
                 .requestMatchers(HttpMethod.GET,"/api/events","/api/events/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.POST,"/api/bookings/*/simulate-payment","/api/bookings/*/cancel").hasRole("CUSTOMER")

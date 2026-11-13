@@ -15,6 +15,7 @@ public class BookingController {
     @PostMapping("/api/bookings")
     public ResponseEntity<String> create(@AuthenticationPrincipal DemoPrincipal principal,@RequestHeader(name="Idempotency-Key",required=false) String key,@RequestBody Map<String,Object> body,HttpServletRequest request){
         var result=commands.create(principal,key,BookingRequest.parse(body),UUID.fromString(request.getAttribute("correlationId").toString()));
+        request.setAttribute("traceBookingId",result.bookingId());request.setAttribute("traceEventId",result.eventId());
         return ResponseEntity.accepted().location(URI.create("/api/bookings/"+result.bookingId())).contentType(MediaType.APPLICATION_JSON).body(result.body());
     }
     @GetMapping("/api/bookings/{id}")

@@ -3,6 +3,8 @@ package com.haolo.ticketing;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.NONE,properties={"spring.datasource.url=${PG_IT_URL}","expiry.enabled=false","messaging.enabled=false"})
 @ActiveProfiles("test") @EnabledIfEnvironmentVariable(named="PG_IT_URL",matches=".+")
+@ExtendWith(OutputCaptureExtension.class)
 class PostgresOutboxTest {
     @Autowired JdbcTemplate jdbc;@Autowired OutboxWriter writer;@Autowired PlatformTransactionManager manager;
     private final List<UUID> fixtureBookings=new ArrayList<>();
@@ -38,10 +41,11 @@ class PostgresOutboxTest {
         assertEquals(1,event.schemaVersion());assertEquals(id[0],event.aggregateId());
         assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM ticketing.outbox_events WHERE id=?",String.class,event.eventId()));
     }
-    @Test void failuresAfterOutboxRollBackBusinessAndEvent(){
+    @Test void failuresAfterOutboxRollBackBusinessAndEvent(CapturedOutput output){
         var tx=new TransactionTemplate(manager);UUID[] id=new UUID[1];
         assertThrows(IllegalStateException.class,()->tx.execute(s->{id[0]=booking();writer.append(id[0],1,"BookingHeld",UUID.randomUUID(),payload(id[0]));throw new IllegalStateException("Failure after append");}));
         assertEquals(0,count("bookings",id[0],"id"));assertEquals(0,count("outbox_events",id[0],"aggregate_id"));
+        assertFalse(output.getAll().lines().anyMatch(line->line.contains("outbox_committed")&&line.contains(id[0].toString())),"Rollback must not log a committed event");
     }
     @Test void duplicateVersionsAndInvalidEnvelopesAreRejected(){
         var tx=new TransactionTemplate(manager);UUID[] id=new UUID[1];

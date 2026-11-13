@@ -5,6 +5,10 @@ import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.haolo.ticketing.operations.TraceContext;
+import com.haolo.ticketing.operations.TraceLog;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
@@ -33,6 +37,11 @@ public class OutboxWriter {
         UUID eventId=UUID.randomUUID();
         jdbc.update("INSERT INTO ticketing.outbox_events(id,aggregate_id,aggregate_version,type,schema_version,payload,correlation_id,created_at) VALUES (?,?,?,?,1,CAST(? AS jsonb),?,?)",
             eventId,bookingId,version,type,mapper.writeValueAsString(payload),correlationId,java.sql.Timestamp.from(occurredAt));
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
+            @Override public void afterCommit(){
+                try(var context=TraceContext.open(correlationId,bookingId,eventId)){TraceLog.event("outbox_committed","COMMITTED",null);}
+            }
+        });
         return new Event(eventId,type,1,bookingId,version,occurredAt.toString(),correlationId,Map.copyOf(payload));
     }
 }

@@ -161,7 +161,7 @@ Giữ ranh giới module khi scaffold; không dồn domain vào một bộ contr
 
 ## 11. Triển khai và quan sát
 
-Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện ích đã chốt T1.1. Hiện tại chỉ PostgreSQL chạy Compose, backend JDK và frontend Vite chạy host; cổng demo bind127.0.0.1. Có health check, migration rõ thứ tự và seed riêng. Replay/simulator và metrics là phần sau: booking theo state, hold expiry, overdue hold count/oldest age, outbox pending/age, retry/DLQ, latency/lỗi API. Không log token hoặc bí mật.
+Mục tiêu Docker Compose gồm frontend/backend/PostgreSQL/Kafka và tiện ích đã chốt T1.1. Local hiện chạy PostgreSQL/Kafka bằng Compose, backend JDK và frontend Vite chạy host; cổng demo bind127.0.0.1. Có health check, migration rõ thứ tự và seed riêng. Replay/simulator đã triển khai ở các phần trước; log/health T8.1 bên dưới. Metrics booking theo state, overdue hold count/oldest age, outbox pending/age, retry/DLQ và latency/lỗi API thuộc T8.2, chưa triển khai. Không log token hoặc bí mật.
 
 
 Event producer/consumer và failure policy: [EVENT_CATALOG](EVENT_CATALOG.md). Test và recovery: [TEST_PLAN](TEST_PLAN.md), [DEMO_AND_RECOVERY](DEMO_AND_RECOVERY.md).
@@ -171,3 +171,13 @@ Event producer/consumer và failure policy: [EVENT_CATALOG](EVENT_CATALOG.md). T
 [ADR0007](adr/0007-kafka-and-recovery.md) chốt publisher session-leader và gửi/ACK ngoài transaction nghiệp vụ, inbox+business commit trước offset, hai group payment/audit, retry tại partition, durable failure trước ACK rồi DLQ sau commit. `MESSAGING_ENABLED=true` local mặc định: simulator trả202 sau ghi result/outbox, consumer xử lý bất đồng bộ. Expiry vẫn đọc ledger bền dưới booking lock. Khi Kafka offline có thể chờ consumer hoặc expiry; không suy HTTP202 là đã có vé.
 
 RefundRecoveryService chỉ local/test, không gọi mạng/tiền thật; pending/failed nghĩa vụ được khóa và attempt/history/status commit nguyên tử, tối đa3lần. No-op khi COMPLETED. Audit projection không phát vé hoặc điều khiển inventory.
+
+## T8.1 — Log và health
+
+Log console khi ứng dụng chạy là JSON Logstash của Spring Boot ([hỗ trợ MDC/key-value chính thức](https://docs.spring.io/spring-boot/reference/features/logging.html)). `logback.xml` đặt mức bootstrap INFO trước khi đọc YAML; sau khi có Spring Environment, `logging.config` chuyển sang `logback-spring.xml` dùng JSON encoder. Không khởi tạo JSON encoder cần Environment ở bootstrap. Tắt riêng logger dump YAML để không lộ giá trị cấu hình kể cả khi logger cha bật DEBUG; không tắt log nghiệp vụ/lỗi. Các dòng bootstrap trước Boot có thể ở dạng text.
+
+Các mốc `http_request`, `outbox_committed`, `outbox_published`, `outbox_publish_failed`, `consumer_processed`, `consumer_failed`, `consumer_rejected`, `consumer_parked` chỉ ghi metadata được chọn: correlationId, bookingId, eventId (ID của message, không phải ID sự kiện bán vé), stage/outcome, HTTP route mẫu/status và consumer. Không ghi raw URI/query, header, token, idempotency key, body, payload payment, exception message hoặc stack trace ở các mốc này. UUID từ client được kiểm tra trước khi dùng; ngữ cảnh MDC được phục hồi trong finally để không lẫn request/message trên thread dùng lại. HTTP tạo booking có cả ba ID sau commit; API booking khác ghi bookingId khi route có UUID hợp lệ, correlationId nối với event ID trong log outbox. Request không liên quan booking không gắn ID giả.
+
+Outbox committed chỉ log sau COMMIT; rollback không được báo thành công. Publisher dùng ID từ outbox bền, consumer dùng envelope đã validate; log consumer thành công sau inbox/nghiệp vụ commit, duplicate là outcome riêng. Không thay payload event hoặc ranh giới giao dịch. HTTP idempotency replay có correlation của request mới và tham chiếu event gốc; không sửa correlation bền của event cũ.
+
+`/actuator/health` là tổng hợp; `/actuator/health/liveness` chỉ phản ánh trạng thái tiến trình; `/actuator/health/readiness` gồm readinessState, PostgreSQL và Kafka khi messaging bật. Kafka lỗi làm tổng hợp/readiness trả503 DOWN nhưng liveness vẫn200 UP; messaging tắt thì không yêu cầu broker. Probe chỉ trả status, không công khai chi tiết cấu hình/lỗi/cluster. DB acquisition dùng timeout pool2s + validation1s; Kafka probe có timeout2s. Đây không phải kiểm tra backlog, độ trễ publisher, consumer đang tiến triển hay khả năng ghi mọi partition; các metric thuộc T8.2, chưa triển khai trong T8.1.
