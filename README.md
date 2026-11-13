@@ -1,326 +1,219 @@
 # event-ticketing-platform
-An event-driven ticketing platform supporting multiple ticket types, concurrency control, overselling prevention, distributed transactions, and fault recovery.
 
-## Trạng thái
+Hệ thống bán vé demo để thực hành đặt vé đồng thời, giữ chỗ có thời hạn và phục hồi xử lý sự kiện. Khách đặt GA (không chỉ định ghế) hoặc chọn ghế, thanh toán mô phỏng rồi xem vé. ADMIN quản lý sự kiện, tồn kho, booking, outbox và khôi phục lỗi. **Không thu tiền thật; chỉ dùng local/test.**
 
-Phần8 triển khai **T7.1–T7.4** theo TASKS; tài liệu không có T7.5. Dashboard dùng API thật, không sửa trực tiếp database. Quyết định: [ADR0008](docs/adr/0008-demo-ui-and-security-review.md).
+## Kiến trúc và luồng nghiệp vụ
+
+Modular monolith Java/Spring Boot: HTTP API và worker cùng ứng dụng, chia module catalog, booking/inventory, payment/ticket, messaging và operations. React/TypeScript gọi API thật. Java/Node chạy trên Windows, PostgreSQL/Kafka chạy Docker Compose. Không dùng Redis trong baseline.
+
+| Thành phần | Trách nhiệm |
+|---|---|
+| PostgreSQL | Nguồn sự thật: booking, quyền giữ ghế/GA, giá chụp lúc đặt, payment demo, vé, lịch sử |
+| Flyway | V1–V9, 18 bảng nghiệp vụ; restart validate, không chạy lại migration thành công |
+| Outbox → Kafka | Publisher đọc **sau commit**, gửi theo booking/version, retry hữu hạn và giữ lỗi bền |
+| Consumer + inbox | Inbox và thay đổi nghiệp vụ cùng transaction PostgreSQL; event trùng trở thành no-op |
+| Expiry/refund worker | Nhả hold đúng một lần, xử lý nghĩa vụ hoàn tiền mô phỏng |
+| Operations | Log JSON/correlation ID, health, metrics, recovery/replay có quyền/audit/giới hạn |
+
+GA: chọn 1–6 vé → `POST /api/bookings` có `Idempotency-Key` → booking `PENDING_PAYMENT`, giữ inventory, history và outbox cùng commit → HTTP 202. Ghế: chọn ID ghế, giữ toàn bộ hoặc rollback toàn bộ. Availability chỉ tham khảo, PostgreSQL quyết định giữ được hay không. Cùng key/nội dung trả kết quả cũ; cùng key/nội dung khác trả 409. Lỗi mạng/503: dùng **Thử lại cùng yêu cầu**, giữ key/body qua reload cùng tab.
+
+Thanh toán mô phỏng ghi kết quả bền/outbox trước; consumer xác nhận success hợp lệ thành `CONFIRMED`, chuyển held sang sold và phát đúng số vé trong cùng transaction. 202 chỉ là đã nhận, UI tiếp tục đọc API. Failure → `PAYMENT_FAILED`; hủy → `CANCELLED`; hết hạn → `EXPIRED` sau khi worker commit nhả inventory. Countdown về 0 không tự nhả ghế. Success muộn sau khi mất hold không phát vé; luồng hết hạn chuyển `REFUND_REQUIRED` và theo dõi bù trừ mô phỏng.
+
+Phục hồi: Kafka tạm ngừng thì outbox/lỗi còn ở PostgreSQL. Bật lại broker để retry; hết số lần tự thử thì ADMIN điều tra và replay event gốc. Inbox/state guard ngăn ghi nghiệp vụ lặp. Đây là **at-least-once kèm deduplication**, không cam kết exactly-once hay chịu mất ổ đĩa. Xem [kiến trúc](docs/ARCHITECTURE.md), [API](docs/API_CONTRACT.md), [event](docs/EVENT_CATALOG.md), [runbook](docs/DEMO_AND_RECOVERY.md).
+
+## Yêu cầu môi trường
+
+Baseline theo [ADR0001](docs/adr/0001-stack-and-local-environment.md); không tự nâng version khi chạy hướng dẫn:
+
+| Công cụ | Phiên bản đã chốt |
+|---|---|
+| Java và javac | Eclipse Temurin **25.0.5+8**, target 25 |
+| Node / npm | **26.13.0 / 11.20.0** |
+| Maven | Wrapper **3.9.16** trong backend, không cần Maven global |
+| Docker Desktop | Linux containers; Engine **29.9.1**, Compose **5.6.0** đã kiểm chứng |
+| PostgreSQL / Kafka | Image pin **17.11 / 4.2.2**, Compose tự tải |
+| Ứng dụng | Boot **4.1.2**, React **19.3.1**, TypeScript **7.0.2**, Vite **8.3.8**; BOM/lockfile giữ dependency |
+
+Cần Git, Windows PowerShell 5.1+, Internet lần đầu để tải Git/Maven/npm/image và đủ đĩa. Compose giới hạn PostgreSQL 1 GiB, Kafka 2 GiB; full test còn broker riêng và JVM/Node. Máy kiểm chứng RAM 16 GiB, Docker khoảng 8 GiB; đây là cấu hình đã thử, chưa đo minimum.
 
 ```powershell
-# Docker Desktop đang chạy, từ thư mục gốc:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
-npm.cmd test --prefix frontend
-npm.cmd run build --prefix frontend
-npm.cmd test --prefix tools/contracts
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1
-# Demo: terminal1 chạy backend, terminal2 chạy frontend:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 60 -ExpiryIntervalSeconds 1
-npm.cmd run dev --prefix frontend
-# Terminal khác: kiểm tra API/quyền, tùy chọn tạo đủ21sự kiện để thử phân trang:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part8.ps1 -CreatePaginationFixtures
+git --version
+java -version
+javac -version
+node --version
+npm.cmd --version
+docker version
+docker compose version
 ```
 
-**Tự thử trên Chrome:**
+Docker phải có **Client và Server**. `JAVA_HOME`/PATH trỏ cùng JDK 25. Dùng `npm.cmd` để tránh policy chặn npm.ps1.
 
-1. Mở http://127.0.0.1:5173 và bấm **Quản trị demo**. Trong **Sự kiện**, bấm Trang sau/Trang trước khi có hơn20bản ghi. Chờ tải xong; dòng hiển thị phải đổi theo trang.
-2. Bấm **Tạo sự kiện mới**, điền tên/địa điểm/thời gian, cấu hình loại GA và thêm loại ghế với nhãn mỗi dòng. Lưu DRAFT: thấy ở admin, chưa có trong catalog khách. Sửa sang PUBLISHED để khách xem được.
-3. Sang **Khách hàng demo**, tải lại sự kiện, chọn GA/số lượng2 rồi giữ vé. Quay admin, mở **Tồn kho [tên]**: thấy held2 và available giảm2. Sửa capacity thấp hơn held+sold phải bị từ chối; sửa giá không đổi tổng tiền booking cũ.
-4. Mở **Booking**, chọn bộ lọc trạng thái, bấm Xem để đọc timeline. Mở **Outbox** để xem event/version/trạng thái gửi. Màn hình chỉ xem; replay API T6 giữ nguyên, recovery UI thuộc T8.
-5. Quay khách, mô phỏng SUCCESS và chờ CONFIRMED/2vé; làm mới outbox sẽ thấy PaymentResultRecorded/BookingConfirmed. DELAY_TIMEOUT dẫn đến EXPIRED rồi REFUND_REQUIRED/không vé; đây không phải thanh toán thật.
-
-`test-part8-ui.ps1` tạo DB/topic/group riêng, kiểm tra dashboard bằng React/jsdom với HTTP/PostgreSQL/Kafka thật và startup guard production; không thay kiểm tra hình ảnh bằng Chrome. `verify-part8.ps1 -CreatePaginationFixtures` chỉ thêm số DRAFT còn thiếu để đủ21, không reset dữ liệu. Persona UI dùng token fixture công khai, server quyết định quyền; không phải đăng nhập production.
-
-Lệnh kiểm tra Phần7 (Docker Desktop đang chạy, từ thư mục gốc):
+## Chuẩn bị từ clone mới
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part7.ps1
-npm.cmd test --prefix tools/contracts
-npm.cmd test --prefix frontend
-npm.cmd run build --prefix frontend
-# HTTP + checkout dùng Kafka thật, DB riêng và restart worker:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka
-# Demo foreground, terminal khác mở frontend:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1
-# Terminal khác:
-npm.cmd run dev --prefix frontend
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part7.ps1
+git clone https://github.com/Haolo333z/event-ticketing-platform.git
+Set-Location event-ticketing-platform
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1
+npm.cmd ci --prefix frontend
+npm.cmd ci --prefix tools/contracts
 ```
 
-Smoke mong đợi: CONFIRMED,2tickets,sold2,payment inbox1,projection version3,outbox PUBLISHED. Script test tự tạo broker/volume và hai database UUID riêng; ngắt **broker test**, giữ dữ liệu demo. Thiếu PG_IT_URL/KAFKA_IT_BOOTSTRAP thì Maven có thể skip integration, không dùng làm nghiệm thu.
+Các lệnh sau chạy từ **gốc repository**. `local-env.ps1` tạo `.env` từ `.env.example` khi chưa có, sinh mật khẩu ngẫu nhiên, không in password và không ghi đè file đã có. Nó đọc KEY=value như dữ liệu; không thực thi nội dung. Bypass chỉ áp dụng process được gọi, không đổi policy hệ thống. Không commit `.env`.
 
-Mở http://127.0.0.1:5173, giữ GA hoặc ghế rồi mô phỏng thanh toán. 202 là đã ghi nhận; UI poll API, có thể chờ vài giây trước CONFIRMED/vé. Muộn → REFUND_REQUIRED,0vé; worker hoàn tiền mô phỏng cập nhật nghĩa vụ COMPLETED, booking giữ nguyên để theo dõi. API sự kiện: http://127.0.0.1:8080/api/events.
+Mặc định không cần sửa `.env`. Nếu chỉnh bằng editor, dùng KEY=value đơn giản, không dấu nháy/comment cuối dòng:
 
-Local bật messaging mặc định, test tắt trừ ca Kafka. Broker bind127.0.0.1:9092, có volume; outbox từ Phần6 cũng được gửi theo version. Giữ volume khi thử outage. Broker tắt lâu có thể hết3attempt → FAILED giữ record, cần replay có audit; xem [runbook T6](docs/DEMO_AND_RECOVERY.md#t6--quy-trình-đã-triển-khai).
+| Biến | Mặc định / ý nghĩa |
+|---|---|
+| SPRING_PROFILES_ACTIVE | local; mock auth/seed chỉ local/test |
+| POSTGRES_DB / POSTGRES_USER | ticketing_demo / ticketing |
+| POSTGRES_PASSWORD | Đã sinh; không rỗng, không đổi tùy tiện khi volume đã khởi tạo |
+| DB_HOST / DB_PORT | 127.0.0.1 / 5432 |
+| SERVER_PORT | 8080, cổng backend Windows |
+| KAFKA_PORT / KAFKA_BOOTSTRAP_SERVERS | 9092 / 127.0.0.1:9092; đổi đồng thời |
+| VITE_API_BASE_URL | http://127.0.0.1:8080; đổi theo backend, chạy lại frontend sau khi đổi |
+| BOOKING_HOLD_TTL_SECONDS | 600; worker mỗi 5 giây (EXPIRY_INTERVAL_SECONDS) |
+| COMPOSE_PROJECT_NAME | Tùy chọn project riêng; tách container/volume, cần đổi cả cổng khi chạy song song |
 
-Phần7 thêm Kafka publisher sau commit, consumer inbox idempotent, retry/DLQ/replay admin và refund mô phỏng có history. Giữ luồng GA/ghế/payment/expiry và phát vé trong PostgreSQL. Không dùng tiền thật. Xem [tiến độ](docs/PROGRESS.md), [task](docs/TASKS.md), [ADR0007](docs/adr/0007-kafka-and-recovery.md) và [lệnh local](infra/README.md).
+`.env.example` cố ý để password rỗng. Nếu tự copy thành `.env`, phải điền password trước khi chạy. Không ghi đè `.env` đang dùng.
+
+## Khởi động và dừng trên Windows
+
+**Terminal 1 — giữ mở cho backend:**
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1
-# Terminal khác:
+```
+
+Script đọc `.env`, đợi PostgreSQL/Kafka healthy, build Maven Wrapper, chạy Flyway/seed local rồi giữ JVM foreground/UTC. Seed chỉ thêm bản ghi thiếu, không reset dữ liệu cũ. Build trong launcher có thể **skip test tích hợp** khi thiếu biến IT; dùng gate đầy đủ bên dưới.
+
+**Terminal 2 — giữ mở cho frontend:**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1
+```
+
+Script đọc VITE_API_BASE_URL từ `.env` gốc, dùng Vite đã cài, bind 127.0.0.1:5173 strict. Không tự chuyển cổng: CORS chỉ cho http://127.0.0.1:5173 và http://localhost:5173.
+
+**Terminal 3 — kiểm tra, đóng được sau khi xong:**
+
+```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1
-npm.cmd ci --prefix frontend
-npm.cmd run dev --prefix frontend
-```
-
-Mở **http://127.0.0.1:5173**. Với GA, chọn số lượng1..6 rồi **Giữ vé GA**. Với sự kiện ghế chỉ định, chọn1..6ghế trống rồi **Giữ ghế đã chọn**. Kết quả: bookingId, PENDING_PAYMENT, thời hạn/countdown và tổng server; bên dưới có lịch sử khách demo. Ghế có nhãn Trống/Đang giữ/Không khả dụng; trạng thái chỉ cập nhật theo API. Frontend dùng localhost8080, cổng5173 cố định cho CORS; có thể đặt VITE_API_BASE_URL trước chạy Vite. Không nhập userId/role.
-
-Nếu mất kết nối/503, bấm **Thử lại cùng yêu cầu**: key và nội dung được giữ trong sessionStorage cùng tab, kể cả reload. Không xóa storage hoặc tạo key mới khi chưa rõ kết quả. Sau thành công, bấm **Đặt thêm vé** để chủ động tạo booking mới. Availability chỉ tham khảo; server có thể trả409 khi hết vé. Giao diện hiển thị mã lỗi/correlationId, không tính tổng giá.
-
-TTL mặc định600s, worker5s/batch50. Success có recorded_at từ DB trước/đúng deadline và còn hold →CONFIRMED,held chuyển sold và phát vé cùng transaction. Failure/cancel/expiry nhả đúng một lần. Success sau khi đã mất hold →REFUND_REQUIRED hoặc nghĩa vụ bù trừ trên state terminal, không nhận lại ghế/phát vé. UI poll3s, countdown0 không tự đổi state. Worker và adapter gọi cùng PaymentResultProcessor, không còn nhánh defer của T4.
-
-## Thử thanh toán mô phỏng và xem vé trên Windows
-
-Để thử nhanh, chạy backend với TTL20s/worker1s; không sửa `.env`:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
-```
-
-Frontend ở http://127.0.0.1:5173 (`npm.cmd run dev --prefix frontend` nếu chưa chạy). Giữ GA hoặc ghế, rồi chọn trong **Thanh toán mô phỏng — không thu tiền thật**:
-
-- **Mô phỏng thành công**: GET booking →CONFIRMED; vé hiển thị mã EF-UUID, GA ordinal hoặc nhãn ghế do server trả.3vé GA là3ticket riêng;2ghế có2ticket ordinal1, đúng seatId/seatLabel.
-- **Mô phỏng thất bại**: PAYMENT_FAILED,không vé,inventory trả lại.
-- **Mô phỏng kết quả đến muộn**: ghi SCHEDULED ngay; sau expiresAt+1s scheduler ghi SUCCESS. UI tiếp tục poll sau EXPIRED để thấy REFUND_REQUIRED; không có vé. Worker T6 hoàn tiền mô phỏng trên cùng nghĩa vụ, booking giữ REFUND_REQUIRED để theo dõi.
-- **Hủy giữ chỗ**: CANCELLED nếu còn pending/chưa có success hợp lệ; repeat cancel không release lần hai. Nếu payment đã thắng, cancel409 và UI cập nhật CONFIRMED/vé thật.
-
-Nếu payment bị network/503/500, dùng **Thử lại thanh toán cùng yêu cầu**; requestId/scenario/bookingId lưu sessionStorage qua reload, không tự tạo attempt khác. Không xóa storage khi chưa rõ kết quả.202 chỉ xác nhận đã nhận mô phỏng; booking/vé luôn lấy từ GET API.
-
-Tự động thử một lượt trên Windows:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part6.ps1 -WaitSeconds 45
-```
-
-Script tạo catalog riêng để không bán hết ghế seed, kiểm tra GA3vé/ghế2vé, replay, failure/cancel và delayed refund0vé; in bookingId/mã vé và giữ dữ liệu để bạn xem lịch sử. Không reset DB. Với TTL mặc định600s, bỏ tham số45 để dùng ngân sách660s. Muốn thử API bằng tay sau khi có bookingId:
-
-```powershell
-$auth = @{ Authorization='Bearer demo-customer-token' }
-$bookingId = 'UUID-booking-cua-ban'
-$requestId = [Guid]::NewGuid().ToString() # Giữ lại ID này khi retry cùng thao tác
-$payment = @{ scenario='SUCCESS'; requestId=$requestId } | ConvertTo-Json
-Invoke-RestMethod "http://127.0.0.1:8080/api/bookings/$bookingId/simulate-payment" -Method Post -Headers $auth -ContentType 'application/json' -Body $payment
-Invoke-RestMethod "http://127.0.0.1:8080/api/bookings/$bookingId" -Headers $auth
-Invoke-RestMethod "http://127.0.0.1:8080/api/bookings/$bookingId/tickets" -Headers $auth
-# Cancel không gửi body:
-# Invoke-RestMethod "http://127.0.0.1:8080/api/bookings/$bookingId/cancel" -Method Post -Headers $auth
-```
-
-Cùng requestId nhưng đổi scenario trả409 IDEMPOTENCY_KEY_REUSED. Simulator chỉ nhận scenario/requestId và bearer owner local/test; không có provider callback HTTP, nhập status/recordedAt/amount/userId sẽ bị từ chối. Ticket code là mã tra cứu demo, không phải QR/chữ ký offline hay check-in production.
-
-## Thử đặt ghế và hết hạn nhanh trên Windows
-
-Không cần sửa `.env`. Trong terminal backend, chạy:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
-```
-
-`-RestartExisting` chỉ được phép thay JVM đang dùng đúng infra/.local-runtime/backend.jar của workspace này; nếu cổng8080 thuộc app khác, script từ chối. Build đạt trước khi dừng JVM cũ. Hai tham số TTL/interval chỉ áp dụng process đang chạy, không ghi `.env`. Các booking đã tồn tại vẫn giữ expiresAt cũ.
-
-Trong UI5173 chọn sự kiện ghế mẫu, chọn A1/A2 nếu còn trống, gửi giữ ghế. Mong đợi202/PENDING_PAYMENT/tổng400000VND với giá seed; ghế đổi Đang giữ. Sau khoảng20s +worker1s +poll3s, GET/UI trả EXPIRED và ghế Trống. Bấm **Đặt thêm vé** để nhận booking mới. Hai lần bấm gửi của cùng thao tác không tạo thêm booking.
-
-Có thể tự động kiểm tra một lượt bằng terminal khác:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part5.ps1 -WaitSeconds 45
-```
-
-Script chọn hai ghế mẫu còn trống, POST/replay, chờ EXPIRED, kiểm tra một history hết hạn/ghế trống, replay key cũ rồi tạo booking mới. Booking mới đó tiếp tục hết hạn theo TTL. Nếu đang giữ ghế trên UI, hãy đợi chúng hết hạn trước; không reset DB. Với TTL mặc định600s, dùng ngân sách chờ mặc định660s thay cho45s. Chạy launcher không tham số TTL để quay lại cấu hình `.env`.
-
-## Xem hai sự kiện mẫu
-
-Sau khi backend chạy, xem giao diện tại5173 hoặc mở [danh sách sự kiện JSON](http://127.0.0.1:8080/api/events).
-
-- [Sự kiện ghế chỉ định](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000001): 4 ghế A1–A4, giá 200.000 VND.
-- [Availability ghế](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000001/availability).
-- [Sự kiện GA](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000002): capacity 100, giá 100.000 VND.
-- [Availability GA](http://127.0.0.1:8080/api/events/20000000-0000-4000-8000-000000000002/availability).
-
-Availability chỉ là snapshot, không giữ vé. Seed idempotent chỉ local/test, không overwrite giá/capacity đã chỉnh. Không cần xóa volume demo để chạy test: script test tự tạo DB riêng và dọn đúng DB đó.
-
-## Tự kiểm tra Phần6 trên Windows
-
-Mở Docker Desktop trước. Từ thư mục gốc:
-
-```powershell
-# PostgreSQL thật, DB test riêng; build và toàn bộ test backend:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6.ps1
-npm.cmd ci --prefix frontend
-npm.cmd test --prefix frontend
-npm.cmd run build --prefix frontend
-npm.cmd ci --prefix tools/contracts
-npm.cmd test --prefix tools/contracts
-# UI/HTTP thật với DB riêng sạch, tự chạy/dừng backend test:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1
-# Ghế + scheduler thật (TTL4s/interval1s) và restart DB test riêng:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1
-# Checkout/payment/tickets + delayed recovery sau restart, DB riêng:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1
-# Backend local8080 cần đang chạy cho hai lệnh tiếp:
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-part4.ps1
-npm.cmd run test:live --prefix tools/contracts
-```
-
-Suite Phần6 có88test backend (87PostgreSQL+1H2),26test frontend,44ca hợp đồng/40response HTTP live.20request payment cùng requestId +20callback nội bộ lặp chỉ1result/1confirm/đúng3vé. Có tests recorded_at đúng deadline/+1microsecond, lag, expiry trước success/rebook,8vòng race deadline,8vòng cancel/payment,admin capacity/giá,rollback recording/ticket/failure/compensation. Toàn bộ GA/ghế/expiry và3kịch bản UI live chạy lại. [Bằng chứng](docs/evidence/part6-2026-11-12.json), report backend/target/surefire-reports và part6-evidence.json. UI live là jsdom +HTTP/PostgreSQL thật; chưa có browser visual QA.
-
-verify-part4 giữ1vé lần đầu rồi replay key cố định; sau expiry POST vẫnbodyPENDING_PAYMENT gốc, GET mới trảEXPIRED. Contract live tạo catalog/payment/vé riêng mỗi lần; nên chạy qua test-part6-ui để dùng DB riêng được dọn. Không xóa volume demo. `mvnw verify` thiếuPG_IT_URL chỉ kiểm tra context H2 và skip PostgreSQL; không dùng thay gate Phần6. CI có PostgreSQL,GA UI/seat UI/checkout thật; chưa có GitHub CI cho working tree chưa commit.
-
-## Thử một booking GA bằng PowerShell
-
-Backend cần đang chạy. Đoạn dưới cố định key; chạy lại cả đoạn trả booking cũ. Muốn tạo booking khác sau khi đã nhận kết quả rõ ràng, chủ động đổi key.
-
-```powershell
-$base = 'http://127.0.0.1:8080'
-$headers = @{ Authorization='Bearer demo-customer-token'; 'Idempotency-Key'='readme-ga-part4-v1' }
-$body = @{ eventId='20000000-0000-4000-8000-000000000002'; ticketTypeId='30000000-0000-4000-8000-000000000002'; quantity=2 } | ConvertTo-Json
-$first = Invoke-WebRequest -UseBasicParsing "$base/api/bookings" -Method Post -Headers $headers -ContentType 'application/json' -Body $body
-$first.StatusCode # 202
-$first.Headers['Location'] # /api/bookings/{UUID}
-$responseText = if ($first.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($first.Content) } else { $first.Content }
-$result = $responseText | ConvertFrom-Json
-$result # PENDING_PAYMENT, totalAmountVnd=200000 nếu giá seed chưa sửa
-$again = Invoke-RestMethod "$base/api/bookings" -Method Post -Headers $headers -ContentType 'application/json' -Body $body
-$again.bookingId -eq $result.bookingId # True; không giữ thêm 2 vé
-Invoke-RestMethod "$base/api/bookings/$($result.bookingId)" -Headers $headers
-Invoke-RestMethod "$base/api/me/bookings?page=0&size=20" -Headers $headers
-# Cùng key nhưng quantity khác: mong đợi409 IDEMPOTENCY_KEY_REUSED
-$changed = @{ eventId='20000000-0000-4000-8000-000000000002'; ticketTypeId='30000000-0000-4000-8000-000000000002'; quantity=3 } | ConvertTo-Json
-try { Invoke-RestMethod "$base/api/bookings" -Method Post -Headers $headers -ContentType 'application/json' -Body $changed -ErrorAction Stop }
-catch {
-  $failure = $_.ErrorDetails.Message
-  if (!$failure -and $_.Exception.Response) {
-    $reader = [IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-    $failure = $reader.ReadToEnd(); $reader.Dispose()
-  }
-  $failure # JSON code=IDEMPOTENCY_KEY_REUSED (hỗ trợ cả Windows PowerShell5)
-}
-```
-
-POST mới có thể trả409 INVENTORY_UNAVAILABLE nếu demo đã hết vé; không tự xóa dữ liệu để khôi phục seed. Error503 BOOKING_BUSY kèm Retry-After:1 cần thử lại **cùng key và body**. Token lạ401, admin POST booking403, customer khác GET booking404.
-
-## Thử API quản trị
-
-Mock fixture công khai: `demo-customer-token` và `demo-admin-token`, chỉ local/test. Thiếu/token lạ trả401; customer gọi admin trả403. Server lấy account/role từ DB principal, bỏ qua header tự khai danh tính. Mock bật ngoài local/test làm startup thất bại; ngoài các profile này không có seed runner hay token demo mặc định.
-
-```powershell
-$admin = @{ Authorization = 'Bearer demo-admin-token' }
-$body = @{
-  title='Demo draft'; description='Local example'; venue='Demo venue'
-  saleStartAt='2026-01-01T00:00:00Z'; saleEndAt='2099-01-01T00:00:00Z'
-  startsAt='2099-01-02T00:00:00Z'; status='DRAFT'
-  ticketTypes=@(@{ name='GA'; mode='GA'; priceVnd=120000; capacity=50 })
-} | ConvertTo-Json -Depth 6
-$event = Invoke-RestMethod http://127.0.0.1:8080/api/admin/events -Method Post -Headers $admin -ContentType 'application/json' -Body $body
-$patch = @{ status='PUBLISHED'; ticketTypes=@(@{id=$event.ticketTypes[0].id; priceVnd=150000; capacity=60}) } | ConvertTo-Json -Depth 6
-Invoke-RestMethod "http://127.0.0.1:8080/api/admin/events/$($event.id)" -Method Patch -Headers $admin -ContentType 'application/json' -Body $patch
-```
-
-PATCH chỉ nhận field đã chốt; không cho đổi mode, sửa/xóa ghế hoặc thêm type. Giảm GA capacity dưới held+sold trả409 và rollback cả transaction. Đổi giá không sửa snapshot booking_items. Chưa có route DELETE. Public catalog chỉ hiện PUBLISHED.
-
-## Công cụ cần có
-
-- Temurin JDK 25.0.5+8, JAVA_HOME trỏ tới JDK và `java`/`javac` trên PATH cùng phiên bản.
-- Node 26.13.0, npm 11.20.0; Maven Wrapper tự tải Maven 3.9.16, không cần cài Maven global.
-- Internet ở lần build đầu để tải dependency. Docker dành cho môi trường ở T1.3 và các task sau.
-
-## Cấu trúc
-
-```text
-backend/   Spring Boot, Maven Wrapper, module packages, test context
-frontend/  React + TypeScript + Vite, test render bằng Node test runner
-infra/     Compose PostgreSQL và script chạy/kiểm tra local
-docs/      thiết kế, ADR, task, tiến độ hiện có
-.github/   CI build/test, secret/dependency scan, Dependabot
-```
-
-## Kiểm tra local (PowerShell)
-
-```powershell
-java -version
-javac -version
-cd backend
-.\mvnw.cmd -B -ntp verify cyclonedx:makeAggregateBom
-cd ../frontend
-npm.cmd ci
-npm.cmd test
-npm.cmd run build
-npm.cmd audit --audit-level=high
-```
-
-Trên Linux/macOS, dùng `sh ./mvnw` và `npm`; integration test cần PostgreSQL riêng qua PG_IT_URL, POSTGRES_USER, POSTGRES_PASSWORD. Test frontend kiểm tra HTTP adapter, storage và tương tác DOM. Chạy giao diện bằng `npm.cmd run dev` trong frontend rồi mở http://127.0.0.1:5173.
-
-## Cấu hình và CI
-
-Script local tự tạo `.env` với mật khẩu ngẫu nhiên nếu chưa có và nạp các biến cho Compose/backend. Nếu sao chép `.env.example` thủ công, phải đặt POSTGRES_PASSWORD trước khi chạy. `.env` bị Git bỏ qua. Không đưa secret vào biến `VITE_*` vì các biến đó có thể xuất hiện trong bundle trình duyệt.
-
-CI chạy khi push, pull request hoặc gọi thủ công: backend verify và CycloneDX SBOM; frontend `npm ci`, test, build và npm audit (fail từ mức high); OSV scan dependency backend từ SBOM; Gitleaks quét cả lịch sử Git và file hiện tại. Findings hoặc lỗi scanner làm job fail. Dependabot kiểm tra Maven/npm/Actions mỗi tuần. Các scanner cần kết nối dịch vụ advisory; báo cáo local chưa thay cho GitHub Actions run.
-
-Sau khi có Gitleaks 8.30.1 và OSV Scanner 2.7.1 trên PATH, từ thư mục gốc chạy:
-
-```powershell
-gitleaks git . --redact --no-banner
-osv-scanner scan source --sbom backend/target/bom.json
-```
-
-Không quét trực tiếp mọi file local bằng `gitleaks dir .` khi có `.env`/dependency/build ignored; để kiểm tra tập bàn giao, chép tập `git ls-files --cached --others --exclude-standard` sang thư mục scan tạm rồi quét thư mục đó. GitHub checkout sạch không có `.env` nên CI vẫn quét working tree đầy đủ.
-
-Không commit `.env`, build output, dữ liệu DB hoặc credential. CI và kiểm tra local không deploy hay gửi thông báo ra ngoài. Tiến độ hiện tại xem [PROGRESS](docs/PROGRESS.md).
-
-## T8.1 — Theo dõi log và health local
-
-Backend ghi mỗi log thành JSON Logstash. Tìm theo `correlationId`, `bookingId`, `eventId` để nối các stage `http_request` → `outbox_committed` → `outbox_published` → `consumer_processed`. `eventId` là UUID message trong outbox/envelope, khác ID sự kiện bán vé. Có thể consumer xử lý trước khi publisher kịp ghi log ACK; dùng ID để nối, không suy thứ tự toàn hệ thống từ vị trí dòng log. Duplicate có outcome `DUPLICATE`; lỗi có stage riêng, không log body/token/payload thanh toán hoặc exception message ở các mốc nghiệp vụ. Giữ mức log Spring/Kafka mặc định khi kiểm tra dữ liệu nhạy cảm.
-
-```powershell
-# Backend đã chạy qua infra/start-local.ps1
 Invoke-RestMethod http://127.0.0.1:8080/actuator/health
-Invoke-RestMethod http://127.0.0.1:8080/actuator/health/liveness
-Invoke-RestMethod http://127.0.0.1:8080/actuator/health/readiness
-
-# Từ thư mục gốc; test tạo DB/broker riêng, không dừng broker demo
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
-npm.cmd test --prefix tools/contracts
+docker compose --env-file .env -f infra/docker-compose.yml ps
 ```
 
-Khi dependency khỏe, cả ba probe trả200/UP. Khi Kafka lỗi và messaging bật, root/readiness trả503/DOWN nhưng liveness vẫn200/UP; messaging tắt bỏ yêu cầu Kafka. Không gửi token cho health. Không dùng liveness để suy rằng PostgreSQL/Kafka đang khỏe; readiness không kiểm tra backlog hoặc consumer lag. Metrics tồn đọng xem T8.2 bên dưới. Kiểm tra tự động bao gồm broker test stop/start, đối chiếu log từ HTTP tới Kafka và fault DB qua DataSource test; chi tiết/bằng chứng tại docs/PROGRESS.md.
+Mong đợi `PASS: HTTP 200 / UP; V1 applied exactly once; ticketing schema exists.` và hai container healthy.
 
-## T8.2 — Metrics local
+| Địa chỉ | Nội dung |
+|---|---|
+| http://127.0.0.1:5173 | Giao diện khách / Quản trị demo |
+| http://127.0.0.1:8080/api/events | Catalog public |
+| http://127.0.0.1:8080/actuator/health | Tổng hợp dependency cần thiết, 200/UP khi sẵn sàng |
+| http://127.0.0.1:8080/actuator/health/readiness | DB + Kafka khi messaging bật |
+| http://127.0.0.1:8080/actuator/health/liveness | Tiến trình sống; có thể UP khi dependency DOWN |
 
-Micrometer/Actuator cung cấp metrics read-only cho ADMIN local/test. Tên và đơn vị đầy đủ tại [ARCHITECTURE — T8.2](docs/ARCHITECTURE.md#t82--hợp-đồng-metrics). Đếm hold theo booking PENDING_PAYMENT quá deadline DB; tuổi hold/outbox tính bằng **seconds**. Outbox chưa publish bao gồm PENDING/FAILED. Các count là hiện trạng DB; retry/DLQ delivery counter và HTTP timer là số liệu của JVM hiện tại, reset khi restart. Không dùng booking/user/message ID hoặc token làm label. HTTP timer `http.server.requests` dùng route mẫu và có COUNT/TOTAL_TIME/MAX; không có p95 ở cấu hình này.
+OpenAPI máy đọc tại [docs/contracts/openapi.json](docs/contracts/openapi.json); không có Swagger UI `/swagger-ui`. Metrics chỉ ADMIN local/test: `/actuator/metrics` và `/actuator/metrics/{name}`, xem [tên/đơn vị](docs/API_CONTRACT.md). Log JSON trên terminal backend truyền correlation ID, booking ID/message event ID khi có ngữ cảnh; không ghi token/payload thanh toán.
+
+Thử expiry nhanh: Ctrl+C backend rồi chạy (hoặc dùng -RestartExisting để thay đúng runtime workspace):
 
 ```powershell
-# Chạy từ thư mục gốc, Docker Desktop đang chạy
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1
-# Hoặc toàn bộ backend, gồm hồi quy GA/ghế/payment/Kafka/T8.1
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-metrics.ps1 -FullSuite
-
-# Backend local đã chạy; token dưới đây là fixture công khai của demo
-$adminHeaders = @{ Authorization = 'Bearer demo-admin-token' }
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics -Headers $adminHeaders
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue -Headers $adminHeaders
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.holds.overdue.oldest.age -Headers $adminHeaders
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.outbox.unpublished.oldest.age -Headers $adminHeaders
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.messaging.retries -Headers $adminHeaders
-Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/http.server.requests -Headers $adminHeaders
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting -HoldSeconds 20 -ExpiryIntervalSeconds 1
 ```
 
-Test pause/resume scheduler trong context test riêng và stop/start broker UUID riêng; không dừng worker/broker demo. Snapshot SQL read-only độc lập worker, cache1s mặc định (`operations.metrics.snapshot-ttl-ms`); đọc lỗi báo gaugeNaN/available0, không giả số0. Health vẫn dùng để kiểm tra dependency; metrics chưa đo consumer lag hoặc cung cấp cảnh báo/dashboard ngoài. Recovery T8.3 xem bên dưới; T8.4 chưa làm.
-
-## T8.3 — Recovery cho ADMIN local/test
+Override chỉ trong process, không sửa `.env`. Dừng bình thường bằng Ctrl+C hai terminal. Hoặc từ terminal khác dừng ứng dụng và Docker project, **giữ volume**:
 
 ```powershell
-# Từ thư mục gốc, Docker Desktop đang chạy
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -StopServices
+```
+
+Script xác minh đường dẫn JVM/Vite thuộc workspace, từ chối tiến trình lạ; compose stop giữ dữ liệu. Không cần reset DB hoặc down --volumes để chạy lại.
+
+## Tài khoản demo và thử giao diện
+
+Seed sạch: một sự kiện ghế A1–A4, một sự kiện GA capacity 100, customer và admin. Dữ liệu đang dùng có thể khác sau khi đặt vé. Token dưới đây là **fixture công khai local/test**, không phải credential production:
+
+| Persona | Bearer token tự gọi API |
+|---|---|
+| Khách hàng demo | demo-customer-token |
+| Quản trị demo | demo-admin-token |
+
+Không có mật khẩu đăng nhập. Server ánh xạ token sang principal/role, không tin userId/role client khai. Token lạ → 401; khách gọi admin → 403. Không bật mock auth ngoài local/test hay mở demo ra Internet.
+
+1. Chrome http://127.0.0.1:5173 → Khách hàng demo → sự kiện GA → số lượng 2 → Giữ vé GA. Thấy PENDING_PAYMENT, ID, giá server và thời hạn. Mô phỏng thành công → chờ CONFIRMED/2 vé; xem lịch sử.
+2. Sự kiện ghế → chọn ghế trống → giữ ghế. Không trả tiền, chờ TTL + lượt worker rồi tải lại: EXPIRED, ghế trống trở lại. Tranh ghế có thể 409 dù snapshot cũ còn trống.
+3. Mô phỏng thất bại → PAYMENT_FAILED/không vé. Mô phỏng kết quả đến muộn → EXPIRED/REFUND_REQUIRED, không phát vé. Refund cũng chỉ mô phỏng.
+4. Quản trị demo → Sự kiện/Booking/Outbox xem dữ liệu thật. Tạo/Sửa có form gần nút, Đóng/Hủy. DRAFT chưa public; PUBLISHED mới xuất hiện với khách.
+5. Khôi phục → lọc sự kiện, xem trạng thái/lý do/inbox/DLQ/audit. Danh sách sạch có thể trống. Sau khi sửa nguyên nhân, chọn event có outbox hợp lệ, nhập lý do và replay. 202 là xếp hàng; làm mới để xem kết quả. Tối đa 3 request mới/event; retry giữ cùng requestId. Event đã xử lý là no-op ở consumer, không thêm vé/nghiệp vụ. Raw record không có outbox chỉ để điều tra; không có nút ép xử lý.
+
+## Chạy test
+
+Sau npm ci, Docker Desktop hoạt động:
+
+```powershell
 npm.cmd test --prefix frontend
 npm.cmd run build --prefix frontend
 npm.cmd test --prefix tools/contracts
-
-# Khởi động bản code hiện tại để tự thử, giữ DB demo
-powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting
-# Nếu Vite chưa chạy, mở terminal khác trong frontend
-npm.cmd run dev --prefix frontend
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live
 ```
 
-Mở Chrome tại http://127.0.0.1:5173 → **Quản trị demo → Khôi phục**. Chọn filter/trang, bấm Xem event để đọc lý do an toàn, trạng thái gửi/DLQ, consumer receipt và audit. Khi không có lỗi, màn hình rỗng là kết quả đúng. Muốn xem event đã xử lý, vào **Outbox → Chi tiết event**. Nhập lý do rồi Gửi yêu cầu replay; kiểm tra requestId trong thông báo và audit. Làm mới để đọc trạng thái mới;202 không hứa đã xử lý xong. Nếu mất phản hồi, giữ nguyên trang/phiên và dùng Gửi lại cùng yêu cầu. Không nhập token hoặc payload thanh toán vào lý do.
+Gate cuối chạy toàn backend PostgreSQL/Kafka thật rồi HTTP contract và React/jsdom admin/recovery với API thật. Harness tạo DB UUID riêng; backend suite còn broker/volume UUID riêng, cuối cùng xóa **đúng tài nguyên test tự tạo**. Live UI dùng topic/group UUID trên broker cấu hình, không ngắt broker demo; topic giữ tới retention. Không thay QA hình ảnh Chrome. Kết quả: backend/target/surefire-reports, frontend/reports, log TEMP script thông báo.
 
-API đọc mới: GET `/api/admin/operations/recovery?page=0&size=20&status=OPEN` và GET `/api/admin/operations/events/{id}`. POST replay T6.4 giữ nguyên giới hạn3request khác nhau/event, cùng request/reason trả kết quả cũ không thêm audit/reset; cùng event tới consumer đã ghi inbox là no-op nghiệp vụ. Không có force/reset/purge. Record thiếu outbox hợp lệ chỉ điều tra. Audit replay hiển thị đủ tối đa3mục; chi tiết consumer tối đa100lỗi gần nhất, lý do kỹ thuật được rút gọn để không lộ raw record/exception. Chọn persona không thay thế quyền server.
+`verify-part4`…`verify-part8` là smoke lịch sử **ghi fixture/booking**, một số cố định 8080. Không dùng làm kiểm tra chỉ đọc trên demo cần giữ. `verify-local.ps1` chỉ đọc. Xem [infra/README](infra/README.md).
 
-Test live dùng DB/topic/group riêng trên broker local, chủ động làm mất phản hồi sau202 rồi gửi lại cùng key: audit1, vé2/history2/businessEvents3/inbox1 giữ nguyên. Gate backend Kafka dùng broker UUID riêng để fault-inject, đối chiếu hash nghiệp vụ và budget3, không xóa inbox hoặc dừng broker demo. Kết quả/giới hạn tại [PROGRESS](docs/PROGRESS.md). T8.4 trở đi chưa thực hiện; chưa commit/push.
+## Kiểm chứng môi trường sạch, song song demo
+
+Clone vào thư mục mới, không copy `.env`, target, node_modules hoặc dữ liệu demo. Sau khối chuẩn bị ở trên, cấu hình **chỉ .env của clone** như sau; các cổng 15432/19092/18080 và IPv6 ::1:5173 phải trống:
+
+```powershell
+$checkProject = 'ticketing-readme-' + [Guid]::NewGuid().ToString('N').Substring(0,12)
+$checkEnv = [IO.File]::ReadAllText((Join-Path $PWD '.env'))
+$checkEnv = $checkEnv -replace '(?m)^POSTGRES_DB=.*$', 'POSTGRES_DB=ticketing_readme'
+$checkEnv = $checkEnv -replace '(?m)^DB_PORT=.*$', 'DB_PORT=15432'
+$checkEnv = $checkEnv -replace '(?m)^SERVER_PORT=.*$', 'SERVER_PORT=18080'
+$checkEnv = $checkEnv -replace '(?m)^KAFKA_PORT=.*$', 'KAFKA_PORT=19092'
+$checkEnv = $checkEnv -replace '(?m)^KAFKA_BOOTSTRAP_SERVERS=.*$', 'KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:19092'
+$checkEnv = $checkEnv -replace '(?m)^VITE_API_BASE_URL=.*$', 'VITE_API_BASE_URL=http://127.0.0.1:18080'
+[IO.File]::WriteAllText((Join-Path $PWD '.env'), $checkEnv + "`nCOMPOSE_PROJECT_NAME=$checkProject`n", [Text.UTF8Encoding]::new($false))
+```
+
+Không chạy khối này trên `.env` demo. Project riêng tách cả container/volume; đổi cổng thôi chưa đủ. Chạy các gate test ở trên trong clone; sau đó:
+
+```powershell
+# Terminal backend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080
+# Terminal frontend, Chrome mở http://localhost:5173 (qua IPv6, CORS cho phép):
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1
+# Terminal kiểm tra:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1 -Port 18080
+Invoke-RestMethod http://127.0.0.1:18080/actuator/health/readiness
+Invoke-RestMethod http://127.0.0.1:18080/api/events
+# Dừng đúng clone, giữ volume:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -Port 18080 -FrontendAddress ::1 -StopServices
+```
+
+127.0.0.1:5173 vẫn là demo cũ; bản thử dùng **localhost qua IPv6**. Nếu không có IPv6 loopback, dùng máy/VM có cổng 5173 trống, không đổi cổng frontend rồi bỏ qua CORS. Bằng chứng, bước đã chạy và giới hạn ở [PROGRESS](docs/PROGRESS.md).
+
+## Xử lý lỗi thường gặp
+
+| Lỗi | Kiểm tra / cách xử lý |
+|---|---|
+| Cổng bận | Get-NetTCPConnection bên dưới, nhận diện PID bằng Get-Process. Dừng đúng terminal của mình; -RestartExisting chỉ thay runtime cùng workspace. Chạy song song dùng project/cổng riêng như trên |
+| Docker chỉ Client / cannot connect | Mở Docker Desktop, đợi Linux engine; docker version, docker context show, docker info. Không reset volume |
+| PostgreSQL/Kafka chưa healthy | compose ps/logs/up bên dưới; kiểm tra RAM/đĩa/cổng và KAFKA_PORT/bootstrap. Sửa dependency trước khi chạy backend |
+| DB healthy nhưng sai password/database | Volume giữ user/password khởi tạo lần đầu, sửa .env không đổi chúng. Khôi phục cấu hình đúng hoặc dùng project mới; không xóa volume demo |
+| Lỗi Java/dependency | Kiểm tra java/javac/JAVA_HOME, dùng Maven Wrapper; npm ci đúng lockfile. Xem lỗi mạng/TLS/proxy khi tải registry; không bỏ test/đổi dependency ngẫu nhiên |
+| Frontend 200 nhưng API/CORS lỗi | Backend readiness UP, kiểm tra VITE_API_BASE_URL trong .env rồi restart frontend; mở đúng HTTP origin localhost/127.0.0.1:5173 |
+| 401/403 / metrics bị chặn | API admin/metrics/recovery cần ADMIN local/test; không gửi userId/role để vượt quyền |
+| 409/503 đặt vé | 409 có thể hết vé/tranh ghế/key đổi nội dung; tải snapshot mới. 503 BOOKING_BUSY: giữ key/body, thử lại theo lỗi, không tạo key mới khi kết quả chưa rõ |
+| Kafka lên nhưng chưa có vé | Kiểm tra outbox/inbox/audit; retry hữu hạn, lỗi cuối cần điều tra/replay gốc. Không xóa inbox, sửa status SQL hoặc reset counter |
+
+```powershell
+Get-NetTCPConnection -State Listen -LocalPort 8080,5173,5432,9092
+docker compose --env-file .env -f infra/docker-compose.yml ps
+docker compose --env-file .env -f infra/docker-compose.yml logs --tail 80 postgres kafka
+docker compose --env-file .env -f infra/docker-compose.yml up -d --wait postgres kafka
+```
+
+Root/readiness trả 503 khi dependency cần thiết DOWN; liveness vẫn có thể 200. Health không lộ chi tiết public. Log JSON trên terminal backend giúp tra correlation ID; không chia sẻ .env hoặc payload thanh toán.
+
+Tài liệu chuẩn: [TASKS](docs/TASKS.md), [PROGRESS](docs/PROGRESS.md), [PRD](docs/PRD.md), [TEST_PLAN](docs/TEST_PLAN.md), [ADR](docs/adr). T8.4 chỉ hướng dẫn/vận hành, chưa làm T9.1.

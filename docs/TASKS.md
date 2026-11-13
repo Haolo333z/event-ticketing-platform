@@ -218,7 +218,7 @@
   - **Phụ thuộc:** T8.2. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** replay no-op khi event trùng; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T8.4 — README:** kiến trúc, luồng, chạy local, troubleshooting.
+- [x] **T8.4 — README (Done, 2026-11-14):** hướng dẫn tiếng Việt đã chạy từ clone sạch/project/volume/cổng riêng; Flyway V1–V9, seed, start/restart/stop và recovery gate đạt.130backend/54frontend/69contract/74HTTP, không đổi dữ liệu demo. [Bằng chứng](evidence/t8-4-readme-2026-11-14.json).
   - **Mục tiêu/phạm vi:** README: kiến trúc, luồng, chạy local, troubleshooting.
   - **Phụ thuộc:** T8.3. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

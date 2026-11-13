@@ -1,5 +1,10 @@
+param([Nullable[int]]$Port)
 . "$PSScriptRoot/local-env.ps1"
-$response = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8080/actuator/health'
+$backendPort=8080
+if($null -ne $Port){$backendPort=[int]$Port}
+elseif($env:SERVER_PORT -and ![int]::TryParse($env:SERVER_PORT,[ref]$backendPort)){throw 'SERVER_PORT must be an integer'}
+if($backendPort -lt 1 -or $backendPort -gt 65535){throw 'Port must be 1..65535'}
+$response = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$backendPort/actuator/health"
 $body = if ($response.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($response.Content) } else { $response.Content }
 if ($response.StatusCode -ne 200 -or ($body | ConvertFrom-Json).status -ne 'UP') {
     throw 'Backend health is not UP.'

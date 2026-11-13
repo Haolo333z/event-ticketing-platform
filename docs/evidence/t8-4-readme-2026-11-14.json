@@ -1,0 +1,293 @@
+﻿{
+    "task":  "T8.4",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "status":  "PASS",
+    "sourceHead":  "1e157a9354f9efcb7158503e3923467720a1c535",
+    "sourceInitiallyClean":  true,
+    "cleanCheckout":  {
+                          "explanation":  "Application code from exact current HEAD; only7candidate README/infra/config files overlaid, never copied .env, build outputs, dependencies or demo data.",
+                          "candidateOverlay":  [
+                                                   {
+                                                       "sha256":  "9EA35C5647D4F45E4E3103F9D32C10DF58886277CE0E0868A645722A0513BC22",
+                                                       "path":  "README.md"
+                                                   },
+                                                   {
+                                                       "sha256":  "CA0BE33FEA4AE58412E7F6480F4CEE696093B5B5230AB3E1F1B4AC06D699D9E5",
+                                                       "path":  "infra/README.md"
+                                                   },
+                                                   {
+                                                       "sha256":  "6069F63E9703B99C619E22B4BE1EC064DFA8604A11152FC1967DC3F9DFCD8209",
+                                                       "path":  ".env.example"
+                                                   },
+                                                   {
+                                                       "sha256":  "F7EAA936EF707898F2D50911349A23AD103E44698F21F3835821DE110B6C28E2",
+                                                       "path":  "infra/start-local.ps1"
+                                                   },
+                                                   {
+                                                       "sha256":  "8CE1B4584B315430B5C58163C36F292F22A27372CCE8DC8C3E8CB44B668EF57C",
+                                                       "path":  "infra/start-frontend.ps1"
+                                                   },
+                                                   {
+                                                       "sha256":  "12DE0977D4349403AD4E5B3F15A500B2520AEB58A3C10B4DA7B86F57A6FBB795",
+                                                       "path":  "infra/stop-local.ps1"
+                                                   },
+                                                   {
+                                                       "sha256":  "B3483F17D5AD3763A2920CC08905BBC3C2E61AA90B48776DE6F3B2757A143C2D",
+                                                       "path":  "infra/verify-local.ps1"
+                                                   }
+                                               ],
+                          "noEnvTargetOrNodeModulesBeforeSetup":  true,
+                          "path":  "C:\\Users\\tinht\\AppData\\Local\\Temp\\ticketing-readme-ca27534dd334",
+                          "method":  "git clone https://github.com/Haolo333z/event-ticketing-platform.git \u003cTEMP\u003e/ticketing-readme-ca27534dd334",
+                          "remoteHeadMatchesSource":  true
+                      },
+    "isolation":  {
+                      "twoProjectVolumesRetained":  true,
+                      "composeProject":  "ticketing-readme-ca27534dd334",
+                      "postgresPort":  15432,
+                      "kafkaPort":  19092,
+                      "noPreexistingVolumes":  true,
+                      "backendPort":  18080,
+                      "frontendOrigin":  "http://localhost:5173",
+                      "testAppsAndServicesStopped":  true,
+                      "databaseTablesBeforeStartup":  0,
+                      "frontendBind":  "::1:5173",
+                      "database":  "ticketing_readme"
+                  },
+    "versions":  {
+                     "javac":  "25.0.5",
+                     "java":  "Temurin25.0.5+8",
+                     "mavenWrapper":  "3.9.16",
+                     "node":  "26.13.0",
+                     "postgres":  "17.11",
+                     "compose":  "5.6.0",
+                     "git":  "2.55.0.windows.3",
+                     "springBoot":  "4.1.2",
+                     "kafka":  "4.2.2",
+                     "npm":  "11.20.0",
+                     "dockerClientAndServer":  "29.9.1"
+                 },
+    "commands":  [
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1",
+                         "result":  "PASS generated nonempty password without output; second run preserves file"
+                     },
+                     {
+                         "command":  "npm.cmd ci --prefix frontend",
+                         "result":  "PASS from absent node_modules;55packages;0audit vulnerabilities"
+                     },
+                     {
+                         "command":  "npm.cmd ci --prefix tools/contracts",
+                         "result":  "PASS from absent node_modules;16packages;0audit vulnerabilities"
+                     },
+                     {
+                         "command":  "npm.cmd test --prefix frontend",
+                         "result":  "PASS54/54"
+                     },
+                     {
+                         "command":  "npm.cmd run build --prefix frontend",
+                         "result":  "PASS TypeScript and Vite"
+                     },
+                     {
+                         "command":  "npm.cmd test --prefix tools/contracts",
+                         "result":  "PASS69cases;18operations;OpenAPI3.1"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live",
+                         "result":  "PASS130backend/0skip;74live HTTP;admin and recovery UI/SQL;production auth guard"
+                     },
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080",
+                         "result":  "PASS clean DB V1-V9,18tables,2events,4seats,GA100,0bookings",
+                         "note":  "Executed as separate arguments: -Port 18080"
+                     },
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1",
+                         "result":  "PASS HTTP200;localhost and explicitIPv6 main.ts uses API18080;CORS204"
+                     },
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1 -Port 18080",
+                         "result":  "PASS; also verified SERVER_PORT fallback without -Port"
+                     },
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080 -RestartExisting",
+                         "result":  "PASS different JVM;9Flyway history rows checksum unchanged;seed unchanged"
+                     },
+                     {
+                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -Port 18080 -FrontendAddress ::1 -StopServices",
+                         "result":  "PASS only owned processes/services stopped;2volumes retained"
+                     }
+                 ],
+    "backend":  {
+                    "skipped":  0,
+                    "errors":  0,
+                    "tests":  130,
+                    "failures":  0
+                },
+    "startupBuild":  {
+                         "discovered":  130,
+                         "note":  "Launcher build is not full integration evidence; full gate separately ran130 with0skip.",
+                         "skipped":  121,
+                         "executed":  9
+                     },
+    "runtimeChecks":  [
+                          {
+                              "status":  "PASS",
+                              "result":  {
+                                             "wrapperPid":  2684,
+                                             "port":  18080
+                                         },
+                              "check":  "README backend launcher and Flyway from empty PostgreSQL"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  "9|9|18|2|4|100|0",
+                              "check":  "Clean seed and migrations"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  [
+                                             "SEATED",
+                                             "GA"
+                                         ],
+                              "check":  "Public catalog/availability GA and SEATED; all health UP"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  {
+                                             "url":  "http://localhost:5173",
+                                             "api":  "http://127.0.0.1:18080"
+                                         },
+                              "check":  "Frontend HTTP200, transformed JS uses isolated API, localhost CORS204"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  "both healthy",
+                              "check":  "README compose ps/log diagnostics"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  "root503/readiness503/liveness200 -\u003e ready200; own volume kept",
+                              "check":  "README dependency diagnostics/recovery kafka"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  "root503/readiness503/liveness200 -\u003e ready200; own volume kept",
+                              "check":  "README dependency diagnostics/recovery postgres"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  "e4117d5fc6c79b1bcfd5b3655be97fe3",
+                              "check":  "RestartExisting preserves9Flyway history rows and seed; no migration rerun"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  [
+                                             "ticketing-readme-ca27534dd334_kafka_demo",
+                                             "ticketing-readme-ca27534dd334_postgres_demo"
+                                         ],
+                              "check":  "README stop: clean apps/services stopped;2owned volumes retained"
+                          },
+                          {
+                              "status":  "PASS",
+                              "result":  {
+                                             "frontend":  3628,
+                                             "backend":  29744
+                                         },
+                              "check":  "Original demo still HTTP200/UP"
+                          }
+                      ],
+    "portAndStopGuards":  {
+                              "value":  [
+                                            {
+                                                "status":  "PASS",
+                                                "guard":  "backend",
+                                                "exitCode":  1
+                                            },
+                                            {
+                                                "status":  "PASS",
+                                                "guard":  "frontend",
+                                                "exitCode":  1
+                                            },
+                                            {
+                                                "status":  "PASS",
+                                                "guard":  "stop",
+                                                "exitCode":  1
+                                            }
+                                        ],
+                              "Count":  3
+                          },
+    "dockerUnavailableDiagnostic":  {
+                                        "exitCode":  1,
+                                        "status":  "PASS",
+                                        "method":  "docker version against nonexistent named pipe; Docker Desktop not stopped"
+                                    },
+    "demoPreservation":  {
+                             "all18TablesUnchanged":  true,
+                             "after":  "fa37aae42c59a7fbfada8991ceed3c7321a57f9ffdf99a86f53282079c7913be",
+                             "before":  "fa37aae42c59a7fbfada8991ceed3c7321a57f9ffdf99a86f53282079c7913be",
+                             "frontendHttp":  200,
+                             "health":  "UP",
+                             "frontendPid":  3628,
+                             "envUnchanged":  true,
+                             "backendPid":  29744
+                         },
+    "additionalChecks":  [
+                             "All infra PowerShell files parse",
+                             "README and infra relative links exist",
+                             "git diff --check passes",
+                             "Generated password and bearer fixtures absent from captured gate/startup logs"
+                         ],
+    "rawLogHashes":  [
+                         {
+                             "sha256":  "3304585B344D38C361C5BB1974545B3FA91B9F93C9E2DA6572179CB0AD14B79B",
+                             "path":  "reports/t84-gates.log"
+                         },
+                         {
+                             "sha256":  "0E936461D35F46A5D6FA3C2FBCE631C732751ACCCCD04FC584C2A2ECAFCC6639",
+                             "path":  "reports/t84-final-gate.stdout.log"
+                         },
+                         {
+                             "sha256":  "EA2BAE72FD52401784D4C60B7E7D074150B96B6ADFD387B827D58B504E8F0D05",
+                             "path":  "reports/t84-final-gate.stderr.log"
+                         },
+                         {
+                             "sha256":  "F0069F61B3248682664DB058872A2419BD7D51CAEA931FB4CF471BCB517E8898",
+                             "path":  "reports/t84-bootstrap.stdout.log"
+                         },
+                         {
+                             "sha256":  "B44C1C2E74F0C53176E48D565E95BF9B118733B898311213E4EA37AF1A27A6A1",
+                             "path":  "reports/t84-bootstrap.stderr.log"
+                         },
+                         {
+                             "sha256":  "A19E0DD130651C4142E3F3C42B2B387631707BC9D8A067350C86C487B0213650",
+                             "path":  "reports/t84-restart.stdout.log"
+                         },
+                         {
+                             "sha256":  "680DC0E0120AE2C444ED0D4BC6A685DFB32931384605DDB89471726CB8F126B7",
+                             "path":  "reports/t84-restart.stderr.log"
+                         },
+                         {
+                             "sha256":  "BAA9C30CEF515346F598A1E5F6F629CFB562FF708B6CCD5E02F47CAEC907A0AB",
+                             "path":  "reports/t84-frontend.stdout.log"
+                         },
+                         {
+                             "sha256":  "E96057B4F967428C0C58B0E5274098FD27BF7910171416464C3DFF8AF83317C6",
+                             "path":  "reports/t84-frontend.stderr.log"
+                         }
+                     ],
+    "notes":  [
+                  "First aggregate capture mapped normal git clone stderr to a PowerShell NativeCommandError in the wrapper. Full documented recovery gate rerun with separate stdout/stderr and verified exit0.",
+                  "An initial audit invocation attempted dot-sourcing under restricted shell policy; rerun in process-scoped -ExecutionPolicy Bypass exactly as README. No global policy changed."
+              ],
+    "limits":  [
+                   "Clean application checkout/DB/volumes/dependencies on existing Windows host; Maven/npm/image caches warm; not a fresh OS or offline install.",
+                   "Actual Chrome layout/interaction not rechecked; HTTP/Vite/CORS and React/jsdom live API checked.",
+                   "No GitHub Actions/Linux run, multi-broker durability, real payment or real refund.",
+                   "No actual Docker Desktop shutdown; unavailable endpoint simulated using nonexistent named pipe, original daemon untouched.",
+                   "Main clean-check project volumes and clone retained stopped for review; regression harness removed only its own UUID databases/broker volumes."
+               ],
+    "finished":  "2026-11-14T00:17:33.0978842+07:00"
+}

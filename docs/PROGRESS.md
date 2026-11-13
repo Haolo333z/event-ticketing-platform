@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Quan sát/vận hành — T8.3 hoàn thành local ngày2026-11-13
-- **Tiến độ:** T1.1–T7.4 và T8.1–T8.3 Done; recovery/audit/replay no-op đã có bằng chứng
-- **Task đang làm:** T8.3 đã kiểm chứng từ HEAD480cd4c, working tree ban đầu sạch; chưa commit/push
-- **Task tiếp theo:** T8.4 (chưa bắt đầu)
-- **Blocker:** Không có blocker T8.3 local. Chưa GitHub Actions/Linux/visual Chrome cho thay đổi; giới hạn chẩn đoán và history ghi ở nhật ký T8.3.
+- **Giai đoạn:** Quan sát/vận hành — T8.4 hoàn thành local ngày2026-11-14
+- **Tiến độ:** T1.1–T7.4 và T8.1–T8.4 Done; README đã chạy từ clone/database/volume sạch
+- **Task đang làm:** T8.4 đã kiểm chứng từ HEAD1e157a9, working tree ban đầu sạch; chưa commit/push
+- **Task tiếp theo:** T9.1 (chưa triển khai)
+- **Blocker:** Không có blocker T8.4 local. Chưa kiểm chứng máy Windows mới hoàn toàn, cache lạnh, GitHub Actions/Linux hoặc visual Chrome; giới hạn đầy đủ trong nhật ký T8.4.
 
-- **Task trong TASKS:** 36/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 37/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -552,3 +552,56 @@ npm.cmd run dev --prefix frontend
 Chrome http://127.0.0.1:5173 → Quản trị demo → Khôi phục. Filter/trang, Xem event, nhập reason và Gửi yêu cầu; xem requestId/audit/ngân sách rồi Làm mới. Với event đã xử lý, Outbox → Chi tiết event. Khi không có lỗi, empty-state là đúng; không cần tạo/sửa lỗi trong demo chỉ để có dữ liệu. Sau lỗi mạng dùng Gửi lại cùng yêu cầu, không tạo key mới. Không đưa token/payment payload vào reason. Record không có outbox chỉ điều tra, không có hành động force.
 
 Backend gate sở hữu DB và broker UUID riêng. Live gate dùng DB/topic/group UUID riêng trên broker local, không dừng broker demo hoặc ghi DB demo; tài nguyên DB/process test được dọn. Chưa visual QA Chrome/mobile; UI được kiểm bằng jsdom với HTTP thật. Chưa GitHub Actions/Linux, tải lớn/multi-broker hoặc mọi crash window. Lý do kỹ thuật cố ý rút gọn theo class/trạng thái T6.4, không phân tích chính xác root SQL exception; detail chỉ100failure gần nhất, audit budget3đầy đủ. Pending persistence dựa sessionStorage; khi không dùng được storage, giữ request trong bộ nhớ khi view còn sống. Không thêm dependency/migration/envelope, không sửa `.env`, không commit/push. T8.4 trở đi chưa làm.
+
+### 2026-11-14 — T8.4: README tiếng Việt, chạy thật từ clone sạch
+
+**Phạm vi:** chỉ T8.4, không triển khai T9.1. Bắt đầu từ HEAD `1e157a9354f9efcb7158503e3923467720a1c535`, Git sạch; đã đọc RULES/TASKS/PROGRESS, README gốc, infra/README và các launcher/test/Compose, đối chiếu kiến trúc/ADR0001 và code hiện hành. Không đổi schema, migration, API, event, luồng GA/ghế/payment/expiry/Kafka/replay hoặc dependency. Không commit/push.
+
+**Lý do sửa:** README cũ tích lũy nhiều hướng dẫn giai đoạn trước, có mô tả recovery UI chưa làm, số operation/schema cũ và smoke ghi fixture lẫn với kiểm tra chỉ đọc. Launcher/verify cố định backend8080; chạy npm dev trực tiếp không nạp VITE_API_BASE_URL từ .env gốc. Các điểm này gây nhầm khi chạy sạch hoặc chạy song song demo. README mới lấy trạng thái T8.3 làm chuẩn; giữ số liệu cũ trong nhật ký lịch sử, không dùng làm kết quả mới.
+
+**File:** README.md viết lại tiếng Việt: mục đích, kiến trúc mô tả/bảng, GA/ghế/payment/expiry/phục hồi, stack/yêu cầu, .env, terminal start/stop, URL/health/metrics/OpenAPI, demo persona/token fixture, thử Chrome, test và troubleshooting. infra/README.md là danh mục script hiện hành và cảnh báo tác động dữ liệu. `.env.example` thêm SERVER_PORT=8080; start-local.ps1/verify-local.ps1 nhận -Port/SERVER_PORT, mặc định giữ8080. start-frontend.ps1 mới nạp .env gốc, chạy Vite đã cài, strict5173. stop-local.ps1 mới chỉ dừng listener/command line đúng workspace, kiểm tra toàn bộ trước khi dừng; -StopServices dùng compose stop giữ volume. Cập nhật TASKS/PROGRESS và [bằng chứng máy đọc](evidence/t8-4-readme-2026-11-14.json).
+
+**Môi trường sạch đã dùng:** git clone thật từ GitHub vào `C:\Users\tinht\AppData\Local\Temp\ticketing-readme-ca27534dd334`, remote HEAD khớp commit hiện tại. Trước chuẩn bị không có .env, backend/target hoặc node_modules frontend/contracts, không có volume của project kiểm tra. Chỉ overlay7file README/infra/config T8.4 chưa commit; không copy build artifact, dependency, .env hay dữ liệu demo. Project `ticketing-readme-ca27534dd334`, database `ticketing_readme`, PostgreSQL15432, Kafka19092, backend18080, ViteIPv6::1:5173 (Chrome origin localhost:5173, CORS hiện có cho phép). Database có0bảng ticketing trước startup; container/volume hoàn toàn tách project demo. Các khối tạo .env, đổi project/cổng và lệnh chạy đúng trong README đã được thực thi ở clone này.
+
+Phiên bản thực tế: Temurin java/javac25.0.5+8, Node26.13.0/npm11.20.0, Docker Client+Server29.9.1, Compose5.6.0, Git2.55.0.windows.3. Wrapper3.9.16, Boot4.1.2, imagePG17.11/Kafka4.2.2 theo baseline đã chốt.
+
+| Lệnh / bước chạy tại clone sạch | Kết quả thực tế |
+|---|---|
+| git clone; powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1 | PASS clone đúng HEAD; tạo .env/password ngẫu nhiên không in password; chạy local-env lần2 giữ nguyên hash file |
+| npm.cmd ci --prefix frontend; npm.cmd ci --prefix tools/contracts | PASS từ node_modules chưa tồn tại; lần lượt55/16package, audit0vulnerability |
+| npm.cmd test --prefix frontend | PASS54/54,0fail/skip |
+| npm.cmd run build --prefix frontend | PASS TypeScript/Vite |
+| npm.cmd test --prefix tools/contracts | PASS OpenAPI3.1/18operation/69case positive-negative |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live | PASS toàn backend130/130,0fail/error/skip; Maven BUILD SUCCESS;74response HTTP hợp đồng; admin và recovery UI thật/SQL/prod auth guard. Lần gate cuối capture stdout/stderr riêng, exit0 |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080 | PASS startup từ database trống;9migration khác version/đều success,18bảng,2event,4ghế,GA capacity100,0booking |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1 -Port 18080; chạy lại không -Port | PASS HTTP200/UP,V1 đúng1lần,schema ticketing; xác nhận cả fallback SERVER_PORT từ .env |
+| GET /api/events, detail và availability; health/root/readiness/liveness | PASS đúng2event GA/SEATED; cả health200/UP |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1 | PASS localhost:5173 và IPv6 trả200; main.ts đã transform chứa API18080; CORS localhost:5173→204 |
+| compose ps/logs; dừng rồi bật riêng kafka, sau đó postgres của project kiểm tra | PASS mỗi outage root/readiness503,liveness200; up -d --wait postgres kafka phục hồi readiness200, giữ volume |
+| start-local.ps1 -Port 18080 -RestartExisting | PASS thay đúng JVM; checksum toàn bộ9row Flyway history không đổi, seed2event/4ghế/GA100/0booking giữ nguyên |
+| stop-local.ps1 -Port 18080 -FrontendAddress ::1 -StopServices | PASS dừng đúng JVM/Vite/2container kiểm tra, port đóng, giữ cả2volume; đã chạy lại stop sau gate cuối |
+| Start backend/frontend và stop từ clone hướng cổng demo8080/5173 | PASS từ chối tiến trình khác, exit1 đúng mong đợi; không dừng demo |
+| docker version với endpoint named-pipe không tồn tại | PASS trả lỗi kết nối/exit1 như khi daemon unavailable; daemon Docker Desktop thật không bị tắt, docker version sau đó vẫn có Server29.9.1 |
+| Parser tất cả infra/*.ps1; liên kết tương đối README/infra; git diff --check; quét log gate/start/restart | PASS không lỗi cú pháp/link/whitespace; không có password đã sinh hoặc bearer fixture trong log được capture |
+
+**Không nhầm launcher với full suite:** Maven trong start-local phát hiện130test nhưng chạy9/skip121 do không có biến IT. Đây chỉ là kiểm tra build khởi động. Bằng chứng130/130,0skip nằm ở gate test-recovery riêng chạy PostgreSQL/Kafka thật (đã chạy2lượt trong clone; không cộng thành260test khác nhau). Gate HTTP/admin/recovery cũng chạy lại đạt; replay cùng request2HTTP →1audit, vé2→2, history2→2, payment inbox1, business outbox3. Dashboard25event →20+5,0IDtrùng, DOM khớp API. Số liệu này ở DB test UUID, không phải assertion dựa trên trạng thái demo.
+
+**Bảo toàn demo:** fingerprint chuẩn hóa nội dung cả18bảng trước/sau cùng SHA256 `fa37aae42c59a7fbfada8991ceed3c7321a57f9ffdf99a86f53282079c7913be`; hash .env gốc không đổi. Backend PID29744 vẫn HTTP200/UP ở127.0.0.1:8080, frontend PID3628 vẫn200 ở127.0.0.1:5173; hai container demo còn healthy. Không reset DB, không xóa volume demo. Clone kiểm tra và hai volume riêng được giữ để xem lại nhưng ứng dụng/container kiểm tra đã dừng. Harness regression chỉ xóa DB/broker/volume UUID do chính nó tạo; live topic UUID ở broker kiểm tra giữ tới retention.
+
+Log thô/runner vận hành trong reports/t84-* (ignored), log live JVM trong TEMP, JUnit trong backend/target của clone. JSON evidence lưu command, kết quả, hash file candidate/log và giới hạn, không chứa .env/password/payload thanh toán. Lần capture gộp stderr ban đầu khiến PowerShell wrapper báo NativeCommandError cho dòng progress git clone; gate gốc đã chạy lại capture hai stream riêng và xác nhận exit0. Một lệnh audit dot-source ban đầu gặp ExecutionPolicy hiện tại; đã chạy lại bằng process-scoped Bypass đúng README, không đổi policy toàn máy.
+
+**Nghiệm thu:** T8.4 Done — từ checkout không có cấu hình/dependency/artifact và DB/volume mới, thực thi hướng dẫn cấu hình, cài đặt, build/test, start/verify/restart/stop và phục hồi dependency thành công; không cần dữ liệu demo cũ.37/45task Done. T9.1 trở đi chưa thực hiện.
+
+**Giới hạn:** đây là môi trường ứng dụng/dữ liệu sạch trên máy Windows hiện có, không phải máy mới hoàn toàn; cache Maven/npm/Docker image được giữ, chưa kiểm chứng cache lạnh/offline hay khác tài khoản Windows. Chưa visual QA Chrome hoặc GitHub Actions/Linux cho thay đổi chưa commit. HTTP/Vite/CORS và React/jsdom/API thật đã chạy. Chưa tắt Docker Desktop thật, chỉ mô phỏng endpoint không kết nối để không ảnh hưởng demo. Không khẳng định multi-broker/HA/mất ổ đĩa, thanh toán hoặc refund thật. CORS frontend vẫn chỉlocalhost/127.0.0.1:5173; máy không có IPv6 cần máy/VM khác trống5173 để thử song song.
+
+Tự chạy lại từ gốc Windows (demo đang chạy không cần restart):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live
+```
+
+Muốn lặp nghiệm thu môi trường sạch, dùng nguyên mục “Kiểm chứng môi trường sạch, song song demo” trong README ở clone mới với project/port riêng; không áp dụng khối sửa .env lên workspace demo. Chrome demo hiện có tại http://127.0.0.1:5173; hướng dẫn Khách hàng/Quản trị/Khôi phục trong README. Không chạy smoke verify-part4…8 lên dữ liệu cần giữ chỉ để kiểm tra README.
