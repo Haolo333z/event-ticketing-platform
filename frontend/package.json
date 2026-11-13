@@ -14,7 +14,8 @@
     "test:live": "node tests/live-ui.ts",
     "test:live:seats": "node tests/live-seats.ts",
     "test:live:payments": "node tests/live-payments.ts",
-    "test:live:admin": "node tests/live-admin.ts"
+    "test:live:admin": "node tests/live-admin.ts",
+    "test:live:recovery": "node tests/live-recovery.ts"
   },
   "dependencies": {
     "react": "19.3.1",

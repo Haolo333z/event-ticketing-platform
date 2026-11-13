@@ -302,4 +302,25 @@ Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/ticketing.messaging.ret
 Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/http.server.requests -Headers $adminHeaders
 ```
 
-Test pause/resume scheduler trong context test riêng và stop/start broker UUID riêng; không dừng worker/broker demo. Snapshot SQL read-only độc lập worker, cache1s mặc định (`operations.metrics.snapshot-ttl-ms`); đọc lỗi báo gaugeNaN/available0, không giả số0. Health vẫn dùng để kiểm tra dependency; metrics chưa đo consumer lag hoặc cung cấp cảnh báo/dashboard ngoài. T8.3 trở đi chưa làm.
+Test pause/resume scheduler trong context test riêng và stop/start broker UUID riêng; không dừng worker/broker demo. Snapshot SQL read-only độc lập worker, cache1s mặc định (`operations.metrics.snapshot-ttl-ms`); đọc lỗi báo gaugeNaN/available0, không giả số0. Health vẫn dùng để kiểm tra dependency; metrics chưa đo consumer lag hoặc cung cấp cảnh báo/dashboard ngoài. Recovery T8.3 xem bên dưới; T8.4 chưa làm.
+
+## T8.3 — Recovery cho ADMIN local/test
+
+```powershell
+# Từ thư mục gốc, Docker Desktop đang chạy
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+
+# Khởi động bản code hiện tại để tự thử, giữ DB demo
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting
+# Nếu Vite chưa chạy, mở terminal khác trong frontend
+npm.cmd run dev --prefix frontend
+```
+
+Mở Chrome tại http://127.0.0.1:5173 → **Quản trị demo → Khôi phục**. Chọn filter/trang, bấm Xem event để đọc lý do an toàn, trạng thái gửi/DLQ, consumer receipt và audit. Khi không có lỗi, màn hình rỗng là kết quả đúng. Muốn xem event đã xử lý, vào **Outbox → Chi tiết event**. Nhập lý do rồi Gửi yêu cầu replay; kiểm tra requestId trong thông báo và audit. Làm mới để đọc trạng thái mới;202 không hứa đã xử lý xong. Nếu mất phản hồi, giữ nguyên trang/phiên và dùng Gửi lại cùng yêu cầu. Không nhập token hoặc payload thanh toán vào lý do.
+
+API đọc mới: GET `/api/admin/operations/recovery?page=0&size=20&status=OPEN` và GET `/api/admin/operations/events/{id}`. POST replay T6.4 giữ nguyên giới hạn3request khác nhau/event, cùng request/reason trả kết quả cũ không thêm audit/reset; cùng event tới consumer đã ghi inbox là no-op nghiệp vụ. Không có force/reset/purge. Record thiếu outbox hợp lệ chỉ điều tra. Audit replay hiển thị đủ tối đa3mục; chi tiết consumer tối đa100lỗi gần nhất, lý do kỹ thuật được rút gọn để không lộ raw record/exception. Chọn persona không thay thế quyền server.
+
+Test live dùng DB/topic/group riêng trên broker local, chủ động làm mất phản hồi sau202 rồi gửi lại cùng key: audit1, vé2/history2/businessEvents3/inbox1 giữ nguyên. Gate backend Kafka dùng broker UUID riêng để fault-inject, đối chiếu hash nghiệp vụ và budget3, không xóa inbox hoặc dừng broker demo. Kết quả/giới hạn tại [PROGRESS](docs/PROGRESS.md). T8.4 trở đi chưa thực hiện; chưa commit/push.

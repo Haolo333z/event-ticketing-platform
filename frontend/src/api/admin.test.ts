@@ -16,3 +16,12 @@ test('admin adapter preserves command payload, errors and correlation, with no a
   const api=createAdminApi('http://local',async(input,init)=>{attempts++;assert.equal(String(input),'http://local/api/admin/events');assert.deepEqual(JSON.parse(init!.body as string),body);return new Response(JSON.stringify({code:'FORBIDDEN',message:'Không có quyền',correlationId:'trace-fixture'}),{status:403});});
   await assert.rejects(api.create(body),(e:unknown)=>e instanceof ApiError&&e.status===403&&e.code==='FORBIDDEN'&&e.correlationId==='trace-fixture');assert.equal(attempts,1);
 });
+
+test('recovery adapter reuses bounded replay endpoint with exact request and no force/user fields or automatic retry',async()=>{
+  const calls:{path:string;init:RequestInit}[]=[];
+  const admin=createAdminApi('http://local',async(input,init)=>{calls.push({path:String(input),init:init!});return new Response(JSON.stringify({code:'REPLAY_LIMIT_REACHED',message:'Hết ngân sách',correlationId:'safe-trace'}),{status:409});});
+  await assert.rejects(admin.recovery(1,20,'OPEN'));await assert.rejects(admin.recoveryEvent('event/id'));
+  await assert.rejects(admin.replayEvent('event/id',{requestId:'same-request',reason:'Same reason'}),(e:unknown)=>e instanceof ApiError&&e.code==='REPLAY_LIMIT_REACHED'&&e.correlationId==='safe-trace');
+  assert.equal(calls.length,3);assert.equal(calls[0].path,'http://local/api/admin/operations/recovery?page=1&size=20&status=OPEN');assert.equal(calls[1].path,'http://local/api/admin/operations/events/event%2Fid');
+  assert.equal(calls[2].path,'http://local/api/admin/operations/events/event%2Fid/replay');assert.deepEqual(JSON.parse(calls[2].init.body as string),{requestId:'same-request',reason:'Same reason'});
+});

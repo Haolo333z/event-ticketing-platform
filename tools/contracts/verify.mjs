@@ -57,6 +57,16 @@ check(api.components.schemas.AdminInventory,{...adminStock,ticketTypes:[{...admi
 check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'🎟'.repeat(500)},true);
 check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'🎟'.repeat(501)},false);
 check(api.components.schemas.ReplayRequest,{requestId:fixtures.bookingGa.eventId,reason:'   '},false);
+const recoveryItem={id:fixtures.bookingGa.eventId,source:'CONSUMER',eventId:null,bookingId:null,eventType:null,consumer:'payment-v1',status:'DEAD',error:'Consumer failure (safe metadata)',createdAt:'2026-11-13T00:00:00Z',dlqStatus:'PENDING',replayable:false};
+check(api.components.schemas.RecoveryItem,recoveryItem,true);
+for(const extra of [{raw_event:'forbidden'},{payload:{}},{token:'forbidden'},{record_key:'private'}])check(api.components.schemas.RecoveryItem,{...recoveryItem,...extra},false);
+const recoveryEvent={eventId:fixtures.bookingGa.eventId,bookingId:fixtures.bookingGa.ticketTypeId,eventType:'PaymentResultRecorded',aggregateVersion:2,status:'PUBLISHED',createdAt:'2026-11-13T00:00:00Z',attempts:1,correlationId:fixtures.bookingGa.eventId,publishedAt:'2026-11-13T00:00:01Z',publisherError:'No current publisher error',remainingReplays:2,audit:[{requestId:fixtures.bookingGa.eventId,adminAccountId:fixtures.bookingGa.ticketTypeId,reason:'Investigate delivery',requestedAt:'2026-11-13T00:00:00Z'}],consumers:[{consumer:'payment-v1',processedAt:'2026-11-13T00:00:01Z'}],failures:[]};
+check(api.components.schemas.RecoveryEvent,recoveryEvent,true);
+check(api.components.schemas.RecoveryEvent,{...recoveryEvent,remainingReplays:4},false);
+check(api.components.schemas.RecoveryEvent,{...recoveryEvent,audit:Array(4).fill(recoveryEvent.audit[0])},false);
+check(api.components.schemas.RecoveryEvent,{...recoveryEvent,payload:{secret:true}},false);
+check(api.components.schemas.RecoveryEvent,{...recoveryEvent,audit:[{...recoveryEvent.audit[0],role:'ADMIN'}]},false);
+check(api.components.schemas.RecoveryEvent,{...recoveryEvent,consumers:[{consumer:'arbitrary-user',processedAt:'2026-11-13T00:00:01Z'}]},false);
 assert(api.paths['/api/admin/events'].get['x-implemented']);assert(api.paths['/api/admin/bookings'].get['x-implemented']);assert(api.paths['/api/admin/events/{id}/inventory'].get['x-implemented']);
 const ids = new Set(); let operations=0;
 for (const [path,item] of Object.entries(api.paths)) for (const [method,op] of Object.entries(item)) {
@@ -67,7 +77,7 @@ for (const [path,item] of Object.entries(api.paths)) for (const [method,op] of O
   if(op.requestBody) {assert(op.responses['413']); assert(op.responses['415']); assert(op['x-max-body-bytes']);}
   if(op.responses['503']) assert(op.responses['503'].headers['Retry-After']);
   for(const res of Object.values(op.responses)) for(const code of res['x-error-codes']??[]) assert(api.components.schemas.Error.properties.code.enum.includes(code));
-  if(op.operationId==='simulatePayment'||op.operationId==='replayEvent'||op.operationId==='listOutbox') assert.deepEqual(op['x-profiles'],['local','test']);
+  if(['simulatePayment','replayEvent','listOutbox','listRecovery','getRecoveryEvent'].includes(op.operationId)) assert.deepEqual(op['x-profiles'],['local','test']);
 }
 assert(api.paths['/api/bookings'].post.responses['202'].headers.Location);
 assert.deepEqual(api.components.schemas.BookingStatus.enum,['PENDING_PAYMENT','CONFIRMED','PAYMENT_FAILED','CANCELLED','EXPIRED','REFUND_REQUIRED']);

@@ -4,8 +4,9 @@ import {ApiError} from '../api/client.ts';
 import type {Booking,Status} from '../api/client.ts';
 import type {AdminApi,AdminEvent,AdminInventory,CreateEvent,PatchEvent,Page,Outbox} from '../api/admin.ts';
 import {EventEditor} from './EventEditor.ts';
+import {RecoveryView} from './RecoveryView.ts';
 
-type Tab='events'|'inventory'|'bookings'|'outbox';
+type Tab='events'|'inventory'|'bookings'|'outbox'|'recovery';
 const states:Status[]=['PENDING_PAYMENT','CONFIRMED','PAYMENT_FAILED','CANCELLED','EXPIRED','REFUND_REQUIRED'];
 const message=(value:unknown)=>value instanceof ApiError?value.message+' · '+value.code+(value.correlationId?' · Mã tra cứu: '+value.correlationId:''):'Không tải được dữ liệu. Hãy thử lại.';
 export function AdminDashboard({api}:{api:AdminApi}){
@@ -16,6 +17,7 @@ export function AdminDashboard({api}:{api:AdminApi}){
   const[editor,setEditor]=useState<'create'|'edit'|null>(null),[detail,setDetail]=useState<Booking|null>(null),[notice,setNotice]=useState('');
   const[uncertain,setUncertain]=useState(false),[saving,setSaving]=useState(false);const savingRef=useRef(false),detailRequest=useRef(0);
   const editorPanel=useRef<HTMLElement>(null);
+  const[recoveryEvent,setRecoveryEvent]=useState<string|undefined>();
   function revealEditor(){
     const panel=editorPanel.current;if(!panel)return;
     panel.scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -24,7 +26,7 @@ export function AdminDashboard({api}:{api:AdminApi}){
   }
   useEffect(()=>{if(editor)revealEditor();},[editor,editor==='edit'?inventory:null,inventoryRevision]);
   useEffect(()=>{
-    if(tab==='inventory'){setLoading(false);return;}let active=true;setLoading(true);setData(null);setError('');
+    if(tab==='inventory'||tab==='recovery'){setLoading(false);return;}let active=true;setLoading(true);setData(null);setError('');
     const request=tab==='events'?api.events(page,20):tab==='bookings'?api.bookings(page,20,filter||undefined):api.outbox(page,20);
     request.then(result=>{if(active)setData(result);}).catch(value=>{if(active)setError(message(value));}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
@@ -55,10 +57,11 @@ export function AdminDashboard({api}:{api:AdminApi}){
   const empty=!loading&&!error&&data?.items.length===0;
   return h('main',{className:'admin-dashboard shell'},
     h('section',{className:'intro'},h('p',{className:'eyebrow'},'QUẢN TRỊ DEMO'),h('h1',null,'Sự kiện và vận hành'),h('p',null,'Dữ liệu từ API. Máy chủ kiểm tra quyền, giá và tồn kho cho mọi thay đổi.')),
-    h('nav',{'aria-label':'Mục quản trị',className:'admin-tabs'},...([['events','Sự kiện'],['inventory','Tồn kho'],['bookings','Booking'],['outbox','Outbox']] as const).map(([key,label])=>h('button',{key,type:'button','aria-pressed':tab===key,disabled:saving,onClick:()=>switchTab(key)},label))),
+    h('nav',{'aria-label':'Mục quản trị',className:'admin-tabs'},...([['events','Sự kiện'],['inventory','Tồn kho'],['bookings','Booking'],['outbox','Outbox'],['recovery','Khôi phục']] as const).map(([key,label])=>h('button',{key,type:'button','aria-pressed':tab===key,disabled:saving,onClick:()=>switchTab(key)},label))),
     error&&h('p',{role:'alert',className:'alert error'},error),notice&&h('p',{role:'status',className:'alert success'},notice),
     uncertain&&h('div',{role:'alert',className:'alert pending'},h('p',null,'Chưa rõ kết quả tạo sự kiện. Không gửi lại tự động. Tải và kiểm tra danh sách trước khi tạo tiếp.'),h('button',{type:'button',disabled:loading,onClick:()=>void reviewCreate()},'Tải danh sách để kiểm tra')),
-    h('div',{className:'section-heading'},h('h2',null,{events:'Danh sách sự kiện',inventory:'Tồn kho theo sự kiện',bookings:'Danh sách booking',outbox:'Sự kiện outbox'}[tab]),h('button',{type:'button',className:'quiet',disabled:loading||saving,onClick:()=>setRevision(x=>x+1)},'Làm mới dữ liệu')),
+    h('div',{className:'section-heading'},h('h2',null,{events:'Danh sách sự kiện',inventory:'Tồn kho theo sự kiện',bookings:'Danh sách booking',outbox:'Sự kiện outbox',recovery:'Khôi phục sự kiện'}[tab]),h('button',{type:'button',className:'quiet',disabled:loading||saving,onClick:()=>setRevision(x=>x+1)},'Làm mới dữ liệu')),
+    tab==='recovery'&&h(RecoveryView,{api,initialEventId:recoveryEvent,revision}),
     tab==='bookings'&&h('div',{className:'filter-field'},h('label',{htmlFor:'booking-status-filter'},'Lọc trạng thái booking'),h('select',{id:'booking-status-filter',value:filter,onChange:(e:ChangeEvent<HTMLSelectElement>)=>{setFilter(e.target.value as Status|'');setPage(0);setDetail(null);detailRequest.current++;}},h('option',{value:''},'Tất cả trạng thái'),...states.map(s=>h('option',{key:s,value:s},s)))),
     tab==='events'&&h('button',{type:'button',className:'primary',disabled:saving||uncertain,'aria-expanded':editor==='create','aria-controls':'event-editor-panel',onClick:()=>{setEditor('create');setError('');if(editor==='create')revealEditor();}},'Tạo sự kiện mới'),
     editor&&h('section',{id:'event-editor-panel',ref:editorPanel,className:'editor-panel',tabIndex:-1,'aria-labelledby':'event-editor-heading'},
@@ -70,8 +73,8 @@ export function AdminDashboard({api}:{api:AdminApi}){
       ...inventory.ticketTypes.map(stock=>h('section',{key:stock.ticketTypeId,className:'inventory-type'},h('h3',null,selected.ticketTypes.find(t=>t.id===stock.ticketTypeId)?.name??stock.ticketTypeId),stock.mode==='GA'?table('Tồn kho GA',['Sức chứa','Đang giữ','Đã bán','Còn trống'],[h('tr',{key:stock.ticketTypeId},h('td',null,stock.capacity),h('td',null,stock.held),h('td',null,stock.sold),h('td',null,stock.available))]):h('div',null,h('p',null,'Ghế chỉ định · '+stock.seats.length+' ghế'),h('ul',{className:'admin-seat-list'},...stock.seats.map(seat=>h('li',{key:seat.id,className:seat.status.toLowerCase()},h('strong',null,seat.label),' · '+seat.status))))))))),
     !loading&&!error&&data&&tab==='bookings'&&table('Booking theo trạng thái đã chọn',['Mã booking','Trạng thái','Tổng tiền','Hạn giữ','Chi tiết'],(data.items as Booking[]).map(b=>h('tr',{key:b.bookingId},h('td',{className:'booking-id'},b.bookingId),h('td',null,b.status),h('td',null,b.totalAmountVnd.toLocaleString('vi-VN')+' ₫'),h('td',null,new Date(b.expiresAt).toLocaleString('vi-VN')),h('td',null,h('button',{type:'button',onClick:()=>void openBooking(b.bookingId)},'Xem '+b.bookingId))))),
     detail&&tab==='bookings'&&h('section',{className:'result','aria-label':'Chi tiết booking quản trị'},h('h3',null,detail.bookingId),h('p',null,detail.status),h('ul',{className:'timeline'},...(detail.history??[]).map((item,i)=>h('li',{key:i},item.toStatus+' · '+new Date(item.occurredAt).toLocaleString('vi-VN'))))),
-    !loading&&!error&&data&&tab==='outbox'&&table('Outbox sau commit nghiệp vụ',['Event ID / loại','Booking','Version','Trạng thái','Số lần gửi'],(data.items as Outbox[]).map(e=>h('tr',{key:e.eventId},h('td',{className:'booking-id'},e.eventId,h('small',null,e.eventType)),h('td',{className:'booking-id'},e.bookingId),h('td',null,e.aggregateVersion),h('td',null,e.status),h('td',null,e.attempts)))),
-    tab==='outbox'&&h('p',{className:'muted'},'PENDING: đang chờ; PUBLISHED: Kafka đã xác nhận; FAILED: hết ngân sách gửi. Màn hình này chỉ xem dữ liệu.'),
+    !loading&&!error&&data&&tab==='outbox'&&table('Outbox sau commit nghiệp vụ',['Event ID / loại','Booking','Version','Trạng thái','Số lần gửi','Chi tiết'],(data.items as Outbox[]).map(e=>h('tr',{key:e.eventId},h('td',{className:'booking-id'},e.eventId,h('small',null,e.eventType)),h('td',{className:'booking-id'},e.bookingId),h('td',null,e.aggregateVersion),h('td',null,e.status),h('td',null,e.attempts),h('td',null,h('button',{type:'button',onClick:()=>{setRecoveryEvent(e.eventId);switchTab('recovery');}},'Chi tiết event '+e.eventId))))),
+    tab==='outbox'&&h('p',{className:'muted'},'PENDING: đang chờ; PUBLISHED: Kafka đã xác nhận; FAILED: hết ngân sách gửi. Chọn một event để xem audit/replay có kiểm soát.'),
     data&&tab!=='inventory'&&h('nav',{className:'pagination','aria-label':'Phân trang quản trị'},h('button',{type:'button',disabled:loading||page===0,onClick:()=>setPage(p=>p-1)},'Trang trước'),h('span',{'aria-live':'polite'},'Trang '+(page+1)+' · '+data.totalElements+' bản ghi'),h('button',{type:'button',disabled:loading||(page+1)*data.size>=data.totalElements,onClick:()=>setPage(p=>p+1)},'Trang sau')),
     );
 }

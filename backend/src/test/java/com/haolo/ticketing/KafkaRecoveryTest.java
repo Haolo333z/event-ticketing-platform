@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named="KAFKA_IT_BOOTSTRAP",matches=".+")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class KafkaRecoveryTest {
+    @Autowired RecoveryQuery recovery;
     @Autowired io.micrometer.core.instrument.MeterRegistry metrics;
     double retries(String stage,String consumer){return metrics.get("ticketing.messaging.retries").tags("stage",stage,"consumer",consumer).counter().count();}
     double dlqDeliveries(String outcome){return metrics.get("ticketing.messaging.dlq.deliveries").tag("outcome",outcome).counter().count();}
@@ -70,6 +71,81 @@ class KafkaRecoveryTest {
     void due(UUID b){jdbc.update("UPDATE ticketing.bookings SET created_at=clock_timestamp()-interval '10s',expires_at=clock_timestamp()-interval '2s' WHERE id=?",b);}
     void available(){jdbc.update("UPDATE ticketing.outbox_events SET next_attempt_at=clock_timestamp() WHERE status='PENDING'");}
     @AfterAll static void save() throws Exception {Files.createDirectories(Path.of("target"));Files.writeString(Path.of("target/part7-kafka-evidence.json"),new ObjectMapper().writeValueAsString(evidence));}
+
+    String businessSnapshot(UUID booking){
+        return jdbc.queryForObject("""
+            SELECT md5(jsonb_build_object(
+              'booking',(SELECT to_jsonb(b) FROM ticketing.bookings b WHERE id=?),
+              'items',(SELECT jsonb_agg(to_jsonb(i) ORDER BY id) FROM ticketing.booking_items i WHERE booking_id=?),
+              'tickets',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM ticketing.tickets t WHERE booking_id=?),
+              'history',(SELECT jsonb_agg(to_jsonb(h) ORDER BY id) FROM ticketing.booking_status_history h WHERE booking_id=?),
+              'payments',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM ticketing.payments p WHERE booking_id=?),
+              'inventory',(SELECT to_jsonb(g) FROM ticketing.inventory_ga g WHERE ticket_type_id=?),
+              'events',(SELECT jsonb_agg(jsonb_build_object('id',id,'type',type,'version',aggregate_version,'payload',payload,'correlation',correlation_id,'created',created_at) ORDER BY id) FROM ticketing.outbox_events WHERE aggregate_id=?),
+              'inbox',(SELECT jsonb_agg(to_jsonb(i) ORDER BY consumer,event_id) FROM ticketing.inbox_events i WHERE aggregate_id=?),
+              'projection',(SELECT jsonb_agg(to_jsonb(p) ORDER BY aggregate_version) FROM ticketing.projection_events p WHERE aggregate_id=?)
+            )::text)
+            """,String.class,booking,booking,booking,booking,booking,type,booking,booking,booking);
+    }
+    @Test @Order(18) void recoveryHttpReplaysProcessedEventsWithoutAnySecondBusinessEffect(CapturedOutput output)throws Exception{
+        UUID booking=booking(2);record(booking,"SUCCESS");flush(booking);await(()->state(booking).equals("CONFIRMED"));flush(booking);
+        UUID payment=eventId(booking,"PaymentResultRecorded"),confirmed=eventId(booking,"BookingConfirmed");
+        await(()->inbox(EventConsumer.AUDIT,confirmed)==1&&inbox(EventConsumer.PAYMENT,payment)==1);
+        String before=businessSnapshot(booking),path="/api/admin/operations/events/"+payment;
+        var first=json.readTree(http("GET",path,null,"demo-admin-token").body());assertEquals(3,first.path("remainingReplays").intValue());assertEquals(2,first.path("consumers").size());assertEquals("PUBLISHED",first.path("status").asString());
+        UUID request=UUID.randomUUID();String reason="Đối soát event đã xử lý";String body=json.writeValueAsString(Map.of("requestId",request,"reason",reason));
+        for(int i=0;i<2;i++)assertEquals(202,http("POST",path+"/replay",body,"demo-admin-token").statusCode());
+        assertEquals(1,count("SELECT jsonb_array_length(replay_requests) FROM ticketing.outbox_events WHERE id=?",payment));
+        flush(booking);await(()->traceLines(output,payment).stream().filter(n->n.path("outcome").asString().equals("DUPLICATE")).map(n->n.path("consumer").asString()).collect(java.util.stream.Collectors.toSet()).containsAll(Set.of(EventConsumer.AUDIT,EventConsumer.PAYMENT)));
+        int attempts=count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",payment);
+        assertEquals(202,http("POST",path+"/replay",body,"demo-admin-token").statusCode());assertEquals(attempts,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",payment));assertEquals("PUBLISHED",jdbc.queryForObject("SELECT status FROM ticketing.outbox_events WHERE id=?",String.class,payment));
+        assertEquals(before,businessSnapshot(booking));
+        for(int i=0;i<2;i++){
+            String next=json.writeValueAsString(Map.of("requestId",UUID.randomUUID(),"reason","Lượt đối soát "+i));assertEquals(202,http("POST",path+"/replay",next,"demo-admin-token").statusCode());flush(booking);
+        }
+        await(()->traceLines(output,payment).stream().filter(n->n.path("stage").asString().equals("consumer_processed")&&n.path("outcome").asString().equals("DUPLICATE")&&n.path("consumer").asString().equals(EventConsumer.PAYMENT)).count()>=3);
+        assertEquals(409,http("POST",path+"/replay",json.writeValueAsString(Map.of("requestId",UUID.randomUUID(),"reason","Không vượt budget")),"demo-admin-token").statusCode());
+        assertEquals(202,http("POST",path+"/replay",body,"demo-admin-token").statusCode());assertEquals(409,http("POST",path+"/replay",body.replace(reason,"Nội dung khác"),"demo-admin-token").statusCode());
+        assertEquals(400,http("POST",path+"/replay",body.substring(0,body.length()-1)+",\"force\":true}","demo-admin-token").statusCode());
+        var detail=json.readTree(http("GET",path,null,"demo-admin-token").body());assertEquals(0,detail.path("remainingReplays").intValue());assertEquals(3,detail.path("audit").size());assertEquals(first.path("consumers"),detail.path("consumers"));
+        assertEquals(admin.accountId().toString(),detail.path("audit").get(0).path("adminAccountId").asString());assertEquals(reason,detail.path("audit").get(0).path("reason").asString());assertEquals(request.toString(),detail.path("audit").get(0).path("requestId").asString());
+        String notification=json.writeValueAsString(Map.of("requestId",UUID.randomUUID(),"reason","Replay BookingConfirmed không phát vé"));
+        assertEquals(202,http("POST","/api/admin/operations/events/"+confirmed+"/replay",notification,"demo-admin-token").statusCode());flush(booking);
+        await(()->traceLines(output,confirmed).stream().anyMatch(n->n.path("outcome").asString().equals("DUPLICATE")&&n.path("consumer").asString().equals(EventConsumer.AUDIT)));
+        String after=businessSnapshot(booking);assertEquals(before,after);assertEquals(2,tickets(booking));assertEquals(2,count("SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
+        assertEquals(3,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=?",booking));assertEquals(2,count("SELECT count(*) FROM ticketing.booking_status_history WHERE booking_id=?",booking));
+        evidence.add(Map.of("case","T8.3 HTTP replay no-op via real Kafka, audit and budget","beforeBusinessHash",before,"afterBusinessHash",after,"tickets",2,"historyRows",2,"businessEvents",3,"paymentReplayAuditRows",3,"remainingReplays",0,"result","PASS"));
+    }
+    @Test @Order(19) void recoveryReadViewIsAuthorizedPaginatedAndNeverLeaksRawFailureData()throws Exception{
+        UUID booking=booking(1),id=eventId(booking,"BookingHeld");String marker="private-recovery-"+UUID.randomUUID();
+        jdbc.update("UPDATE ticketing.outbox_events SET status='FAILED',last_error=? WHERE id=?",marker,id);
+        var own=new HashSet<String>();own.add("OUTBOX:"+id);var failureIds=new ArrayList<UUID>();
+        for(int i=0;i<22;i++){
+            UUID failure=UUID.randomUUID();failureIds.add(failure);own.add("CONSUMER:"+failure);
+            jdbc.update("INSERT INTO ticketing.message_failures(id,consumer,topic,partition_id,record_offset,record_key,raw_event,event_id,attempts,error,created_at) VALUES (?,'payment-v1',?,0,?,?,?,?,3,?,'2026-11-01T00:00:00Z')",failure,marker,i,marker,marker,id,marker);
+        }
+        String path="/api/admin/operations/events/"+id;
+        for(String endpoint:List.of(path,"/api/admin/operations/recovery")){
+            assertEquals(401,http("GET",endpoint,null,null).statusCode());assertEquals(401,http("GET",endpoint,null,"unknown").statusCode());assertEquals(403,http("GET",endpoint,null,"demo-customer-token").statusCode());assertEquals(200,http("GET",endpoint,null,"demo-admin-token").statusCode());
+        }
+        assertEquals(404,http("GET","/api/admin/operations/events/"+UUID.randomUUID(),null,"demo-admin-token").statusCode());assertEquals(404,http("POST","/api/admin/operations/events/"+UUID.randomUUID()+"/replay",json.writeValueAsString(Map.of("requestId",UUID.randomUUID(),"reason","missing")),"demo-admin-token").statusCode());
+        for(String query:List.of("?status=bad","?status=","?size=101","?page=-1","?page=10001"))assertEquals(400,http("GET","/api/admin/operations/recovery"+query,null,"demo-admin-token").statusCode());
+        var seen=new LinkedHashSet<String>();var ownOrder=new ArrayList<String>();int total=-1;
+        for(int page=0;;page++){
+            var response=http("GET","/api/admin/operations/recovery?status=ALL&size=1&page="+page,null,"demo-admin-token");assertEquals(200,response.statusCode());assertFalse(response.body().contains(marker));assertFalse(response.body().contains("raw_event"));assertFalse(response.body().contains("payload"));
+            var body=json.readTree(response.body());if(total<0)total=body.path("totalElements").intValue();assertEquals(total,body.path("totalElements").intValue());
+            if(page==total){assertTrue(body.path("items").isEmpty());break;}
+            var row=body.path("items").get(0);String key=row.path("source").asString()+":"+row.path("id").asString();assertTrue(seen.add(key));
+            if(own.contains(key)){ownOrder.add(key);assertTrue(row.path("replayable").booleanValue());}
+            if(row.path("eventId").isNull())assertFalse(row.path("replayable").booleanValue());
+        }
+        assertEquals(total,seen.size());assertTrue(seen.containsAll(own));
+        assertEquals(failureIds.stream().map(UUID::toString).sorted(Comparator.reverseOrder()).toList(),ownOrder.stream().filter(k->k.startsWith("CONSUMER:")).map(k->k.substring("CONSUMER:".length())).toList());
+        var response=http("GET",path,null,"demo-admin-token");assertFalse(response.body().contains(marker));var detail=json.readTree(response.body());assertEquals(22,detail.path("failures").size());assertEquals(3,detail.path("remainingReplays").intValue());assertTrue(detail.path("audit").isEmpty());
+        var prod=new org.springframework.mock.env.MockEnvironment();prod.setActiveProfiles("prod");var denied=new RecoveryQuery(jdbc,new ReplayService(jdbc,transactions,json,new DemoSettings(prod,false,"","")),json);
+        assertEquals(403,assertThrows(ApiException.class,()->denied.list(admin,0,20,"ALL")).status);assertEquals(403,assertThrows(ApiException.class,()->denied.event(admin,id)).status);
+        evidence.add(Map.of("case","T8.3 recovery list/details authorization, pagination, safe diagnostics","ownRows",own.size(),"totalRowsObserved",total,"pageSize",1,"duplicates",0,"result","PASS"));
+    }
 
     @Test @Order(1) void schemaV1StrictAndInboxUniquePerConsumer(){
         UUID b=booking(1);var e=publisher.event(eventId(b,"BookingHeld"));String raw=codec.encode(e);

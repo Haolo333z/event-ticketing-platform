@@ -1,5 +1,11 @@
 # DESIGN — Hướng dẫn giao diện demo
 
+## T8.3 — Khôi phục sự kiện
+
+Quản trị demo có tab Khôi phục, filter Cần xử lý/Đã phục hồi/Tất cả và phân trang. Từ Outbox chọn Chi tiết event để xem cả event đã gửi. Panel mở ở đầu vùng recovery, tự cuộn/focus lý do; nút Đóng chi tiết rõ ràng. Hiển thị trạng thái publisher, lỗi an toàn, consumer receipt riêng,100lỗi consumer/DLQ gần nhất, audit ADMIN/requestId/reason/time và ngân sách còn lại.
+
+Replay yêu cầu lý do1..500Unicode point; không tự POST khi mở/refresh, chặn double click. Khi mất phản hồi giữ nguyên request trong session để gửi lại, không tạo key mới. Budget0 khóa yêu cầu mới nhưng vẫn cho gửi lại request đang chưa rõ kết quả; server quyết định cached replay hay409. 202 chỉ xác nhận yêu cầu đã được chấp nhận, có thể là kết quả cũ; không suy đó là xử lý mới hoặc đã hoàn tất. Receipt audit không chứng minh payment xong; consumer đã ghi nhận chống trùng, consumer chưa ghi nhận có thể xử lý lần đầu. Record không có outbox chỉ xem để điều tra; không có nút bỏ qua giới hạn hoặc sửa raw record. Audit text được escape; không nhập token/payment payload vào reason.
+
 ## Hiện trạng T7
 
 Form Tạo/Sửa nằm ngay dưới nút Tạo sự kiện mới, trước bảng và phân trang. Khi mở, cuộn tới panel và focus tên sự kiện sau khi dữ liệu sẵn sàng; nút Đóng biểu mẫu ở đầu panel dùng được cả khi đang tải hoặc tải lỗi, nút Hủy ở cuối form. Việc mở/đóng không gửi lệnh tạo/sửa.

@@ -1,0 +1,259 @@
+{
+  "date": "2026-11-13",
+  "task": "T8.3",
+  "baseCommit": "480cd4c9b07800693f3b100a22aa17220705f1d7",
+  "status": "Done locally, uncommitted",
+  "reuse": {
+    "postReplay": "Existing T6.4 ReplayService transaction, authorization, requestId/reason dedup, three-request budget and outbox audit unchanged",
+    "consumer": "Existing inbox and business handlers unchanged; no inbox deletion or force/reset endpoint",
+    "schema": "V1-V9 and event envelope v1 unchanged"
+  },
+  "newReadEndpoints": [
+    "GET /api/admin/operations/recovery?page=0&size=20&status=OPEN",
+    "GET /api/admin/operations/events/{id}"
+  ],
+  "commands": [
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live",
+      "result": "PASS",
+      "backendTests": 130,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log": {
+        "path": "backend/target/t83-full-live.log",
+        "sha256": "912d83d8d866766d5e2a481954bf107046698a137963839d8456569153f249b9"
+      }
+    },
+    {
+      "command": "npm.cmd test --prefix frontend",
+      "result": "PASS",
+      "tests": 54,
+      "log": {
+        "path": "backend/target/t83-frontend-tests-final.log",
+        "sha256": "984bc8ace38094d2d310055e1147df065720b42d639971d2ce97219f3a6af36c"
+      }
+    },
+    {
+      "command": "npm.cmd run build --prefix frontend",
+      "result": "PASS",
+      "log": {
+        "path": "backend/target/t83-frontend-build-final.log",
+        "sha256": "21a5b0433eb50cadd765690e12af3eae1fab5593e7cccfa5000bfb0cb30ca78f"
+      }
+    },
+    {
+      "command": "npm.cmd test --prefix tools/contracts",
+      "result": "PASS",
+      "operations": 18,
+      "cases": 69,
+      "log": {
+        "path": "backend/target/t83-contracts.log",
+        "sha256": "611be394537162589276681fbe56aa4d6611bcf07af7770e93c1cd430f97db50"
+      }
+    },
+    {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1",
+      "result": "PASS",
+      "httpResponses": 74,
+      "note": "Rerun after clarifying per-consumer receipt text; same packaged backend; DOM uses latest frontend source",
+      "log": {
+        "path": "backend/target/t83-live-final.log",
+        "sha256": "4270e15aae0a1b15a56bd968ab6267ec9b1897af775c00f594a1324dba71c06f"
+      }
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "suiteDetails": [
+    {
+      "name": "com.haolo.ticketing.DemoAuthConfigurationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.HealthEndpointTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.KafkaRecoveryTest",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.operations.OperationsMetricsTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresAdminTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresBookingTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresCatalogTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresMetricsTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresOutboxTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresPaymentTest",
+      "tests": "30",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSchemaTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.PostgresSeedTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TicketingApplicationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.haolo.ticketing.TraceContextTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "measuredKafkaCases": [
+    {
+      "paymentReplayAuditRows": 3,
+      "historyRows": 2,
+      "case": "T8.3 HTTP replay no-op via real Kafka, audit and budget",
+      "tickets": 2,
+      "beforeBusinessHash": "b59f9e6bece60463fe8bda16a211a2a4",
+      "businessEvents": 3,
+      "result": "PASS",
+      "remainingReplays": 0,
+      "afterBusinessHash": "b59f9e6bece60463fe8bda16a211a2a4"
+    },
+    {
+      "result": "PASS",
+      "ownRows": 23,
+      "duplicates": 0,
+      "totalRowsObserved": 39,
+      "pageSize": 1,
+      "case": "T8.3 recovery list/details authorization, pagination, safe diagnostics"
+    }
+  ],
+  "measuredLiveUi": {
+    "result": "PASS",
+    "eventId": "0942a1c8-364f-4cb4-9941-af6013b3b69c",
+    "bookingId": "21e4d9b8-914c-4cd6-ab9a-3b00fc5917ba",
+    "ticketTypeId": "c9103a30-7e45-4d1e-96c2-ff15c0b5634e",
+    "paymentEventId": "3a38cea2-be3c-491a-bd66-b9bae345d889",
+    "requestId": "29a5d9f3-e37d-4811-b2c9-710c43d76344",
+    "httpReplayCalls": 2,
+    "distinctRequestIds": 1,
+    "auditRows": 1,
+    "ticketsBefore": 2,
+    "ticketsAfter": 2,
+    "historyBefore": 2,
+    "historyAfter": 2,
+    "remainingReplays": 2,
+    "consumerReceiptsUnchanged": true
+  },
+  "executedAssertions": [
+    "ADMIN local/test allowed; anonymous/unknown401,customer403; service prod403",
+    "Unknown event GET/POST404; invalid query400; force request field400",
+    "Processed payment and BookingConfirmed republished through real Kafka; DUPLICATE consumer logs observed",
+    "Before/after business hash covers booking, items, tickets, history, payments, inventory, business event fields, inbox and projection event rows",
+    "Same request/reason returns202 without extra audit or attempt reset; changed reason409",
+    "Three new requests consume budget; fourth rejected409; old request remains202 after budget exhausted",
+    "Recovery size1 pagination preserves all23own rows among other test rows, no duplicate IDs, deterministic UUID order for tied timestamps",
+    "No raw event/key/topic/payload/arbitrary exception marker in diagnostic API or final logs",
+    "Frontend no automatic POST on mount/refresh, double-click guard, pending request retained across remount and same-body retry permitted at remaining budget0",
+    "Frontend focus/close, filters/pagination, stale detail suppression, authorization/not-found/budget errors, Unicode500 validation, escaped audit text",
+    "Live lost-response injection happens after real HTTP202; retry from UI sends identical request and consumes one audit entry only",
+    "Final SQL on live fixture: tickets2,sold2,history2,businessEvents3,audit1,paymentInbox1",
+    "Regression GA/seats/payment/expiry/Kafka/health/log/metrics and admin/customer live UI retained"
+  ],
+  "resolvedIssue": "Spring defaultValue treated status= as default OPEN; now omitted status defaults to OPEN but explicit empty string is rejected400, keeping the assertion",
+  "environment": "Windows PowerShell, Temurin25.0.5+8, Boot4.1.2, PostgreSQL17.11, Kafka4.2.2, Node26.13.0; backend suite UTC",
+  "isolation": "Backend gate owns UUID databases and broker. Live gate owns UUID database/topic/group on the local broker; it never stops the demo broker or alters demo database.",
+  "limits": [
+    "No remote GitHub Actions/Linux execution of uncommitted changes",
+    "UI tested with jsdom and real API, not visual Chrome/mobile QA",
+    "Technical errors are intentionally reduced to safe metadata/class categories; not an exact SQL root-cause analyzer",
+    "Detail shows100most-recent consumer failures; replay audit remains complete within the existing max3 budget",
+    "Malformed/orphan records with no canonical outbox can only be investigated, not replayed via this UI/API",
+    "HTTP202 and existing inbox receipt do not prove a new delivery finished; backend no-op proof waits for actual duplicate consumer logs",
+    "Pending request persistence relies on sessionStorage; when unavailable, same in-memory request is retained until the view is discarded",
+    "No new dependency/database schema/event payload, no force/reset/purge or raw-record editor; T8.4 onward not implemented"
+  ],
+  "demoDataModified": false,
+  "committedOrPushed": false
+}

@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Quan sát/vận hành — T8.2 hoàn thành local ngày2026-11-13
-- **Tiến độ:** T1.1–T7.4 và T8.1–T8.2 Done; log/health/metrics đã có bằng chứng
-- **Task đang làm:** T8.2 đã kiểm chứng từ HEAD59e4621, working tree ban đầu sạch; chưa commit/push
-- **Task tiếp theo:** T8.3 (chưa bắt đầu)
-- **Blocker:** Không có blocker T8.2 local. Chưa chạy GitHub Actions/Linux cho thay đổi chưa commit/push; giới hạn counter/cache/SQL scale ghi ở nhật ký T8.2.
+- **Giai đoạn:** Quan sát/vận hành — T8.3 hoàn thành local ngày2026-11-13
+- **Tiến độ:** T1.1–T7.4 và T8.1–T8.3 Done; recovery/audit/replay no-op đã có bằng chứng
+- **Task đang làm:** T8.3 đã kiểm chứng từ HEAD480cd4c, working tree ban đầu sạch; chưa commit/push
+- **Task tiếp theo:** T8.4 (chưa bắt đầu)
+- **Blocker:** Không có blocker T8.3 local. Chưa GitHub Actions/Linux/visual Chrome cho thay đổi; giới hạn chẩn đoán và history ghi ở nhật ký T8.3.
 
-- **Task trong TASKS:** 35/45 Done.18bảng/V1–V9 và16API nghiệp vụ giữ nguyên; metrics dùng Micrometer/Actuator hiện có, không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 36/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -497,3 +497,58 @@ Invoke-RestMethod http://127.0.0.1:8080/actuator/metrics/http.server.requests -H
 ```
 
 Metric count/age phản ánh dữ liệu hiện tại, không hứa giá trị2/0 trên demo; thử pause/resume dùng script để không ảnh hưởng demo. Retry ứng dụng không bao gồm network retry nội bộ Kafka producer. Counter/timer reset khi JVM restart, không là số event unique bền; cache tối đa1s mặc định và mỗi request metrics có thể ở snapshot khác nhau. DB auth lỗi có thể chặn metrics HTTP, dùng health để theo dõi dependency; gauge NaN/availability không thay health. Chưa benchmark aggregate SQL ở dữ liệu lớn, pool saturation, nhiều replica hoặc cluster Kafka; chưa có Prometheus/Grafana/alerting/consumer lag. Chưa GitHub Actions/Linux/visual Chrome; không chạy lại frontend unit/build vì không sửa frontend, nhưng live jsdom/API đã chạy. Không sửa `.env`, dữ liệu demo, schema hay event; chưa commit/push. T8.3 trở đi chưa thực hiện.
+
+## 2026-11-13 — T8.3 Done: recovery view, audit và replay no-op
+
+Tiếp tục từ HEAD480cd4c, working tree ban đầu sạch. Đọc RULES/TASKS/PROGRESS/PRD/ARCHITECTURE/DESIGN, DATA_MODEL/API_CONTRACT/EVENT_CATALOG/TEST_PLAN và ADR0007; kiểm tra ReplayService, FailureStore/DLQ/inbox, audit replay_requests, publisher và dashboard có sẵn. Quyết định bổ sung read-view trước code tại ARCHITECTURE/API_CONTRACT, không viết lại cơ chế T6.4. [Bằng chứng T8.3](evidence/t8-3-recovery-2026-11-13.json) có hash snapshot nghiệp vụ, số liệu backend/UI/SQL và hash log.
+
+### File và phạm vi thay đổi
+
+- `operations/RecoveryQuery.java` mới: list recovery OPEN/RESOLVED/ALL phân trang và detail event trong REPEATABLE_READ; publisher status, consumer receipt, lỗi/DLQ an toàn, audit/remainingReplays. Không trả raw_event/key/topic/payload hoặc arbitrary exception text. Detail tối đa100lỗi gần nhất; audit cũ tối đa3được trả đủ.
+- `operations/OperationsController.java`: thêm GET `/api/admin/operations/recovery` và GET `/api/admin/operations/events/{id}`. `ReplayService.java` chỉ đổi visibility helper authorize để query tái sử dụng cùng guard; phương thức POST replay/transaction/budget/idempotency giữ nguyên. Không có mutation endpoint mới, không sửa consumer/inbox, không tạo force/reset/purge.
+- `frontend/src/app/RecoveryView.ts`, `replayAttempt.ts`: list/filter/pagination/detail gần đầu/focus/đóng, lý do Unicode, pending request giữ trong session, không tự POST khi mount/refresh và chặn double click. Audit và từng consumer/DLQ có trạng thái riêng;202 không bị diễn giải thành xử lý xong. Receipt audit không đồng nghĩa payment hoàn tất; consumer chưa ghi nhận vẫn có thể xử lý lần đầu.
+- `frontend/src/app/AdminDashboard.ts`, `frontend/src/api/admin.ts`, `styles.css`: tab Khôi phục, nút Chi tiết event trong từng hàng Outbox, adapter gọi đúng2GET và POST replay cũ; không gửi user/role/force. Khi budget0 khóa request mới, nhưng giữ khả năng gửi lại đúng pending request vì server dedup trước kiểm tra budget.
+- `RecoveryView.test.ts`, `admin.test.ts`, `AdminDashboard.test.ts`, `KafkaRecoveryTest.java`: unit/integration/RBAC/privacy/pagination/replay no-op. `frontend/tests/live-recovery.ts`, `frontend/package.json`, `infra/test-recovery.ps1`, `infra/test-part8-ui.ps1`: live fault mất phản hồi thật, đối chiếu SQL trên DB test; CI thêm chạy live recovery cho lần push sau.
+- `docs/contracts/openapi.json`, `tools/contracts/verify.mjs`, `verify-live.mjs`:18operation, strict schemas recovery/audit/receipt và validation/privacy cases. `RULES`, migrationV1–V9, schema/envelope event, seed và dependency không đổi. README/DESIGN/ARCHITECTURE/API_CONTRACT/TEST_PLAN/TASKS/PROGRESS/evidence cập nhật phạm vi và cách thử; chưa làm T8.4.
+
+### Acceptance và bằng chứng thực
+
+| Trường hợp | Kết quả |
+|---|---|
+| ADMIN hợp lệ / không có quyền | Hai GET mới: admin200, thiếu/lạ token401, customer403. Guard service prod403, POST replay vẫn theo T6.4. Không nhận identity/role từ client |
+| Event không tồn tại / validation | GET và POST404; query sai400, status rỗng400, payload force400; requestId cũ khác reason409 |
+| Event đã xử lý / replay trùng | PaymentResultRecorded và BookingConfirmed được republish qua Kafka thật; đợi log DUPLICATE từ consumer. Hash snapshot nghiệp vụ trước/sau đều **b59f9e6bece60463fe8bda16a211a2a4**. Bao gồm booking/items/tickets/history/payments/inventory/business-event fields/inbox/projection event rows; vé2, history2, businessEvents3 không đổi |
+| Audit và budget | Cùng request/reason trả202 không append audit hoặc reset attempts/status sau PUBLISHED.3request khác nhau/event tạo3audit; request thứ4 bị409, request cũ vẫn202 khi budget0. Actor/time/reason/requestId từ audit bền hiển thị đúng; không xóa inbox |
+| Danh sách lỗi | Fixture23row giữa tổng39row của full Kafka suite; size1 lấy đủ dữ liệu,0trùng ID và ID DESC khi timestamp trùng. Không giả định DB chỉ có fixture của mình. Private marker trong raw/error/key/topic không có trong response; record không có outbox không được replay |
+| UI/mất phản hồi | Fetch wrapper làm mất phản hồi **sau khi server thật trả202**. Người dùng gửi lại cùng request từ UI:2HTTP POST nhưng1requestId/1audit; vé2→2, history2→2, receipt timestamps không đổi, remaining2/3. SQL cuối sold2/businessEvents3/paymentInbox1. Không dùng dữ liệu giả cho kết quả nghiệp vụ |
+| Frontend limits | Form focus/đóng, audit text escape, stale response không đè selection; whitespace/501Unicode bị chặn,500Unicode gửi được. Double click chỉ1POST; pending qua remount không tự gửi, gửi lại được đúng request khi server budget0; hiển thị403/404/409/correlation rõ |
+
+Thông báo202 chỉ chứng minh yêu cầu được chấp nhận (có thể là kết quả của request cũ), không chứng minh lần gửi/consumer mới đã xong. Receipt chỉ ghi lần xử lý đầu của từng consumer; chứng minh no-op của lần phát lại lấy từ test Kafka đợi log DUPLICATE và snapshot SQL, không suy từ receipt cũ hoặc PUBLISHED đơn thuần.
+
+### Lệnh đã chạy và kết quả
+
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live`: **130/130 backend**,0failure/error/skip, verify/package BUILD SUCCESS; sau đó chạy gate HTTP/UI/SQL thật. Gồm128test nền +2Kafka recovery mới; giữ hồi quy GA/ghế/payment/expiry/metrics/log/health. Log `backend/target/t83-full-live.log`.
+- **PASS** ca riêng2test recovery qua `infra/test-part8.ps1 -Tests 'KafkaRecoveryTest#recoveryHttpReplaysProcessedEventsWithoutAnySecondBusinessEffect+recoveryReadViewIsAuthorizedPaginatedAndNeverLeaksRawFailureData'` sau sửa validation: **2/2**. Log `backend/target/t83-focused-fixed.log`.
+- **PASS** `npm.cmd test --prefix frontend`: **54/54**,0fail/cancel/skip; `npm.cmd run build --prefix frontend`: TypeScript/Vite đạt. Log cuối `backend/target/t83-frontend-tests-final.log`, `t83-frontend-build-final.log`.
+- **PASS** `npm.cmd test --prefix tools/contracts`: **69positive/negative case**, **18operation**. Log `backend/target/t83-contracts.log`.
+- **PASS** `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1` lần cuối sau làm rõ wording consumer receipt: **74HTTP response** đúng schema, admin/customer DOM/API/Kafka thật và live recovery lost-response/same-request. SQL recovery `2|2|2|3|1|1` = tickets/sold/history/businessEvents/audit/paymentInbox; production auth guard/localhost/log scan và9migration không đổi đạt. Log `backend/target/t83-live-final.log`; JAR backend cùng bản đã full130, frontend DOM dùng source mới nhất.
+- **PASS** `git diff --check`; evidence JSON parse/tổng JUnit130/hash log đối chiếu đúng. CI workflow thêm bước live recovery nhưng **chưa chạy GitHub Actions của thay đổi chưa commit**.
+
+Lượt focused đầu phát hiện `@RequestParam(defaultValue="OPEN")` coi `status=` rỗng là mặc định, trái contract. Đã tách omitted/null khỏi explicit empty, giữ assertion400 rồi chạy lại focused/full/live; không đổi expected để che lỗi. Rà UI cũng tách ý nghĩa từng consumer receipt để không diễn giải audit receipt là payment xong.
+
+### Tự thử Windows/Chrome và giới hạn
+
+```powershell
+# Từ thư mục gốc, Docker Desktop đang chạy
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+npm.cmd test --prefix tools/contracts
+# Muốn mở bản hiện tại với DB demo giữ nguyên
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -RestartExisting
+npm.cmd run dev --prefix frontend
+```
+
+Chrome http://127.0.0.1:5173 → Quản trị demo → Khôi phục. Filter/trang, Xem event, nhập reason và Gửi yêu cầu; xem requestId/audit/ngân sách rồi Làm mới. Với event đã xử lý, Outbox → Chi tiết event. Khi không có lỗi, empty-state là đúng; không cần tạo/sửa lỗi trong demo chỉ để có dữ liệu. Sau lỗi mạng dùng Gửi lại cùng yêu cầu, không tạo key mới. Không đưa token/payment payload vào reason. Record không có outbox chỉ điều tra, không có hành động force.
+
+Backend gate sở hữu DB và broker UUID riêng. Live gate dùng DB/topic/group UUID riêng trên broker local, không dừng broker demo hoặc ghi DB demo; tài nguyên DB/process test được dọn. Chưa visual QA Chrome/mobile; UI được kiểm bằng jsdom với HTTP thật. Chưa GitHub Actions/Linux, tải lớn/multi-broker hoặc mọi crash window. Lý do kỹ thuật cố ý rút gọn theo class/trạng thái T6.4, không phân tích chính xác root SQL exception; detail chỉ100failure gần nhất, audit budget3đầy đủ. Pending persistence dựa sessionStorage; khi không dùng được storage, giữ request trong bộ nhớ khi view còn sống. Không thêm dependency/migration/envelope, không sửa `.env`, không commit/push. T8.4 trở đi chưa làm.

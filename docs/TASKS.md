@@ -213,7 +213,7 @@
   - **Phụ thuộc:** T8.1. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** worker dừng thì overdue metric tăng; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T8.3 — Recovery view/lệnh admin local** để xem/replay có kiểm soát.
+- [x] **T8.3 — Recovery view/lệnh admin local (Done, 2026-11-13):** tab Khôi phục và GET metadata/audit/DLQ, tái sử dụng POST replay T6.4/budget3/inbox. Replay payment/confirmed qua Kafka thật không đổi hash nghiệp vụ; lost-response UI gửi2HTTP cùng request chỉ1audit, vé/history không tăng.130backend/54frontend/69contract/74HTTP và build đạt. [Bằng chứng](evidence/t8-3-recovery-2026-11-13.json).
   - **Mục tiêu/phạm vi:** Recovery view/lệnh admin local để xem/replay có kiểm soát.
   - **Phụ thuộc:** T8.2. **Module/file:** operations/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

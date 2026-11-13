@@ -16,7 +16,7 @@ public class ReplayService {
     public record Page(List<Outbox> items,int page,int size,int totalElements){}
     private final JdbcTemplate jdbc;private final BookingTransactions tx;private final ObjectMapper json;private final DemoSettings settings;
     public ReplayService(JdbcTemplate jdbc,BookingTransactions tx,ObjectMapper json,DemoSettings settings){this.jdbc=jdbc;this.tx=tx;this.json=json;this.settings=settings;}
-    private void authorize(DemoPrincipal principal){if(!settings.safeProfile||principal==null||!principal.role().equals("ADMIN"))throw new ApiException(403,"FORBIDDEN","Replay chỉ dành cho admin local/test");}
+    void authorize(DemoPrincipal principal){if(!settings.safeProfile||principal==null||!principal.role().equals("ADMIN"))throw new ApiException(403,"FORBIDDEN","Replay chỉ dành cho admin local/test");}
     public Page list(DemoPrincipal principal,int page,int size){
         authorize(principal);if(page<0||page>10000||size<1||size>100)throw ApiException.invalid();
         var items=jdbc.query("SELECT * FROM ticketing.outbox_events ORDER BY created_at DESC,id LIMIT ? OFFSET ?",(r,n)->new Outbox(r.getObject("id",UUID.class),r.getObject("aggregate_id",UUID.class),r.getString("type"),r.getLong("aggregate_version"),r.getString("status"),r.getTimestamp("created_at").toInstant().toString(),r.getInt("attempts")),size,page*size);

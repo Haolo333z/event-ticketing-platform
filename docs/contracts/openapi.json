@@ -2109,6 +2109,249 @@
         },
         "x-implemented": true
       }
+    },
+    "/api/admin/operations/recovery": {
+      "get": {
+        "operationId": "listRecovery",
+        "summary": "Lỗi publisher/consumer và lịch sử recovery an toàn",
+        "description": "T6 implemented; PostgreSQL audit and bounded replay. ",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "DemoBearer": []
+          }
+        ],
+        "x-role": "ADMIN",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "RESOLVED",
+                "ALL"
+              ],
+              "default": "OPEN"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VALIDATION_ERROR"
+            ]
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "FORBIDDEN"
+            ]
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "x-profiles": [
+          "local",
+          "test"
+        ],
+        "x-implemented": true
+      }
+    },
+    "/api/admin/operations/events/{id}": {
+      "get": {
+        "operationId": "getRecoveryEvent",
+        "summary": "Outbox gốc, audit replay, consumer receipt và tối đa100lỗi gần nhất",
+        "description": "T6 implemented; PostgreSQL audit and bounded replay. ",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "DemoBearer": []
+          }
+        ],
+        "x-role": "ADMIN",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "VALIDATION_ERROR"
+            ]
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "FORBIDDEN"
+            ]
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "500": {
+            "description": "INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "x-error-codes": [
+              "INTERNAL_ERROR"
+            ]
+          }
+        },
+        "x-profiles": [
+          "local",
+          "test"
+        ],
+        "x-implemented": true
+      }
     }
   },
   "components": {
@@ -3279,6 +3522,405 @@
           "eventId",
           "asOf",
           "ticketTypes"
+        ]
+      },
+      "RecoveryItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "OUTBOX",
+              "CONSUMER"
+            ]
+          },
+          "eventId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bookingId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eventType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "BookingHeld",
+                  "PaymentResultRecorded",
+                  "BookingConfirmed",
+                  "BookingPaymentFailed",
+                  "BookingCancelled",
+                  "BookingExpired",
+                  "BookingRefundRequired"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "consumer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "payment-v1",
+                  "booking-audit-v1",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PUBLISHED",
+              "FAILED",
+              "DEAD",
+              "RESOLVED"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "dlqStatus": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "EXHAUSTED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "replayable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "eventId",
+          "bookingId",
+          "eventType",
+          "consumer",
+          "status",
+          "error",
+          "createdAt",
+          "dlqStatus",
+          "replayable"
+        ]
+      },
+      "RecoveryPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecoveryItem"
+            },
+            "maxItems": 100,
+            "minItems": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements"
+        ]
+      },
+      "RecoveryAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "adminAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "\\S"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "requestId",
+          "adminAccountId",
+          "reason",
+          "requestedAt"
+        ]
+      },
+      "RecoveryReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "consumer": {
+            "type": "string",
+            "enum": [
+              "payment-v1",
+              "booking-audit-v1",
+              "UNKNOWN"
+            ]
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "consumer",
+          "processedAt"
+        ]
+      },
+      "RecoveryFailure": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consumer": {
+            "type": "string",
+            "enum": [
+              "payment-v1",
+              "booking-audit-v1",
+              "UNKNOWN"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DEAD",
+              "RESOLVED"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "attempts": {
+            "type": "integer",
+            "const": 3
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dlqStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PUBLISHED",
+              "EXHAUSTED"
+            ]
+          },
+          "dlqAttempts": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          }
+        },
+        "required": [
+          "id",
+          "consumer",
+          "status",
+          "error",
+          "attempts",
+          "createdAt",
+          "resolvedAt",
+          "dlqStatus",
+          "dlqAttempts"
+        ]
+      },
+      "RecoveryEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "BookingHeld",
+              "PaymentResultRecorded",
+              "BookingConfirmed",
+              "BookingPaymentFailed",
+              "BookingCancelled",
+              "BookingExpired",
+              "BookingRefundRequired"
+            ]
+          },
+          "aggregateVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PUBLISHED",
+              "FAILED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publisherError": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "remainingReplays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "audit": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/RecoveryAudit"
+            }
+          },
+          "consumers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecoveryReceipt"
+            }
+          },
+          "failures": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/RecoveryFailure"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "bookingId",
+          "eventType",
+          "aggregateVersion",
+          "status",
+          "createdAt",
+          "attempts",
+          "correlationId",
+          "publishedAt",
+          "publisherError",
+          "remainingReplays",
+          "audit",
+          "consumers",
+          "failures"
         ]
       }
     }

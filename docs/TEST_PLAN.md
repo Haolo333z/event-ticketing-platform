@@ -1,5 +1,13 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T8.3 — Recovery view và replay có kiểm soát
+
+- Tái sử dụng POST replay T6.4, không xóa inbox hoặc tạo force/reset. `KafkaRecoveryTest` phát lại PaymentResultRecorded/BookingConfirmed đã xử lý qua HTTP/Kafka thật. Đợi log DUPLICATE từ consumer, so hash toàn snapshot nghiệp vụ trước/sau: booking, items, tickets, history, payments, inventory, event business và inbox/projection rows không đổi. Cùng requestId/reason không append audit/reset attempts;3request mới hết budget, request thứ4 bị409, request cũ vẫn202, payload có force bị400.
+- Hai GET recovery: anonymous/lạ token401, customer403, admin200; service prod403; UUID không tồn tại404, query sai400. Fixture riêng gồm23row trong database còn dữ liệu test khác; phân trang size1 thu đủ ID, không trùng, timestamp trùng vẫn ID DESC, không giả định tổng cố định. Raw record/key/topic/payload/error marker không xuất hiện trong response; record không có outbox không replay được.
+- Frontend: form mở gần đầu/focus và đóng; list/filter/pagination/loading/error; audit reason hiển thị text an toàn;500Unicode point/whitespace, lỗi quyền/404/budget; double click chỉ gửi1POST. Mất phản hồi giữ requestId/reason qua remount, không tự POST khi mount/refresh; retry đúng request ngay cả khi ngân sách mới bằng0. Consumer receipt được hiển thị theo từng consumer, không suy receipt audit là payment xong.
+- Live UI với API/PG/Kafka thật: làm mất phản hồi sau202, gửi lại cùng request từ giao diện, audit vẫn1, vé2 và history2 không đổi, receipt timestamps giữ nguyên. SQL cuối kiểm tra sold2/businessEvents3/paymentInbox1. Regression admin/customer/health/log/metrics vẫn chạy.
+- Contract OpenAPI18operation, thêm RecoveryPage/RecoveryEvent/Audit/Failure/Receipt strict và negative payload privacy/budget. Không sửa schema database/event hoặc data seed; ghi bằng chứng và giới hạn chẩn đoán/100failure gần nhất vào PROGRESS.
+
 ## Gate T8.2 — Metrics
 
 - `PostgresMetricsTest`: pause lifecycle TaskScheduler thật, drain task đang chạy, tạo booking GA/ghế qua service thật, để deadline đi qua theo đồng hồ PG; metric overdue và oldest age phải tăng khi scheduler vẫn dừng. Resume scheduler, chờ EXPIRED/release thật và đối chiếu metric với SQL hiện trạng; không gọi expiry inline trong ca acceptance này.

@@ -68,6 +68,14 @@ await check('/api/bookings/'+cancellable.bookingId+'/cancel','Booking',200,{meth
 await check('/api/bookings/'+cancellable.bookingId+'/cancel','Error',400,{method:'POST',headers:auth,body:'{}'});
 const delayed=await holdGa();await check('/api/bookings/'+delayed.bookingId+'/simulate-payment','PaymentAccepted',202,{method:'POST',headers:auth,body:JSON.stringify({scenario:'DELAY_TIMEOUT',requestId:crypto.randomUUID()})});
 const operations=await check('/api/admin/operations/outbox?size=100','OutboxPage',200,{headers:admin});
+await check('/api/admin/operations/recovery?status=ALL','RecoveryPage',200,{headers:admin});
+await check('/api/admin/operations/recovery','Error',401);
+await check('/api/admin/operations/recovery','Error',403,{headers:auth});
+await check('/api/admin/operations/recovery?status=','Error',400,{headers:admin});
+await check('/api/admin/operations/recovery?status=bad','Error',400,{headers:admin});
+await check('/api/admin/operations/events/'+operations.items[0].eventId,'RecoveryEvent',200,{headers:admin});
+await check('/api/admin/operations/events/'+crypto.randomUUID(),'Error',404,{headers:admin});
+await check('/api/admin/operations/events/'+operations.items[0].eventId,'Error',403,{headers:auth});
 await check('/api/admin/operations/outbox','Error',401);
 await check('/api/admin/operations/outbox','Error',403,{headers:auth});
 await check('/api/admin/operations/outbox?size=101','Error',400,{headers:admin});

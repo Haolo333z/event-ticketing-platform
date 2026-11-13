@@ -30,6 +30,13 @@ try {
     $result=$sql|& docker @composeArgs exec -T postgres psql -U $env:POSTGRES_USER -d $name -At -v ON_ERROR_STOP=1
     if($LASTEXITCODE -ne 0 -or ($result -join '').Trim() -ne '2|2|1|0|0|9'){throw "SQL invariant checks failed: $result"}
     Write-Output 'PASS SQL:2tickets/sold2/payment inbox1,0oversell,0tickets on invalid states,9unchanged migrations.'
+    & npm.cmd run test:live:recovery --prefix (Join-Path $repoRoot 'frontend')
+    if($LASTEXITCODE -ne 0){throw 'Live recovery UI failed'}
+    $recovery=Get-Content -LiteralPath (Join-Path $repoRoot 'frontend/reports/recovery-live.json') -Raw|ConvertFrom-Json
+    $recoverySql="SELECT (SELECT count(*) FROM ticketing.tickets WHERE booking_id='$($recovery.bookingId)'),(SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id='$($recovery.ticketTypeId)'),(SELECT count(*) FROM ticketing.booking_status_history WHERE booking_id='$($recovery.bookingId)'),(SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id='$($recovery.bookingId)'),(SELECT jsonb_array_length(replay_requests) FROM ticketing.outbox_events WHERE id='$($recovery.paymentEventId)'),(SELECT count(*) FROM ticketing.inbox_events WHERE consumer='payment-v1' AND event_id='$($recovery.paymentEventId)');"
+    $recoveryResult=$recoverySql|& docker @composeArgs exec -T postgres psql -U $env:POSTGRES_USER -d $name -At -v ON_ERROR_STOP=1
+    if($LASTEXITCODE -ne 0 -or ($recoveryResult -join '').Trim() -ne '2|2|2|3|1|1'){throw "Recovery SQL invariant checks failed: $recoveryResult"}
+    Write-Output 'PASS recovery SQL:2tickets/sold2/history2/businessEvents3/audit1/paymentInbox1 after two identical HTTP replays.'
     # Verify SEC-01 through an actual packaged application startup, not just a settings unit test.
     $prodLog=Join-Path $env:TEMP ($name+'-prod.log');$prodErr=Join-Path $env:TEMP ($name+'-prod.err')
     $prod=Start-Process java -ArgumentList @('-Xmx384m','-jar',$runtime,"--spring.datasource.url=jdbc:postgresql://127.0.0.1:$($env:DB_PORT)/$name",'--spring.profiles.active=prod','--demo.auth.enabled=true','--messaging.enabled=false','--expiry.enabled=false','--server.port=0') -WindowStyle Hidden -PassThru -RedirectStandardOutput $prodLog -RedirectStandardError $prodErr
