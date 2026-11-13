@@ -5,6 +5,7 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
+import java.time.Instant;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -73,12 +74,54 @@ class PostgresDashboardSecurityTest {
         error(get("/api/admin/events/"+UUID.randomUUID()+"/inventory","demo-admin-token"),404,"NOT_FOUND");
     }
     @Test void adminBookingFilterPaginationAndQueryValidation()throws Exception{
-        UUID pending=book(owner,1),cancelled=book(other,1);cancel.cancel(other,cancelled,UUID.randomUUID());
-        var filtered=json.readTree(get("/api/admin/bookings?status=CANCELLED","demo-admin-token").body());assertEquals(1,filtered.path("totalElements").intValue());assertEquals(cancelled.toString(),filtered.path("items").get(0).path("bookingId").asString());
-        var first=json.readTree(get("/api/admin/bookings?size=1","demo-admin-token").body());var second=json.readTree(get("/api/admin/bookings?size=1&page=1","demo-admin-token").body());assertEquals(2,first.path("totalElements").intValue());assertNotEquals(first.path("items").get(0).path("bookingId").asString(),second.path("items").get(0).path("bookingId").asString());
-        assertTrue(get("/api/admin/bookings?status=PENDING_PAYMENT","demo-admin-token").body().contains(pending.toString()));
-        for(String path:List.of("/api/admin/bookings?status=unknown","/api/admin/bookings?status=","/api/admin/bookings?page=-1","/api/admin/bookings?size=101","/api/admin/events?page=10001","/api/admin/events?size=0","/api/admin/events?size=x","/api/admin/events/not-uuid/inventory"))error(get(path,"demo-admin-token"),400,"VALIDATION_ERROR");
-        assertEquals(0,json.readTree(get("/api/admin/events?page=10000","demo-admin-token").body()).path("items").size());
+        // A different event deliberately contributes data, even when this class runs alone.
+        UUID background=bookings.create(owner,"pagination-background-"+UUID.randomUUID(),new GaBookingRequest(
+            UUID.fromString("20000000-0000-4000-8000-000000000002"),UUID.fromString("30000000-0000-4000-8000-000000000002"),1),UUID.randomUUID()).bookingId();
+        try{
+            cancel.cancel(owner,background,UUID.randomUUID());
+            UUID pending=book(owner,1),cancelled=book(other,1);cancel.cancel(other,cancelled,UUID.randomUUID());
+            var ownIds=Set.of(pending,cancelled);
+            assertEquals(ownIds,new HashSet<>(jdbc.queryForList("SELECT id FROM ticketing.bookings WHERE event_id=?",UUID.class,event)));
+            // Target rows tie on time; the older background row also tests the primary time sort.
+            var timestamp=jdbc.queryForObject("SELECT created_at FROM ticketing.bookings WHERE id=?",(r,n)->r.getTimestamp(1),pending);
+            for(UUID id:ownIds)jdbc.update("UPDATE ticketing.bookings SET created_at=? WHERE id=?",timestamp,id);
+            jdbc.update("UPDATE ticketing.bookings SET created_at=? WHERE id=?",java.sql.Timestamp.from(timestamp.toInstant().minusSeconds(1)),background);
+            // Take an unordered independent DB snapshot; compute the expected order in Java.
+            var snapshot=jdbc.query("SELECT id,event_id,status,created_at FROM ticketing.bookings",(r,n)->new ExpectedBooking(r.getObject("id",UUID.class),r.getObject("event_id",UUID.class),r.getString("status"),r.getTimestamp("created_at").toInstant()));
+            var all=assertAdminBookingPages(snapshot,null);
+            assertTrue(all.contains(background));
+            assertEquals(ownIds,new HashSet<>(all.stream().filter(ownIds::contains).toList()));
+            var cancelledIds=assertAdminBookingPages(snapshot,"CANCELLED");
+            assertTrue(cancelledIds.containsAll(Set.of(cancelled,background)));assertFalse(cancelledIds.contains(pending));
+            var pendingIds=assertAdminBookingPages(snapshot,"PENDING_PAYMENT");
+            assertTrue(pendingIds.contains(pending));assertFalse(pendingIds.contains(cancelled));assertFalse(pendingIds.contains(background));
+            for(String path:List.of("/api/admin/bookings?status=unknown","/api/admin/bookings?status=","/api/admin/bookings?page=-1","/api/admin/bookings?size=101","/api/admin/events?page=10001","/api/admin/events?size=0","/api/admin/events?size=x","/api/admin/events/not-uuid/inventory"))error(get(path,"demo-admin-token"),400,"VALIDATION_ERROR");
+            assertEquals(0,json.readTree(get("/api/admin/events?page=10000","demo-admin-token").body()).path("items").size());
+        }finally{
+            // This background fixture is outside this class's usual event-scoped cleanup.
+            jdbc.update("DELETE FROM ticketing.idempotency_keys WHERE booking_id=?",background);
+            jdbc.update("DELETE FROM ticketing.booking_status_history WHERE booking_id=?",background);
+            jdbc.update("DELETE FROM ticketing.outbox_events WHERE aggregate_id=?",background);
+            jdbc.update("DELETE FROM ticketing.booking_items WHERE booking_id=?",background);
+            jdbc.update("DELETE FROM ticketing.bookings WHERE id=?",background);
+        }
+    }
+    private record ExpectedBooking(UUID id,UUID eventId,String status,Instant createdAt){}
+    private List<UUID> assertAdminBookingPages(List<ExpectedBooking> snapshot,String status)throws Exception{
+        var expected=snapshot.stream().filter(b->status==null||b.status().equals(status))
+            .sorted(Comparator.comparing(ExpectedBooking::createdAt).thenComparing(b->b.id().toString()).reversed()).toList();
+        var seen=new LinkedHashSet<UUID>();
+        for(int page=0;page<=expected.size();page++){
+            var response=get("/api/admin/bookings?size=1&page="+page+(status==null?"":"&status="+status),"demo-admin-token");
+            assertEquals(200,response.statusCode(),response.body());var body=json.readTree(response.body());
+            assertEquals(expected.size(),body.path("totalElements").longValue());assertEquals(page,body.path("page").intValue());assertEquals(1,body.path("size").intValue());
+            if(page==expected.size()){assertEquals(0,body.path("items").size());continue;}
+            assertEquals(1,body.path("items").size());var item=body.path("items").get(0);var row=expected.get(page);
+            UUID id=UUID.fromString(item.path("bookingId").asString());assertTrue(seen.add(id),"Booking repeated across pages: "+id);
+            assertEquals(row.id(),id,"Order must be created_at DESC,id DESC");assertEquals(row.eventId().toString(),item.path("eventId").asString());assertEquals(row.status(),item.path("status").asString());
+        }
+        assertEquals(expected.stream().map(ExpectedBooking::id).toList(),new ArrayList<>(seen));
+        return new ArrayList<>(seen);
     }
     @Test void inventoryReadMatchesHeldAndCapacityConflictKeepsSnapshot()throws Exception{
         UUID booking=book(owner,2);var stock=json.readTree(get("/api/admin/events/"+event+"/inventory","demo-admin-token").body());var ga=stock.path("ticketTypes").valueStream().filter(n->n.path("mode").asString().equals("GA")).findFirst().orElseThrow();assertEquals(2,ga.path("held").intValue());assertEquals(4,ga.path("available").intValue());

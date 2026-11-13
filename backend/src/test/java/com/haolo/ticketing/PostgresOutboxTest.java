@@ -2,6 +2,7 @@ package com.haolo.ticketing;
 
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test") @EnabledIfEnvironmentVariable(named="PG_IT_URL",matches=".+")
 class PostgresOutboxTest {
     @Autowired JdbcTemplate jdbc;@Autowired OutboxWriter writer;@Autowired PlatformTransactionManager manager;
-    UUID booking(){UUID id=UUID.randomUUID();jdbc.update("INSERT INTO ticketing.bookings(id,account_id,event_id,ticket_type_id,payment_intent_id,status,expires_at,total_amount_vnd,aggregate_version) VALUES (?,'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000002',?,'PENDING_PAYMENT',clock_timestamp()+interval '10m',100000,1)",id,UUID.randomUUID());return id;}
+    private final List<UUID> fixtureBookings=new ArrayList<>();
+    UUID booking(){UUID id=UUID.randomUUID();fixtureBookings.add(id);jdbc.update("INSERT INTO ticketing.bookings(id,account_id,event_id,ticket_type_id,payment_intent_id,status,expires_at,total_amount_vnd,aggregate_version) VALUES (?,'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000002',?,'PENDING_PAYMENT',clock_timestamp()+interval '10m',100000,1)",id,UUID.randomUUID());return id;}
+    @AfterEach void cleanupOwnFixtures(){
+        // The commit test must keep its commit assertions, then remove only its own durable rows.
+        for(UUID id:fixtureBookings){
+            jdbc.update("DELETE FROM ticketing.payments WHERE booking_id=?",id);
+            jdbc.update("DELETE FROM ticketing.outbox_events WHERE aggregate_id=?",id);
+            jdbc.update("DELETE FROM ticketing.bookings WHERE id=?",id);
+        }
+    }
     Map<String,Object> payload(UUID id){return Map.of("bookingId",id.toString(),"expiresAt",jdbc.queryForObject("SELECT expires_at FROM ticketing.bookings WHERE id=?",(r,n)->r.getTimestamp(1).toInstant().toString(),id));}
     int count(String table,UUID id,String col){return jdbc.queryForObject("SELECT count(*) FROM ticketing."+table+" WHERE "+col+"=?",Integer.class,id);}
     @Test void businessAndOutboxCommitTogether(){

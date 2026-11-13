@@ -1,0 +1,306 @@
+{
+  "date": "2026-11-13",
+  "scope": "Fix CI31 test isolation and strengthen admin pagination regression; no runtime API/schema/demo changes",
+  "remoteFailure": {
+    "runNumber": 31,
+    "runId": 43349485060,
+    "jobId": 131636787039,
+    "commit": "de527c070eaa7971f530d81511f6422ef9a1d55f",
+    "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43349485060",
+    "classOrder": [
+      "com.haolo.ticketing.DemoAuthConfigurationTest",
+      "com.haolo.ticketing.PostgresAdminTest",
+      "com.haolo.ticketing.PostgresSeedTest",
+      "com.haolo.ticketing.TicketingApplicationTest",
+      "com.haolo.ticketing.PostgresCatalogTest",
+      "com.haolo.ticketing.PostgresOutboxTest",
+      "com.haolo.ticketing.PostgresPaymentTest",
+      "com.haolo.ticketing.KafkaRecoveryTest",
+      "com.haolo.ticketing.PostgresProductionProfileTest",
+      "com.haolo.ticketing.PostgresSchemaTest",
+      "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "com.haolo.ticketing.PostgresBookingTest"
+    ],
+    "failure": [
+      "2026-11-13T02:06:03.3070936Z [ERROR]   PostgresDashboardSecurityTest.adminBookingFilterPaginationAndQueryValidation:78 expected: <2> but was: <3>",
+      "2026-11-13T02:06:03.3072009Z [ERROR] Tests run: 116, Failures: 1, Errors: 0, Skipped: 0"
+    ]
+  },
+  "rootCause": [
+    "PostgresOutboxTest committed a booking/outbox fixture without cleanup in shared PG_IT_URL.",
+    "Dashboard test assumed global admin totalElements equals its own two bookings; CI ran outbox first.",
+    "API correctly counts all matching bookings and orders by created_at DESC,id DESC in REPEATABLE_READ."
+  ],
+  "fix": [
+    "AfterEach deletes only UUIDs recorded by PostgresOutboxTest, after commit/rollback assertions.",
+    "Dashboard creates an unrelated-event background booking, verifies its own two IDs, computes global expected pages from unordered DB snapshot in Java.",
+    "Validates time descending, UUID descending tie-break, status filters, size=1 pages, exact IDs, no duplicates, and empty terminal page."
+  ],
+  "beforeFixReproduction": {
+    "tests": 14,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "log": "backend/target/ci31-before.log",
+    "sha256": "111362a6d0ecac1eecfcd66462d95d8cc395cf71be5ef7be9a63cc0f513a11d7",
+    "classOrder": [
+      "com.haolo.ticketing.PostgresOutboxTest",
+      "com.haolo.ticketing.PostgresDashboardSecurityTest"
+    ],
+    "residualDatabase": {
+      "remainingBookings": 1,
+      "remainingOutbox": 1,
+      "rows": [
+        {
+          "id": "4e64cbe6-ba24-40f7-b7ba-c245eed6dcbb",
+          "eventId": "20000000-0000-4000-8000-000000000002",
+          "status": "PENDING_PAYMENT"
+        }
+      ]
+    }
+  },
+  "afterFixFocusedReverseOrder": {
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "log": "backend/target/ci31-focused-final.log",
+    "sha256": "2a841738c589497dfdd9472658c2ac6eab92488caf90386257f163b33d298938",
+    "classOrder": [
+      "com.haolo.ticketing.PostgresOutboxTest",
+      "com.haolo.ticketing.PostgresDashboardSecurityTest"
+    ],
+    "residualDatabase": {
+      "remainingBookings": 0,
+      "remainingOutbox": 0,
+      "rows": []
+    }
+  },
+  "afterFixFullReverseOrderFinalCode": {
+    "tests": 116,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "log": "backend/target/ci31-full-reverse-final.log",
+    "sha256": "f7e831bda7aff001d4760749c5a0fab557392f55bb9c1c68bc76dbefb9c352f1",
+    "classOrder": [
+      "com.haolo.ticketing.TicketingApplicationTest",
+      "com.haolo.ticketing.PostgresSeedTest",
+      "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "com.haolo.ticketing.PostgresSchemaTest",
+      "com.haolo.ticketing.PostgresProductionProfileTest",
+      "com.haolo.ticketing.PostgresPaymentTest",
+      "com.haolo.ticketing.PostgresOutboxTest",
+      "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "com.haolo.ticketing.PostgresCatalogTest",
+      "com.haolo.ticketing.PostgresBookingTest",
+      "com.haolo.ticketing.PostgresAdminTest",
+      "com.haolo.ticketing.KafkaRecoveryTest",
+      "com.haolo.ticketing.DemoAuthConfigurationTest"
+    ]
+  },
+  "afterFixFullRandomOrderSeed31": {
+    "tests": 116,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "log": "backend/target/ci31-full-random.log",
+    "sha256": "898b52749b55868ba8e7887dfb14ed6026352e5ffe2c2878ea74c447918ca689",
+    "classOrder": [
+      "com.haolo.ticketing.PostgresSeatExpiryTest",
+      "com.haolo.ticketing.PostgresAdminTest",
+      "com.haolo.ticketing.PostgresOutboxTest",
+      "com.haolo.ticketing.PostgresSchemaTest",
+      "com.haolo.ticketing.KafkaRecoveryTest",
+      "com.haolo.ticketing.PostgresSeedTest",
+      "com.haolo.ticketing.PostgresCatalogTest",
+      "com.haolo.ticketing.PostgresDashboardSecurityTest",
+      "com.haolo.ticketing.PostgresBookingTest",
+      "com.haolo.ticketing.DemoAuthConfigurationTest",
+      "com.haolo.ticketing.TicketingApplicationTest",
+      "com.haolo.ticketing.PostgresProductionProfileTest",
+      "com.haolo.ticketing.PostgresPaymentTest"
+    ]
+  },
+  "randomSuiteDetails": {
+    "tests": 116,
+    "failures": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.haolo.ticketing.DemoAuthConfigurationTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.054"
+      },
+      {
+        "name": "com.haolo.ticketing.KafkaRecoveryTest",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "54.399"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresAdminTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.707"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresBookingTest",
+        "tests": "16",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "6.334"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresCatalogTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.242"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresDashboardSecurityTest",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.268"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresOutboxTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.124"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresPaymentTest",
+        "tests": "30",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "11.804"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresProductionProfileTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.418"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSchemaTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.382"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeatExpiryTest",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "23.601"
+      },
+      {
+        "name": "com.haolo.ticketing.PostgresSeedTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.066"
+      },
+      {
+        "name": "com.haolo.ticketing.TicketingApplicationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.709"
+      }
+    ]
+  },
+  "preexistingUnrelatedBookings": {
+    "method": "adminBookingFilterPaginationAndQueryValidation",
+    "before": "2|190c6c091968da11d5726b04759ad442",
+    "unrelatedBookings": 2,
+    "result": "PASS",
+    "after": "2|190c6c091968da11d5726b04759ad442",
+    "methodTests": 1,
+    "setupTests": 4,
+    "totalBookingsDuringMethod": 5,
+    "database": "Owned UUID test database, dropped after verification; 2 external rows unchanged before drop"
+  },
+  "relatedChecks": {
+    "staticOpenApi": {
+      "command": "npm.cmd test --prefix tools/contracts",
+      "cases": 58,
+      "operations": 16,
+      "result": "PASS"
+    },
+    "liveAdmin": {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1",
+      "result": "PASS",
+      "httpContractResponses": 66,
+      "pagination": {
+        "total": 25,
+        "firstPage": 20,
+        "secondPage": 5,
+        "overlap": 0,
+        "domMatchesApi": true
+      },
+      "checks": [
+        "admin/customer DOM with real API",
+        "GA inventory/capacity/price/history",
+        "outbox/Kafka/two tickets",
+        "SQL invariants",
+        "packaged production auth guard",
+        "logs"
+      ],
+      "browser": "jsdom, not visual Chrome QA"
+    },
+    "sbom": {
+      "command": "./mvnw.cmd -B -ntp cyclonedx:makeAggregateBom",
+      "result": "PASS"
+    },
+    "osv": {
+      "command": "osv-scanner scan --sbom target/bom.json",
+      "packages": 77,
+      "result": "PASS: no issues found"
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  },
+  "environment": {
+    "local": "Windows PowerShell, Temurin25.0.5+8, Maven Wrapper, user.timezone=UTC, PostgreSQL17.11 and Kafka4.2.2",
+    "isolation": "Full suite uses fresh UUID PG_IT_URL and KAFKA_IT_PG_URL databases and dedicated Kafka project; no skipped tests.",
+    "ciEquivalence": "Same backend suite/versions/UTC and live PostgreSQL/Kafka as CI; local OS Windows, GitHub runner Linux."
+  },
+  "sourceSha256": {
+    "backend/src/test/java/com/haolo/ticketing/PostgresDashboardSecurityTest.java": "81672cbef1ac50d9e6980d9c0d8d1c4babc6759999c658507700333eec65c586",
+    "backend/src/test/java/com/haolo/ticketing/PostgresOutboxTest.java": "28f35f5ea767b8f194c5ad32d6e4721a94ce2378cec22fd52ff7da925bdf244f"
+  },
+  "limits": [
+    "Uncommitted changes have not run on GitHub Actions; original run31 remains failed.",
+    "No claim about offset pagination stability across concurrent writes between separate HTTP requests.",
+    "No visual Chrome/mobile QA or new frontend unit/build run for test-only Java changes."
+  ],
+  "demoDataModified": false,
+  "committedOrPushed": false
+}

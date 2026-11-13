@@ -6,9 +6,9 @@
 
 - **Giai đoạn:** Phần8 — UI và rà auth, hoàn thành T7.1–T7.4 ngày2026-11-13
 - **Tiến độ:** T1.1–T7.4 Done; dashboard/customer UI và security kiểm chứng bằng HTTP/PostgreSQL/Kafka thật
-- **Task đang làm:** Không có; bàn giao working tree chưa commit
+- **Task đang làm:** Đã sửa và kiểm chứng local lỗi CI#31 của de527c0: dọn fixture outbox theo UUID và kiểm tra pagination với dữ liệu nền; chưa commit/push
 - **Task tiếp theo:** T8.1 (chưa bắt đầu); TASKS không có T7.5
-- **Blocker:** Không còn blocker T7. Chưa visual QA Chrome/mobile hoặc remote CI của thay đổi này. Không commit/push.
+- **Blocker:** Không còn lỗi tái hiện trong kiểm tra local. CI#31 trên commit cũ vẫn đỏ; chưa chạy GitHub Actions cho bản sửa chưa commit/push. Chưa visual QA Chrome/mobile.
 
 - **Task trong TASKS:** 33/45 Done.18bảng/V1–V9 giữ nguyên,16API đã triển khai; thêm dashboard/admin query và rà HTTP/log. Các mục Phần3–7 dưới đây giữ bằng chứng lịch sử.
 
@@ -337,3 +337,53 @@ Tiếp tục từ HEAD5942ed0 và các thay đổi hiện có, không làm lại
 CI thêm broker/database riêng, evidence và checkout Kafka; **chưa chạy GitHub Actions của thay đổi chưa commit/push**. Browser dùng jsdom/HTTP, chưa visual QA thật. RF1/singlepublisher là MVP; chưa chứng minh mất volume, cluster nhiều node, network partition dài hạn hoặc crash đúng mọi cửa sổ COMMIT. Retry/DLQ/refund hết ngân sách giữ record để điều tra, không tự reset hoặc ép side effect; chưa có API force refund. T6 không tự purge inbox/outbox/recovery. T7 trở đi chưa làm.
 
 README/infra README/runbook có lệnh Windows và recovery theo version. Không commit/push; người dùng xem diff và tự quyết định.
+
+## 2026-11-13 — Sửa CI#31/de527c0: cô lập fixture và hồi quy pagination admin
+
+Đã đọc RULES và kiểm tra trạng thái Git, workflow, fixture/migration, cleanup, truy vấn admin và log thật của [run#31](https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43349485060), backend job131636787039. HEAD ban đầu là de527c070eaa7971f530d81511f6422ef9a1d55f, working tree sạch. [Bằng chứng tổng hợp](evidence/ci31-pagination-fix-2026-11-13.json) giữ thứ tự class, kết quả và SHA256 log local.
+
+### Nguyên nhân và phạm vi sửa
+
+Đây là lỗi cô lập dữ liệu và giả định của test, chưa thấy lỗi API trong ca tái hiện. `PostgresOutboxTest.businessAndOutboxCommitTogether` commit một booking/outbox rồi không dọn. CI chạy class này trước `PostgresDashboardSecurityTest` trên cùng `PG_IT_URL`; test dashboard tạo thêm hai booking nhưng khẳng định tổng toàn database phải bằng2. API trả3 là đúng. Tái hiện bản cũ trên DB sạch với outbox chạy trước: **14test,1failure**, đúng expected2/actual3; sau cleanup dashboard còn đúng **1booking/1outbox** của test outbox. Không phải dữ liệu demo có sẵn trên runner.
+
+`BookingQueryService.admin` đếm tất cả booking khớp status, dùng cùng transaction `REPEATABLE_READ` và `ORDER BY created_at DESC,id DESC LIMIT/OFFSET`. Không sửa production query, API, migration hoặc cố định thứ tự test để che lỗi. Thứ tự class khác nhau giữa local và CI đã làm lần kiểm tra local trước đó bỏ sót lỗi.
+
+- `PostgresOutboxTest.java`: ghi UUID fixture và dọn đúng booking/payment/outbox do từng test tạo trong `@AfterEach`. Giữ nguyên assertion xác nhận dữ liệu đã commit trước khi dọn và các assertion rollback.
+- `PostgresDashboardSecurityTest.java`: chủ động có booking nền thuộc sự kiện khác; xác nhận chính xác hai ID của fixture mục tiêu. Lấy snapshot DB không sắp xếp rồi tính thứ tự mong đợi độc lập trong Java. Hai booking mục tiêu trùng `created_at` để kiểm tra UUID DESC; booking nền cũ hơn để kiểm tra thời gian DESC. Kiểm tra toàn bộ trang size1, total theo snapshot, status filter, đúng ID/event/status, không trùng ID và trang cuối rỗng. Cleanup chỉ xóa fixture của mình; không truncate hoặc sửa booking của test khác.
+- `TEST_PLAN.md`: ghi ca hồi quy dữ liệu nền/thứ tự class. `PROGRESS.md` và JSON evidence ghi kết quả thật. Không thêm task mới vào TASKS.
+
+### Kiểm tra đã chạy
+
+| Kiểm tra | Kết quả thực tế |
+|---|---|
+| Tái hiện trước sửa: `-Dtest=PostgresOutboxTest,PostgresDashboardSecurityTest -Dsurefire.runOrder=reversealphabetical -Duser.timezone=UTC verify` trên DB UUID sạch | **FAIL có chủ đích:14test/1failure**, đúng lỗi CI; còn1booking/1outbox sau cleanup |
+| Chạy lại đúng cặp class trên bản sửa cuối cùng | **PASS14/14**,0failure/error/skip; sau cleanup còn0booking/0outbox |
+| Toàn backend qua `infra/test-part8.ps1`, `MAVEN_ARGS=-Dsurefire.runOrder=reversealphabetical -Dsurefire.runOrder.random.seed=31` | **PASS116/116**,0failure/error/skip, Maven `verify` BUILD SUCCESS; outbox chạy trước dashboard |
+| Toàn backend qua cùng harness, `MAVEN_ARGS=-Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=31` | **PASS116/116**,0failure/error/skip, BUILD SUCCESS; outbox cũng chạy trước dashboard |
+| DB riêng có sẵn hai booking ngoài fixture: chạy riêng method pagination | **PASS1/1** với5booking lúc kiểm tra; count/MD5 của hai hàng ngoài fixture trước/sau giữ nguyên (`2\|190c6c091968da11d5726b04759ad442`). Setup outbox **4/4**; DB được dọn sau xác minh |
+| `npm.cmd test --prefix tools/contracts` | **PASS58case**,16operation OpenAPI |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1` | **PASS66HTTP response** đúng schema; dashboard DOM/API thật có25booking, hai trang20/5, overlap0, DOM khớp API; GA/inventory/history/outbox/Kafka phát2vé, SQL invariants, production auth guard và log check đạt |
+| `mvnw.cmd -B -ntp cyclonedx:makeAggregateBom`, OSV trên `backend/target/bom.json` | **PASS** SBOM;77package, không phát hiện vấn đề |
+| `git diff --check` | **PASS** |
+
+Full suite dùng cùng phiên bản stack với CI: Temurin25.0.5+8, PostgreSQL17.11, Kafka4.2.2, UTC. Harness tạo hai DB UUID riêng cho PostgreSQL/Kafka test và broker/project/volume Kafka riêng, rồi dọn đúng tài nguyên đó. Không ghi/xóa dữ liệu demo, không sửa `.env`, không commit/push. Log ở `backend/target/ci31-before.log`, `ci31-focused-final.log`, `ci31-full-reverse-final.log`, `ci31-full-random.log`, `ci31-unrelated-fixtures.log`, `ci31-admin-live.log`, `ci31-contracts.log`, `ci31-sbom.log`, `ci31-osv.log`; các file target không đưa vào Git. JSON evidence giữ tóm tắt suite trước khi Surefire có thể bị lần chạy tiếp ghi đè.
+
+### Tự kiểm tra trên Windows
+
+Từ thư mục gốc, Docker Desktop đang chạy và `.env` local đã cấu hình:
+
+```powershell
+$env:MAVEN_ARGS='-Dsurefire.runOrder=reversealphabetical'
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
+$env:MAVEN_ARGS='-Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=31'
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8.ps1
+Remove-Item Env:MAVEN_ARGS
+npm.cmd test --prefix tools/contracts
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part8-ui.ps1
+```
+
+Mỗi lượt full suite mong đợi116test,0failure/error/skip và BUILD SUCCESS; script UI mong đợi pagination20/5, overlap0 và PASS cuối. Có thể chạy nhanh cặp hồi quy bằng `infra/test-part8.ps1 -Tests 'PostgresOutboxTest,PostgresDashboardSecurityTest'` với `MAVEN_ARGS` thứ tự đảo như trên.
+
+### Giới hạn và bước tiếp theo
+
+GitHub Actions của bản sửa chưa commit/push chưa được chạy; run#31 trên commit cũ vẫn đỏ. Đã kiểm chứng tương đương suite/database/broker/UTC của CI trên Windows, chưa chạy lại runner Linux cho bản sửa này. UI kiểm tra bằng jsdom/HTTP thật; chưa visual QA Chrome/mobile và không chạy lại frontend unit/build vì không sửa frontend. Pagination được kiểm tra trên snapshot dữ liệu ổn định; không khẳng định OFFSET giữ nguyên tập trang khi có giao dịch khác ghi giữa hai request HTTP. Người dùng xem diff, tự commit/push và theo dõi CI mới. Chưa bắt đầu T8.1.
