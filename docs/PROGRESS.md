@@ -4,13 +4,106 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Kiểm chứng tích hợp — đang rà soát T9.4 ngày2026-11-14
-- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.3 Done; fault/recovery có snapshot SQL trước/sau
-- **Task đang làm:** T9.4: sửa test race lộ ở backend CI #38 của db5105f. Bản sửa working tree đã PASS 130/130 backend trên Linux container; chờ GitHub Actions của commit chứa bản sửa, chưa commit/push
-- **Task tiếp theo:** Chỉ cân nhắc T10.1 sau khi nghiệm thu T9.4; chưa làm Phần10
-- **Giới hạn:** GitHub Actions #38 của db5105f vẫn đỏ backend, ba job còn lại xanh. Local Linux PASS không thay thế CI cho bản sửa chưa commit; T9.4 vẫn In Progress, chưa làm Phần10.
+- **Giai đoạn:** Báo cáo — T10.3 hoàn thành ngày2026-11-14
+- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done
+- **Task vừa hoàn tất:** T10.3: báo cáo tiếng Việt43trang Word/PDF,8sơ đồ/24bảng,46mục lục đúng trang; đã đối chiếu evidence và kiểm từng trang
+- **Task tiếp theo:** T10.4 chưa bắt đầu; chưa tag/đóng gói phát hành hoặc commit/push
+- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Môi trường riêng đang chạy; chưa commit/push.
 
-- **Task trong TASKS:** 40/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 44/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+
+## T10.3 — Báo cáo đồ án tiếng Việt (Done, 2026-11-14)
+
+**Phạm vi và đầu vào:** chỉ soạn/kiểm báo cáo, không làm T10.4, không commit/push. Đọc RULES/PRD/ARCHITECTURE/DESIGN/DATA_MODEL/TEST_PLAN/PROGRESS, TASKS/README, ADR0001–0008, code/migration/contract và evidenceT9.1–T10.2. Đã tìm và trích file `D:\Kho Down\Quy_Trinh_Xay_Dung_He_Thong_Dat_Ve_Le_Huu_Hao.docx`; đây là kế hoạch ngày12/11/2026, chỉ đối chiếu mục tiêu, không lấy các trạng thái “chưa triển khai” làm hiện trạng mới. HEAD vẫn984e95d; giữ thay đổiT10.1–T10.2 chưa commit.
+
+**Bàn giao:** [Word chỉnh sửa được](report/bao-cao-do-an.docx), [PDF đọc](report/bao-cao-do-an.pdf), [Markdown nội dung](report/BAO_CAO.md), [hướng dẫn chỉnh/build](report/README.md). **43trang A4**, khoảng14.280từ tách theo khoảng trắng,8sơ đồ tự dựng từ source/ADR,24bảng,8chương và3phụ lục. Word có384paragraph, heading/bookmark và bảng thật, không biến cả trang thành ảnh;7ô[CẦN ĐIỀN] cho thông tin chưa được cung cấp. Không có mẫu trường; fontTimesNewRoman13 thân bài, tiêu đềđen và viền bảng; cần áp mẫu/kiểm lại pagination khi có mẫu trường hoặc sửa nội dung.
+
+Nội dung: bài toán, yêu cầu, kiến trúc modularmonolith, ranh giới transaction, ERrútgọn và18bảng/V1–V9, state machine, GA/ghế/idempotency/expiry/payment mô phỏng/vé/refund mô phỏng, outbox/Kafka/inbox/retry/DLQ/replay, UI và log/metric/health. Chương6–7 dành riêng phương pháp/máy/pool, burst50, sốtest, SQLbấtbiến, outage/rollback/restart và demo; Chương8 giới hạn/hướngpháttriển; phụ lục lệnhWindows, SQLchỉđọc và ma trận truyvết.
+
+**Đối chiếu sự thật:** bảng định lượng được builder lấy trực tiếp từ evidence, gắn mãE1–E6 và tênfile/trườngJSON. T9.1/T9.3/T9.4local có130backend thựcchạy/0skip; T10.2launcher chỉ9thựcchạy/121skip, khônggộp. CSVlọc warmup=False có300mẫu,6lượt×50request; tínhlại nearest-rankp50/p95/p99 vàrequestthroughput từnglượt khớpJSON;150mẫu/mode tínhphânvịriêng. GA30success/120conflict vàSEATED3success/147conflict,0lỗikhác; capacity10GA hoặc2ghế/chọncặp, khônggọi sốbookingthànhvé. SQL37snapshot×11counter=407lầnkiểm, khôngphải407testcase; tấtcả0. E3comparisonProofs vàE6main.replay chứngminhno-op; đồthịpaymenttáchSCHEDULEDledger khỏi statebooking. CI39/E4b đúngSHA984e95d có4jobsuccess là lịch sửđãghi nhận, khôngphảirunCI mới của cácfilechưacommit.
+
+ChromeT10.1 là lời xácnhậnngườidùng trongE5a, không có fileảnhtruycậpđược; khôngchèn ảnhgiả hoặc gọi sơđồ/wireframe làảnhChrome. T10.2 làHTTP/SQLpaced365,499giây, gồm310giâyxem/thuyếtminhđịnhgiờ; khôngđobàinóiconngười. Payment/refund chỉmôphỏng; Kafkaat-least-oncevớiinboxdedup, khôngcamkếtexactly-oncexuyênhệ. Nêu riêngbrokerRF1, mộtmáy, burstngắn/cùngprincipal, warmcache, chưaHA/mấtđĩa/mọiCOMMITwindow hoặcproductionauth/payment.
+
+**Công cụ và lệnh thực chạy:** dùng Python3.12.14/Node24.22.1 của Codex primaryruntime26.1112.11217; không thayJava/Node/dependency ứngdụng. Chạy mark_artifact_operation_started đúngmộtlần/docx vàmộtlần/pdf trước khi author. RuntimeWindows có libreOfficeVersion=null, nên adapter chỉ thay bước Officeconversion bằngcontainerDebian/LibreOffice riêng, khôngnetwork/port/productvolume; input vàfontWindows mountreadonly, output là thưmụctạm. PhầnPNG dùngrender_docx.py chuẩn vàPoppler đi kèmruntime. Không sửdụngOffice desktop của ngườidùng.
+
+```powershell
+$artifactPython=Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+& $artifactPython -X utf8 tools/report/build_report.py
+# Lượt đầu đã build từ reports/t10-3/Dockerfile.render (cùng recipe):
+docker build -t ticketing-t103-render:local -f tools/report/Dockerfile.render tools/report
+& $artifactPython -X utf8 tools/report/render_report.py docs/report/bao-cao-do-an.docx --output_dir reports/t10-3/render-reviewed --dpi 150 --emit_pdf
+& $artifactPython -X utf8 tools/report/verify_report.py reports/t10-3/render-reviewed
+```
+
+| Kiểm tra T10.3 | Kết quả thực |
+|---|---|
+| Build dữliệu/sốliệu | PASS: CSV300mẫu/6lượt, phânvị/throughput vàcounter407 khớp; không chạy mới backend/load |
+| Render DOCX→PDF→PNG | PASS:43trang/43PNG150dpi,8hình/24bảng; PDFxuấttừcùngDOCX |
+| Mục lục và trường | PASS:46entry cóbookmark vàPAGEREF hợp lệ, đúngtrangPDF; footer2–43 đúng |
+| Font/biên/glyph | PASS: TimesNewRoman/Consolas, khôngthemeCalibri/đườngkẻtitle; khôngglyphthaythế, khôngtextvượtbiên hoặc near-empty page |
+| VisualQA | PASS: mở43PNG của bảnrender-final; lầnchỉnhsau40PNGgiốngSHA256, mởlại3trang25/31/37 ởrender-reviewed; khôngthấy cắtchữ/chồnglấn/hỏngbảng hoặc sơđồ |
+| Secret scan | PASS: Gitleaks8.30.1, dir bảnMarkdown+textextractPDF vàdirtools/report, exit0/0finding; khôngxuất.env/token/rawpayment |
+| Bảo toàn | PASS:11fileworkingtreecósẵn ngoàiPROGRESS/TASKS và3.env giữhash; không truycập DB, dừngruntime hoặcmountvolume sảnphẩm |
+
+**Lỗi trong quá trình soạn đã sửa:** renderđầuexit0 nhưng visualchưađạt vìstyleTitle kếthừađườngkẻxanh/themefont; mũitênexpiry cóthểnhìnthànhCONFIRMED→EXPIRED; sơđồgửi/DBmark cònnhìntuầntự. Đãsửakiểu/đườngđi vàtáirender. Lượt2 phát hiệnparserlấychúthíchPowerShelltrongcodefence làmheading, sinh2PAGEREF “Reference source not found”; đã bỏfencekhixâymụclục, kiểm46referenceđềuđúng ởbảncuối. Lượtsau chỉlàmchínhxácthuậtngữSCHEDULEDledger/PENDING_PAYMENT vàspacingCPU;43tranggiữnguyên. KhônggọicáclượtFIX_REQUIREDlàđãđạt.
+
+**Bằng chứng và giới hạn:** [t10-3-report-2026-11-14.json](evidence/t10-3-report-2026-11-14.json) cóhashartifact/source, kiểmtraclaim, từngtrang/toctarget, visualnotes vànguồnthamkhảochínhthứcđãmởthật. RawPNG/PDFtrung gian/log/baseline ở `reports/t10-3/` (ignored). KhôngkiểmMicrosoftWordGUI; khimẫu trường/thôngtinbìa/nộidungthayđổi phải xuấtkiểmlại. Mụclụctitletĩnh kèmPAGEREF cậpnhậtsốtrang bằngCtrl+A/F9; thêm/xóaheadingcần rebuild. KhôngđưaảnhQAtrung gianvào artifactbàngiao, khôngtựtag/slide/backlogT10.4. T10.3Done,44/45taskDone; T10.4chưabắtđầu.
+
+## T10.2 — Kịch bản trình diễn có thể tập lại (Done, 2026-11-14)
+
+**Acceptance:** có seed/persona và kịch bản 5–10phút, chạy được và có kết quả thực. Đã đọc RULES/TASKS/README/DEMO_AND_RECOVERY/TEST_PLAN và kiểm tra runtime T10.1. HEAD vẫn `984e95d7dc7aca0b7ea94743e27e21d5d713d906`. Trước khi làm có2file tài liệu sửa và4file evidence chưa tracked của T9.4/T10.1; giữ chúng. Đoạn runbook dự kiến cũ có bước reset demo được thay bằng tạo fixture mới, không reset dữ liệu.
+
+**Bàn giao:** [runbook người thuyết trình](DEMO_AND_RECOVERY.md) tách chuẩn bị, 8bước chính, tình huống phụ, URL/persona, kết quả mong đợi, API/SQL, gián đoạn và Stop/Start giữ volume. [demo-rehearsal.ps1](../infra/demo-rehearsal.ps1) chuẩn bị từ working tree, chốt đúng project/cổng/.env hash, lưu key/body/requestId trước gửi, không tự tạo booking khi tải lại. [demo-audit.sql](../infra/demo-audit.sql) chỉ đọc hai fixture, đo allocation/vé/history/inbox/projection và hash nghiệp vụ; loại operational publisher status/attempt/audit ra khỏi hash để replay hợp lệ không gây false failure. README gốc/infra và TEST_PLAN dẫn tới quy trình này. Không sửa backend/frontend, contract, migration hoặc dependency.
+
+**Môi trường:** project `ticketing-t102-e8b72037cdaf`, checkout `D:\ticketing-t102-e8b72037cdaf`, DB `ticketing_rehearsal`, PG15433/Kafka19093/API18081/UI **http://127.0.0.1:5173**. Clone local + overlay tracked/untracked không ignored và phản ánh file xóa; kiểm144file runtime/harness cùng SHA256 với working tree. Script chạy bản mới, không lấy HEAD cũ chứng minh file chưa commit. Sinh `.env` mới duy nhất trong clone mới; TTL override20giây/expiry1giây ở process, `.env` mặc định600 không đổi. SQL đo deadline-created_at đúng20giây. V1–V9 thành công,2seed gốc GA/SEATED vẫn nguyên, seedGA100/held0/sold0. Mỗi lượt thêm2fixture ADMIN riêng, GA10/A1-A2; không dùng seed hoặc DB demo cũ.
+
+**Thời gian thực:** lượt kỹ thuật `c280ac5e97d1` đạt8/8 trong **52,298giây**, không được gọi là buổi thuyết trình 5–10phút. NewRun tạo cặp fixture mới `4c414aba80c1`; lượt `Rehearse -Paced` bắt đầu19:41:39+07, đạt8/8 trong **365,499giây (6phút5,499giây)**, gồm310giây khoảng xem/thuyết minh được đặt và khoảng55,499giây chạy lệnh/lưu kết quả/overhead. Không đo bài nói của con người hoặc thao tác Chrome. Hai lượt giữ dữ liệu, không reset. Verify trong JSON được cập nhật thêm sau restart; timing tổng là của lượt paced đã hoàn tất, không cộng restart/Backup vào5–10phút.
+
+| Bước chính | Kết quả thực | Bằng chứng |
+|---|---|---|
+| Show | PASS: hai fixture GA/SEATED, HTTPhealth200, frontend200 | show.json, API chi tiết/availability |
+| Ga | PASS: haiPOST cùngkey/body→cùngbooking,1hold/1key; SUCCESS→CONFIRMED/1vé; gửi lại sauconfirm vẫn cachedPENDING_PAYMENT, GETCONFIRMED | ga-held/ga-confirmed.json |
+| Seats | PASS: hai HTTP request khởi chạy trước khi chờ kết quả, cùngpersona khách; đúng1×202/1×409 INVENTORY_UNAVAILABLE,1booking/1véA1; loser không có key/booking dở | seat-confirmed.json |
+| Late | PASS: worker tựEXPIRED sauTTL20, rồi mới gửiSUCCESS; REFUND_REQUIRED, khôngvé thêm,1compensation/1attemptCOMPLETED; recorded_at sau deadline | late-expired/late-completed.json |
+| Outage | PASS: stop đúng Kafka session; root/readiness503/liveness200; create+cancel commitbền; versionđầuFAILED/attempt3, versionsauPENDING | kafka-down-committed/kafka-down-failed.json |
+| Recover | PASS: bậtbrokerhealthy, ADMINreplay originalversionđầu, drain đủPUBLISHED/inbox/projection; giữCANCELLED,khôngvé/hold thêm | recovery-before/recovery-after.json |
+| Replay | PASS: PaymentResultRecorded đã xử lý; haiPOST cùngrequestId/reason→202/202 nhưng1audit/budgetcòn2; logpayment-v1 vàbooking-audit-v1 DUPLICATE đúngevent; hashnghiệpvụ trước/sau giống nhau | replay-before/replay-after.json và metadata log trong evidencepublic |
+| Verify | PASS:4booking,4item,4key,3payment,2vé,9history,12outbox,15inbox,4projection/12projectionevent,1compensation/1attempt; GA10/held0/sold1/available9,A1SOLD/A2AVAILABLE | final.json;10countervi phạm đều0 |
+
+Tại bước chuyển trạng thái, projection có thể chưa bắt kịp nên snapshot trung gian có projectionLag1; final/settled bắt buộc0. Không gọi độ trễ projection tạm thời là oversell. Payment bền đúng hạn vẫn có thể được expiryworker xử lý khi Kafka ngừng; outage trình diễn dùng create/cancel, không nói brokerdown làm mọi payment PENDING. REFUND_REQUIRED vẫn giữ sau refund mô phỏngCOMPLETED.
+
+**Dự phòng đã chạy:** `Backup` PASS: đổiquantity cùngkey→409IDEMPOTENCY_KEY_REUSED; fixtureghế thứ3 EXPIRED rồi đặt lại, paymentFAILURE→PAYMENT_FAILED/A1AVAILABLE. SQL riêng:2booking/2key/4history/5outbox/6inbox/0vé;10countervi phạm0. Hash hai fixturechính không đổi. Không đem bài tải50request hoặc consumerpoison/DLQ vào đồng hồ chính; các phần đó giữ bằng chứng T9.1–T9.3.
+
+**Lệnh thực chạy và kết quả:**
+
+```powershell
+# Từ D:\event-ticketing-platform, mỗi lệnh trả0 nếu PASS.
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Prepare
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action NewRun
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Rehearse
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action NewRun
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Rehearse -Paced
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Backup
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Stop
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Start
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/demo-rehearsal.ps1 -Action Verify
+npm.cmd test --prefix tools/contracts
+npm.cmd test --prefix frontend
+npm.cmd run build --prefix frontend
+```
+
+- Prepare/Start launcher `mvnw.cmd -B -ntp verify`: BUILD SUCCESS,9test thực chạy,0fail/0error,121integration skipped do không cấp biến IT. **Không gọi đây là130integrationPASS**; các8bước×2lượt bên trên thật sự dùng PostgreSQL/Kafka mới. Frontend54/54, buildPASS; OpenAPI18operation/69casePASS. ParsePowerShellPASS.
+- SQL chính: lệnh trong runbook dùng `docker exec -i <project>-postgres-1 psql -U ticketing -d ticketing_rehearsal -qAt -v ON_ERROR_STOP=1 -v ga_event=<UUID> -v seat_event=<UUID>`, stdin `infra/demo-audit.sql`. Backup dùngga_event=`00000000-0000-0000-0000-000000000000`, seat_event=backupfixtureID. Snapshot/queries chạy lại được, không dùng số seed cố định làm assertion tổng hệ thống.
+- Bốn guardPASS khi nhận exit1dựkiến: sessionngoài reports, Prepare khi cổng đangbận, Stopprojectdemo cũ, và Rehearse lại lượtđãxong để tránh timinggiả; từchối trước mutation.
+- Stop/Start trực tiếp đúngrunbook đềuexit0: hai container riêngexited rồihealthy, frontend200/backendUP.18hashbảng và9dòngFlyway/checksum/installed_on khôngđổi; Verify sau restartPASS. Giữvolume.
+- Probe thu log restart phụ ban đầuFAIL vì WindowsPowerShell coi stderrtiếnđộDocker là NativeCommandError; wrapperredirect sau đó chờpipe của tiếntrìnhcon. Đã bỏ cách thu đó và chạy trực tiếp từng lệnh Stop/Start, kiểmexitcode và SQL riêng; giữ reportFAIL, không đổi codeứngdụng/không tính probeFAIL là PASS. Probe quét log ban đầu quá rộng bắt chữ “bearer fixture” trong tên test; xác minh là tên test, đổi mẫu sang header/token-shapedvalue, vẫn kiểm từng password thực trongbộnhớ và tokenfixturechínhxác; không loại log ra khỏi lượtquét.
+- Gitleaks8.30.1 dir docs/infra (và README bảncopy cuối), `--redact --no-banner --report-format json`, exit0/không phát hiện leak. Quét các logđãthu bằng password thực và mẫu bearer/Authorization/rawpayload,0match; rawlog/privateenv không đưa vào evidencepublic. Giới hạn quét theo các mẫu/file đã thu, không khẳng định mọi logtươnglai đều antoàn.
+
+**Bảo toàn:** đọc so sánh T10.1 trước/sau:18bảng và9migration giữhash,2booking/2vé cònnguyên; backend18080UP kể cả khi T10.2stop.2`.env` có sẵn và4fileevidencechưatracked banđầu khôngđổi. Mọi volume có trước được giữ. Không đọc/ghi database demo cũ; không commit/push, không làm T10.3/T10.4.
+
+**Bằng chứng:** [t10-2-rehearsal-2026-11-14.json](evidence/t10-2-rehearsal-2026-11-14.json). Raw SQLsnapshot, sourceSHAmanifest, timings, log/safe metadata, báo cáo guard/backup/restart/secret và probeFAIL ở `reports/t10-2/` (ignored). Bản T10.2 đang chạy ở127.0.0.1:5173/API18081; T10.1 vẫnlocalhost:5173/API18080. Không cần giữ terminallauncher vì tiếntrình chạyẩn; dùng Stop/Start đúngsession.
+
+**Giới hạn:** chưa thao tác/quan sátChromeT10.2, chưa nhận/xem ảnh; T10.1 chỉ là nguồn xác nhận khác. Tranhghế là hai request cùngcustomer, không phải hai accountđộc lập/benchmark50. Chưa chạy lại full130integration/remoteCI vì không đổi application source; không testmới poison/DLQ hoặc HA/mấtđĩa. UIcustomer giới hạn100event/100booking; sau nhiều lượt cầnprojectmới giữvolumecũ. Kịchbản đápứngT10.2; T10.3/T10.4 chưa bắtđầu.
 
 ## Đã hoàn thành
 
@@ -932,3 +1025,85 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -W
 ```
 
 Lệnh này chạy rộng hơn lần sửa backend và tạo môi trường riêng, cần Docker Desktop/JDK25/Node26. Runner `reports/ci38/run-backend.ps1 -Phase full` chỉ là bằng chứng Linux có thể chạy lại trong workspace hiện tại với image/context đã dựng, không phải script phân phối trong clone mới. Xem exit code/JUnit của UUID mới; không đọc nhầm report đỏ hoặc report130PASS cũ để chứng minh source mới.
+
+### 2026-11-14 — T9.4 Done sau CI#39; T10.1 demo sạch và bảo toàn dữ liệu qua restart
+
+**Đóng T9.4:** đã xác minh qua GitHub API [run#39](https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678), đúng full SHA `984e95d7dc7aca0b7ea94743e27e21d5d713d906`. Cả4job cùng SHA đều completed/success: contracts132350822202, backend132350822427, secrets132350822521, frontend132350822543; không có failed step. Kết hợp audit migration/config/secret trước đó và bản sửa CI#38 đã kiểm chứng, T9.4 đủ acceptance và được đánh dấu Done. [Bằng chứng CI#39](evidence/t9-4-ci39-2026-11-14.json). Agent không commit/push.
+
+**Phạm vi T10.1:** chỉ chạy sản phẩm theo README từ môi trường riêng, thử chức năng, dừng/khởi động lại và ghi bằng chứng. Không làm kịch bản trình diễn/persona mới T10.2, báo cáo T10.3 hoặc tag T10.4. Git HEAD vẫn984e95d; giữ thay đổi tài liệu chưa commit. Không đổi stack, source backend/frontend, contract, migration hoặc dữ liệu demo cũ.
+
+**Chuẩn bị sạch đã chạy ở lượt trước:** clone thật từ GitHub vào `D:\ticketing-t101-94eeadabbaa1`, HEAD khớp984e95d. Trước chuẩn bị không có `.env`, target hoặc node_modules của clone; không có volume/project kiểm tra. Dùng `infra/local-env.ps1` sinh password mới, không copy `.env` gốc. Áp dụng đúng khối cấu hình song song trong README chỉ lên `.env` clone:
+
+| Tài nguyên | Giá trị riêng |
+|---|---|
+| Compose project | ticketing-readme-94eeadabbaa1 |
+| Database | ticketing_readme |
+| PostgreSQL/Kafka host |127.0.0.1:15432 /127.0.0.1:19092 |
+| Backend |http://127.0.0.1:18080 |
+| Frontend |http://localhost:5173, listener IPv6 ::1 |
+| Volume |ticketing-readme-94eeadabbaa1_postgres_demo và _kafka_demo |
+
+Lúc đầu Docker Desktop chưa có Server; đã mở Docker Desktop theo điều kiện README, đợi Server29.9.1/Compose5.6.0 rồi lưu baseline tài nguyên trước khi tạo project mới. Không reset volume để xử lý. Cache Maven/npm/image trên máy được giữ; đây là ứng dụng/dữ liệu sạch trên máy hiện có, không phải Windows mới/cache lạnh.
+
+Các lệnh README đã thực chạy trong clone (log ở reports/t10-1):
+
+| Lệnh | Kết quả thực |
+|---|---|
+| `git clone https://github.com/Haolo333z/event-ticketing-platform.git D:\ticketing-t101-94eeadabbaa1` |PASS, đúng984e95d |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1` |PASS, `.env` riêng/password không xuất log |
+| `npm.cmd ci --prefix frontend`; tương tự `tools/contracts` |PASS từ lockfile |
+| `npm.cmd test --prefix frontend`; `npm.cmd run build --prefix frontend` |**54/54 PASS**,0fail/skip; build PASS |
+| `npm.cmd test --prefix tools/contracts` |**69ca/18operation PASS** |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live` |**130/130 backend**,0failure/error/skip;74response schema check, admin/customer và recovery React/jsdom với HTTP/PG/Kafka thật PASS; không gọi đây là Chrome |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080` |Build/start PASS, local seed và Kafka thật |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1` |Vite8.3.8 READY, URL frontend HTTP200 |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1 -Port 18080` |HTTP200/UP,V1 đúng1lần,schema ticketing có mặt |
+
+Gate tạo DB/topic UUID riêng; **DB sản phẩm ticketing_readme vẫn0bảng trước product startup**, topic sản phẩm mặc định chưa tồn tại. Boot đầu áp dụng V1–V9,18bảng,2user/2event/2ticket-type,GA100/held0/sold0 và4ghếAVAILABLE,0booking/0vé. PostgreSQL17.11/Kafka4.2.2 healthy; health/readiness/liveness200/UP. Snapshot pristine/log boot và SHA nguồn nằm trong evidence. Gate dọn đúng DB/broker/volume test UUID của nó; không xóa volume có sẵn hoặc hai volume sản phẩm riêng.
+
+**Bằng chứng Chrome:** người dùng xác nhận tự thao tác tại `http://localhost:5173`: GA CONFIRMED có1vé; ghế A1 CONFIRMED có vé đúng A1; lịch sử khách và dashboard ADMIN đều thấy đúng2booking. Agent không tiếp tục Computer Use sau lần công cụ dừng vì không xác định được URL. Tin nhắn hiện tại không có file ảnh/attachment/đường dẫn mà công cụ truy cập được: [ghi nhận nguồn Chrome](evidence/t10-1-chrome-user-2026-11-14.md) là xác nhận của chủ dự án, **không tuyên bố agent đã xem hoặc lưu ảnh**. Đây là giới hạn lưu ảnh, không thay việc đối soát dữ liệu thật dưới đây.
+
+**Đối chiếu trước/sau restart theo yêu cầu mới:** kiểm tra đúng `.env`/project/ports clone và PID Java/Vite thuộc clone trước khi dừng. Chỉ SELECT trong transaction `REPEATABLE READ READ ONLY`, timeout5s, scoped DBticketing_readme; xuất SHA256 rowset chuẩn hóa của **cả18bảng**, không xuất raw payment hoặc mã vé. Vé đối chiếu qua ID/ordinal/seatLabel và SHA256(code), không lưu code thô trong báo cáo. HTTP chỉ GET, không tạo thêm booking/payment để thay kết quả Chrome.
+
+| Booking do người dùng đã tạo | Trước restart | Sau restart |
+|---|---|---|
+| GA f46bb63a-ec94-414e-8381-85d51aed6e7b |CONFIRMED/100000đ/1vé |Giữ đúngID,state,giá,1vé và code hash |
+| Ghế b0075641-16cc-48a8-b07c-3e5823fdd3a1 |CONFIRMED/200000đ/1vé A1 |Giữ đúngID,state,giá,1vé,code hash và A1 |
+
+Lệnh thực theo README, cwd `D:\ticketing-t101-94eeadabbaa1`:
+
+```powershell
+# Dừng đúng clone, giữ volume:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -Port 18080 -FrontendAddress ::1 -StopServices
+# Terminal backend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080
+# Terminal frontend:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1
+# Terminal kiểm tra:
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/verify-local.ps1 -Port 18080
+```
+
+Lượt kiểm tra hoàn chỉnh **18:32:04–18:32:43 +07:00**, runner audit cục bộ `powershell -NoProfile -ExecutionPolicy Bypass -File reports/t10-1/verify-restart.ps1`, exit0. Stop PASS: backend18080 và frontendIPv6:5173 không còn listener;2service riêng đềuexited,2volume giữ nguyên. Start PASS:2service healthy, frontend200, cả3health200/UP. Agent giữ các launcher chạy nền; người dùng mở Chrome được ngay, không cần terminal hiện tại giữ mở. Nếu tự khởi động sau khi dừng, hai lệnh start chạy ở hai terminal riêng và giữ chúng mở.
+
+| Kiểm tra sau restart | Kết quả |
+|---|---|
+| Flyway |Đúng9version1–9, mỗi version1row/success; checksum/installed_on và hash toàn bộ history bằng trước restart và bằng boot sạch. Runtime ghi **No migration necessary** |
+| Dữ liệu nghiệp vụ |**18/18 rowset hash bằng nhau**, không chỉ so count |
+| Booking/vé |2CONFIRMED/2item/2vé/2payment;2key idempotency; code hash/ordinal/seat không đổi |
+| Tồn kho |GA capacity100/held0/sold1/available99;A1SOLD đúngowner,A2–A4AVAILABLE |
+| History/outbox/inbox |4history/6outbox/8inbox,2projection/6projection-event; không phát vé hoặc thêm lịch sử lần hai |
+| API |10GET trước+10GET sau cho3health/frontend/customer-list/admin-list/2detail/2ticket-list; danh sách khách/admin khớp đúng2ID; ticket API khớp code hash PostgreSQL |
+| Bất biến |6counter mỗi snapshot đều0: oversell,invalid ticket,duplicate ordinal,duplicate seat ticket,duplicate history,wrong SOLD owner |
+| Bảo toàn môi trường |ID2container riêng không đổi;mọi volume có sẵn còn nguyên;state container khác,hash `.env` gốc và `.env` clone không đổi. Demo cũ không được mở/kết nối/mount/reset |
+
+Build trong launcher lần boot và restart báo **130test/121skip/0failure/error**, tức9unit/H2 chạy và121integration skip khi không có biến IT, đúng giới hạn README đã nêu. Không dùng build này để tuyên bố130integrationPASS;130/0skip là gate riêng đã thực chạy trước product startup, chưa chạy lại toàn suite trong lượt restart này.
+
+**Các lỗi công cụ audit đã sửa, giữ bằng chứng FAIL:** probe dot-source trực tiếp bị shell policy chặn trước SQL; chạy lại bằng `-ExecutionPolicy Bypass` ở process như README, không đổi policy máy. SQL audit ban đầu lấy nhầm mode ở bookings, sửa join ticket_types; health parser ban đầu chưa decode Byte[] của actuator, sửa theo verify-local hiện có, health thực tế vẫn200/UP. Chu kỳ restart đầu đã bảo toàn đủ18bảng/9row nhưng hậu kiểm ReadAllText bị sharing violation với log JVM đang chạy; đổi script tạm sang Get-Content có shared read, lưu report lỗi và chạy lại **cả chu kỳ**. Lượt cuối exit0 là bằng chứng nghiệm thu; không đổi source/schema/expected nghiệp vụ để che lỗi. Runbook sản phẩm không có lỗi cần sửa trong lượt này.
+
+**File bằng chứng:** [t10-1-clean-demo-2026-11-14.json](evidence/t10-1-clean-demo-2026-11-14.json), [SQL restart](evidence/t10-1-restart-2026-11-14.sql), [xác nhận Chrome](evidence/t10-1-chrome-user-2026-11-14.md). Raw setup/boot/restart logs, gate JUnit/DOM report, before/after18hash và report các probe lỗi ở `reports/t10-1/` (ignored). Lượt xuất cuối đọc27log được thu, không phát hiện password test/bearer/Authorization/raw payload theo mẫu kiểm tra; không đưa `.env`, mã vé thô hoặc log thô vào Git. Chỉ sửa tài liệu/evidence của T9.4/T10.1, không sửa code ứng dụng. T10.1 **Done,42/45taskDone**; T10.2–T10.4 giữ chưa bắt đầu. Không commit/push.
+
+**Quét tài liệu cuối:** `reports/t9-4/tools/gitleaks.exe dir docs --redact --no-banner --report-format json --report-path reports/t10-1/final-docs-secrets.json`. Lượt đầu báo2generic-api-key ở field checksum `idempotency_keys` của before/after JSON; đã xác minh cả hai đúng SHA256 rowset trong snapshot SQL, không phải credential. Chuẩn hóa bản công bố thành mảng `{table,sha256}`, giữ đủ18tên/hash và giữ bản SQL/raw snapshot gốc; không thêm allowlist hoặc bỏ checksum. Chạy lại scanner **exit0/0finding**, `git diff --check` PASS. Phạm vi là working tree thư mục docs có tất cả file mới; không gọi đó là quét toàn history hay CI mới.
+
+**Giới hạn:** Chrome do chủ dự án xác nhận, chưa có file ảnh để archive; agent kiểm HTTP/SQL sau restart, không tự làm visual QA Chrome sau đó. Đây là restart có kiểm soát của2booking đãCONFIRMED, không phải cắt điện/mất đĩa hoặc kill đúngCOMMIT đang chạy. Cache và một máy/broker được giữ, không suy thành nghiệm thu HA hoặc production; không dùng tiền thật.
+
+**Demo riêng đang mở:** frontend `http://localhost:5173`, catalog `http://127.0.0.1:18080/api/events`, health `http://127.0.0.1:18080/actuator/health`. Chỉ chạy lệnh stop/start ở thư mục clone nêu trên; không dùng thư mục demo gốc để thao tác môi trường này.

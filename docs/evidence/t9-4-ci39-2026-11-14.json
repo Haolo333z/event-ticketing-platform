@@ -1,0 +1,42 @@
+{
+  "task": "T9.4",
+  "status": "DONE",
+  "verifiedAt": "2026-11-14 Asia/Saigon",
+  "run": 39,
+  "runId": 43563069678,
+  "sha": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+  "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "contracts",
+      "id": 132350822202,
+      "sha": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+      "conclusion": "success",
+      "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822202"
+    },
+    {
+      "name": "backend",
+      "id": 132350822427,
+      "sha": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+      "conclusion": "success",
+      "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822427"
+    },
+    {
+      "name": "secrets",
+      "id": 132350822521,
+      "sha": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+      "conclusion": "success",
+      "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822521"
+    },
+    {
+      "name": "frontend",
+      "id": 132350822543,
+      "sha": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+      "conclusion": "success",
+      "url": "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822543"
+    }
+  ],
+  "localPrerequisites": "Clean migration/restart, secret/dependency scans and source provenance in t9-4-audit-2026-11-14.json; backend CI race fix and Linux 130/130 in ci38-backend-fix-2026-11-14.json",
+  "note": "All four jobs green for exact full SHA including CI38 fix; no new commit/push by agent."
+}

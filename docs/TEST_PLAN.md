@@ -1,5 +1,22 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## T10.2 — Tập kịch bản trình diễn
+
+Không thay suite T9 hoặc thêm endpoint. Harness `infra/demo-rehearsal.ps1` tạo project/volume/cổng riêng từ working tree; seed giữ nguyên, mỗi lượt có hai fixture ADMIN mới. SQL `infra/demo-audit.sql` read-only scope theo eventID, không in mã vé/payload payment.
+
+| Bước | Bằng chứng kiểm tra thực |
+|---|---|
+| Show/Ga | Hai mode và health, haiPOST cùngkey→cùngbooking/1hold; SUCCESS→1vé; cached receipt khác GETtrạngthái hiện tại |
+| Seats | Hai request đồng thời cùngpersona tranhA1: đúng1×202/1×409 INVENTORY_UNAVAILABLE,1booking/1véA1, khôngkey/holddở |
+| Late | TTL20/worker1 tựEXPIRED trướcSUCCESS; REFUND_REQUIRED/0vé/1compensation/1attemptCOMPLETED, recorded_at sau deadline |
+| Outage/Recover | Stop đúng broker session, root/readiness503/liveness200; create/cancel commitbền;3attemptFAILED; bậtbroker/replayversionđầu, drain/PUBLISHED/inbox đủ |
+| Replay | Cùngrequestreplay haiHTTP202→1audit/budgetcòn2; consumerDUPLICATE đúngevent; SHA256 nghiệp vụ/inbox/projection/vé không đổi |
+| Verify |4booking/2vé/9history/12outbox/15inbox, GAheld0/sold1, A1SOLD;10countervi phạm gồmprojectionlag đều0 |
+| Backup | Payloadđổi/cùngkey409; fixtureghế khác hết hạn/đặtlại/paymentFAILURE/release, không thayhash fixturechính |
+| Tái lập/an toàn | Lượt mới không reset; reject session/project sai/cổngbận; Stop/Start giữvolume/Flyway/dữliệu; hash.env và snapshotT10.1 không đổi |
+
+Paced đo wallclock 5–10phút gồm khoảng xem/thuyết minh định giờ, JSON tách activeSeconds/reviewSeconds. Lượt nhanh chỉ là kiểm tra kỹ thuật. Ghi riêng Chrome thực sự thao tác; không lấy userconfirmationT10.1 làm bằng chứng đã xem ChromeT10.2. Không phát sinh T10.3.
+
 ## Gate T9.4 — Working tree, migration và cấu hình phát hành demo
 
 Chạy `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -WorkingTree`. Snapshot bao gồm tracked/untracked không bị ignore và phản ánh file đã xóa, kiểm SHA256 trước/sau; không nạp `.env` gốc. Tái sử dụng gate T9.3, thêm Gitleaks history/candidate (redacted), actionlint, parse PowerShell, npm audit, SBOM/OSV, 7 test công cụ đo tải và javac. DB chính mới/rỗng chạy JAR hai lần: V1–V9, checksum/installed_on không đổi khi restart, 18 bảng/seed không nhân đôi/readiness UP. Giữ mọi volume; backend UUID DB được giữ trong mode này, UI DB tạm vẫn được harness tự dọn. Không reset demo.

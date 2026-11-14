@@ -1,5 +1,9 @@
 # Hạ tầng và script Windows
 
+## T10.2 — Tập trình diễn riêng
+
+`demo-rehearsal.ps1`: Prepare → NewRun → Rehearse [-Paced]; hoặc từng Action Show/Ga/Seats/Late/Outage/Recover/Replay/Verify. Backup chạy tình huống phụ, Stop giữ volume, Start dùng lại. Chạy bằng Windows PowerShell `-NoProfile -ExecutionPolicy Bypass -File`. [Runbook đầy đủ](../docs/DEMO_AND_RECOVERY.md) ghi URL/persona/thời gian/khôi phục. Bản sao chứa working tree chưa commit; DB/project mới, cổng15433/19093/18081 và IPv4:5173. Từ chối cổng bận/cấu hình sai, không chạm demo cũ hoặc `.env` hiện có. SQL `demo-audit.sql` chỉ đọc hai fixture đã chọn. Session/log/evidence riêng dưới reports/t10-2 (ignored).
+
 Hướng dẫn hiện hành: [README gốc](../README.md), gồm môi trường, .env, địa chỉ, demo, test sạch và troubleshooting. Chạy từ gốc repo bằng powershell -NoProfile -ExecutionPolicy Bypass -File infra/<tên>.ps1. Không đổi policy toàn máy.
 
 ## Chạy / dừng

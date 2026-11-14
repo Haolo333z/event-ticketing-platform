@@ -1,0 +1,997 @@
+﻿{
+    "task":  "T10.1",
+    "status":  "DONE",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "sourceHead":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+    "prerequisite":  {
+                         "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678",
+                         "sha":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+                         "ciRun":  39,
+                         "jobs":  [
+                                      {
+                                          "name":  "contracts",
+                                          "id":  132350822202,
+                                          "sha":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+                                          "conclusion":  "success",
+                                          "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822202"
+                                      },
+                                      {
+                                          "name":  "backend",
+                                          "id":  132350822427,
+                                          "sha":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+                                          "conclusion":  "success",
+                                          "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822427"
+                                      },
+                                      {
+                                          "name":  "secrets",
+                                          "id":  132350822521,
+                                          "sha":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+                                          "conclusion":  "success",
+                                          "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822521"
+                                      },
+                                      {
+                                          "name":  "frontend",
+                                          "id":  132350822543,
+                                          "sha":  "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+                                          "conclusion":  "success",
+                                          "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43563069678/job/132350822543"
+                                      }
+                                  ],
+                         "status":  "DONE",
+                         "task":  "T9.4"
+                     },
+    "isolation":  {
+                      "checkout":  "D:\\ticketing-t101-94eeadabbaa1",
+                      "dockerRecovery":  "Started installed Docker Desktop per README prerequisites; first available Docker baseline saved before new project creation",
+                      "productTopicsAbsentBeforeStartup":  true,
+                      "initialApplicationClean":  true,
+                      "project":  "ticketing-readme-94eeadabbaa1",
+                      "ports":  {
+                                    "backend":  18080,
+                                    "postgres":  15432,
+                                    "kafka":  19092,
+                                    "frontend":  "[::1]:5173, http://localhost:5173"
+                                },
+                      "beforeProductStartupTables":  0,
+                      "cache":  "Existing Maven/npm/Docker image caches, not a fresh machine",
+                      "copyMethod":  "Fresh GitHub clone of exact HEAD, no original .env/build/dependency/database copy",
+                      "privateEnvNotPublished":  true,
+                      "dockerInitiallyUnavailable":  true,
+                      "database":  "ticketing_readme"
+                  },
+    "setupCommands":  [
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 git clone --quiet https://github.com/Haolo333z/event-ticketing-platform.git \u0027D:\\ticketing-t101-94eeadabbaa1\u0027",
+                              "name":  "clone"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1",
+                              "name":  "local-env"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 npm.cmd ci --prefix frontend",
+                              "name":  "install-frontend"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 npm.cmd ci --prefix tools/contracts",
+                              "name":  "install-contracts"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 npm.cmd test --prefix frontend",
+                              "name":  "frontend-tests"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 npm.cmd run build --prefix frontend",
+                              "name":  "frontend-build"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 npm.cmd test --prefix tools/contracts",
+                              "name":  "contracts"
+                          },
+                          {
+                              "exitCode":  0,
+                              "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live",
+                              "name":  "recovery-gate"
+                          }
+                      ],
+    "initialProduct":  {
+                           "started":  "2026-11-14T18:02:30.4118859+07:00",
+                           "readiness":  {
+                                             "status":  "UP"
+                                         },
+                           "liveness":  {
+                                            "status":  "UP"
+                                        },
+                           "health":  {
+                                          "groups":  [
+                                                         "liveness",
+                                                         "readiness"
+                                                     ],
+                                          "status":  "UP"
+                                      },
+                           "status":  "PASS",
+                           "docker":  [
+                                          {
+                                              "Service":  "kafka",
+                                              "State":  "running",
+                                              "Health":  "healthy",
+                                              "Image":  "apache/kafka:4.2.2",
+                                              "Publishers":  [
+                                                                 {
+                                                                     "URL":  "127.0.0.1",
+                                                                     "TargetPort":  9092,
+                                                                     "PublishedPort":  19092,
+                                                                     "Protocol":  "tcp"
+                                                                 }
+                                                             ]
+                                          },
+                                          {
+                                              "Service":  "postgres",
+                                              "State":  "running",
+                                              "Health":  "healthy",
+                                              "Image":  "postgres:17.11",
+                                              "Publishers":  [
+                                                                 {
+                                                                     "URL":  "127.0.0.1",
+                                                                     "TargetPort":  5432,
+                                                                     "PublishedPort":  15432,
+                                                                     "Protocol":  "tcp"
+                                                                 }
+                                                             ]
+                                          }
+                                      ],
+                           "snapshot":  {
+                                            "ga":  [
+                                                       {
+                                                           "held":  0,
+                                                           "sold":  0,
+                                                           "capacity":  100
+                                                       }
+                                                   ],
+                                            "modes":  [
+                                                          "GA",
+                                                          "SEATED"
+                                                      ],
+                                            "seats":  [
+                                                          {
+                                                              "label":  "A1",
+                                                              "status":  "AVAILABLE"
+                                                          },
+                                                          {
+                                                              "label":  "A2",
+                                                              "status":  "AVAILABLE"
+                                                          },
+                                                          {
+                                                              "label":  "A3",
+                                                              "status":  "AVAILABLE"
+                                                          },
+                                                          {
+                                                              "label":  "A4",
+                                                              "status":  "AVAILABLE"
+                                                          }
+                                                      ],
+                                            "users":  2,
+                                            "events":  2,
+                                            "tables":  18,
+                                            "tickets":  0,
+                                            "bookings":  0,
+                                            "database":  "ticketing_readme",
+                                            "oversell":  0,
+                                            "migrations":  [
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "1",
+                                                                   "checksum":  534994926,
+                                                                   "installedOn":  "2026-11-14T11:02:53.747547"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "2",
+                                                                   "checksum":  2037578376,
+                                                                   "installedOn":  "2026-11-14T11:02:53.790838"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "3",
+                                                                   "checksum":  -475844455,
+                                                                   "installedOn":  "2026-11-14T11:02:53.892938"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "4",
+                                                                   "checksum":  -727577109,
+                                                                   "installedOn":  "2026-11-14T11:02:53.938897"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "5",
+                                                                   "checksum":  -704638016,
+                                                                   "installedOn":  "2026-11-14T11:02:53.964201"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "6",
+                                                                   "checksum":  -2081481639,
+                                                                   "installedOn":  "2026-11-14T11:02:54.013115"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "7",
+                                                                   "checksum":  -1625388130,
+                                                                   "installedOn":  "2026-11-14T11:02:54.038119"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "8",
+                                                                   "checksum":  2046874239,
+                                                                   "installedOn":  "2026-11-14T11:02:54.064185"
+                                                               },
+                                                               {
+                                                                   "success":  true,
+                                                                   "version":  "9",
+                                                                   "checksum":  -1407983870,
+                                                                   "installedOn":  "2026-11-14T11:02:54.105397"
+                                                               }
+                                                           ],
+                                            "invalidTickets":  0
+                                        },
+                           "finished":  "2026-11-14T18:02:59.3490445+07:00"
+                       },
+    "previousTurnValidation":  {
+                                   "contracts":  {
+                                                     "liveResponseChecks":  74,
+                                                     "cases":  69,
+                                                     "operations":  18
+                                                 },
+                                   "backend":  {
+                                                   "skipped":  0,
+                                                   "errors":  0,
+                                                   "tests":  130,
+                                                   "failures":  0
+                                               },
+                                   "frontend":  {
+                                                    "skipped":  0,
+                                                    "tests":  54,
+                                                    "build":  "PASS",
+                                                    "failures":  0
+                                                },
+                                   "dom":  "Admin/customer and recovery React/jsdom with real HTTP/PG/Kafka, not Chrome"
+                               },
+    "chrome":  {
+                   "note":  "No attachment or image path exposed in this turn; written Chrome confirmation recorded without claiming image inspection",
+                   "source":  "User confirmation in conversation",
+                   "imagesInspectedByAgent":  false,
+                   "imageFilesAvailable":  false,
+                   "ga":  "CONFIRMED, one ticket",
+                   "historyAndAdmin":  "Exactly these two bookings",
+                   "seated":  "CONFIRMED, one A1 ticket"
+               },
+    "chromeConfirmation":  "docs/evidence/t10-1-chrome-user-2026-11-14.md",
+    "restart":  {
+                    "started":  "2026-11-14T18:32:04.7190487+07:00",
+                    "log":  "No migration necessary",
+                    "preservation":  {
+                                         "ticketCodesEqual":  true,
+                                         "flywayHistoryEqual":  true,
+                                         "cloneEnvUnchanged":  true,
+                                         "ownedContainerIdsUnchanged":  true,
+                                         "allVolumesRetained":  true,
+                                         "otherContainerStatesUnchanged":  true,
+                                         "initialBootMigrationsEqual":  true,
+                                         "all18TableHashesEqual":  true,
+                                         "originalEnvUnchanged":  true,
+                                         "noDemoDatabaseOpened":  true
+                                     },
+                    "stopped":  {
+                                    "frontendIpv6ListenerAbsent":  true,
+                                    "services":  [
+                                                     {
+                                                         "Service":  "kafka",
+                                                         "State":  "exited"
+                                                     },
+                                                     {
+                                                         "Service":  "postgres",
+                                                         "State":  "exited"
+                                                     }
+                                                 ],
+                                    "backendListenerAbsent":  true,
+                                    "volumesRetained":  [
+                                                            "ticketing-readme-94eeadabbaa1_kafka_demo",
+                                                            "ticketing-readme-94eeadabbaa1_postgres_demo"
+                                                        ]
+                                },
+                    "httpAfter":  {
+                                      "health":  {
+                                                     "/actuator/health/liveness":  {
+                                                                                       "http":  200,
+                                                                                       "status":  "UP"
+                                                                                   },
+                                                     "/actuator/health/readiness":  {
+                                                                                        "http":  200,
+                                                                                        "status":  "UP"
+                                                                                    },
+                                                     "/actuator/health":  {
+                                                                              "http":  200,
+                                                                              "status":  "UP"
+                                                                          }
+                                                 },
+                                      "frontend":  200,
+                                      "customerBookings":  [
+                                                               "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                               "f46bb63a-ec94-414e-8381-85d51aed6e7b"
+                                                           ],
+                                      "adminBookings":  [
+                                                            "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                            "f46bb63a-ec94-414e-8381-85d51aed6e7b"
+                                                        ],
+                                      "tickets":  [
+                                                      {
+                                                          "bookingId":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                          "seatLabel":  null,
+                                                          "ordinal":  1,
+                                                          "id":  "b4039420-3114-4ef9-b237-5ef928971fb9",
+                                                          "codeSha256":  "4433bcbd51d850e689814af71666203c0d6c65dda252192d89018c4a353c3386"
+                                                      },
+                                                      {
+                                                          "bookingId":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                          "seatLabel":  "A1",
+                                                          "ordinal":  1,
+                                                          "id":  "4a597ade-f6c6-4e1e-9aef-c2140df9f8ec",
+                                                          "codeSha256":  "4fcaf2b98a21d7a14b7629bf4e70e37eb6c2b114e855fe4f50132cc460d3d3e3"
+                                                      }
+                                                  ]
+                                  },
+                    "after":  {
+                                  "ga":  [
+                                             {
+                                                 "held":  0,
+                                                 "sold":  1,
+                                                 "capacity":  100
+                                             }
+                                         ],
+                                  "seats":  [
+                                                {
+                                                    "label":  "A1",
+                                                    "owner":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                    "status":  "SOLD"
+                                                },
+                                                {
+                                                    "label":  "A2",
+                                                    "owner":  null,
+                                                    "status":  "AVAILABLE"
+                                                },
+                                                {
+                                                    "label":  "A3",
+                                                    "owner":  null,
+                                                    "status":  "AVAILABLE"
+                                                },
+                                                {
+                                                    "label":  "A4",
+                                                    "owner":  null,
+                                                    "status":  "AVAILABLE"
+                                                }
+                                            ],
+                                  "counts":  {
+                                                 "seats":  4,
+                                                 "users":  2,
+                                                 "events":  2,
+                                                 "tickets":  2,
+                                                 "bookings":  2,
+                                                 "payments":  2,
+                                                 "inbox_events":  8,
+                                                 "inventory_ga":  1,
+                                                 "ticket_types":  2,
+                                                 "booking_items":  2,
+                                                 "outbox_events":  6,
+                                                 "idempotency_keys":  2,
+                                                 "message_failures":  0,
+                                                 "event_projections":  2,
+                                                 "projection_events":  6,
+                                                 "compensation_attempts":  0,
+                                                 "payment_compensations":  0,
+                                                 "booking_status_history":  4
+                                             },
+                                  "tickets":  [
+                                                  {
+                                                      "id":  "4a597ade-f6c6-4e1e-9aef-c2140df9f8ec",
+                                                      "itemId":  "ae25d646-e55b-4e7f-826f-ecb3eb0e258f",
+                                                      "seatId":  "40000000-0000-4000-8000-000000000001",
+                                                      "ordinal":  1,
+                                                      "bookingId":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                      "seatLabel":  "A1",
+                                                      "codeSha256":  "4fcaf2b98a21d7a14b7629bf4e70e37eb6c2b114e855fe4f50132cc460d3d3e3"
+                                                  },
+                                                  {
+                                                      "id":  "b4039420-3114-4ef9-b237-5ef928971fb9",
+                                                      "itemId":  "deaa7da5-5192-455f-b646-d4c3e73bc0a5",
+                                                      "seatId":  null,
+                                                      "ordinal":  1,
+                                                      "bookingId":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                      "seatLabel":  null,
+                                                      "codeSha256":  "4433bcbd51d850e689814af71666203c0d6c65dda252192d89018c4a353c3386"
+                                                  }
+                                              ],
+                                  "bookings":  [
+                                                   {
+                                                       "id":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                       "mode":  "GA",
+                                                       "units":  1,
+                                                       "status":  "CONFIRMED",
+                                                       "totalVnd":  100000
+                                                   },
+                                                   {
+                                                       "id":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                       "mode":  "SEATED",
+                                                       "units":  1,
+                                                       "status":  "CONFIRMED",
+                                                       "totalVnd":  200000
+                                                   }
+                                               ],
+                                  "database":  "ticketing_readme",
+                                  "migrations":  [
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "1",
+                                                         "checksum":  534994926,
+                                                         "installedOn":  "2026-11-14T11:02:53.747547"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "2",
+                                                         "checksum":  2037578376,
+                                                         "installedOn":  "2026-11-14T11:02:53.790838"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "3",
+                                                         "checksum":  -475844455,
+                                                         "installedOn":  "2026-11-14T11:02:53.892938"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "4",
+                                                         "checksum":  -727577109,
+                                                         "installedOn":  "2026-11-14T11:02:53.938897"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "5",
+                                                         "checksum":  -704638016,
+                                                         "installedOn":  "2026-11-14T11:02:53.964201"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "6",
+                                                         "checksum":  -2081481639,
+                                                         "installedOn":  "2026-11-14T11:02:54.013115"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "7",
+                                                         "checksum":  -1625388130,
+                                                         "installedOn":  "2026-11-14T11:02:54.038119"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "8",
+                                                         "checksum":  2046874239,
+                                                         "installedOn":  "2026-11-14T11:02:54.064185"
+                                                     },
+                                                     {
+                                                         "success":  true,
+                                                         "version":  "9",
+                                                         "checksum":  -1407983870,
+                                                         "installedOn":  "2026-11-14T11:02:54.105397"
+                                                     }
+                                                 ],
+                                  "violations":  {
+                                                     "oversell":  0,
+                                                     "invalidTickets":  0,
+                                                     "wrongSoldOwner":  0,
+                                                     "duplicateHistory":  0,
+                                                     "duplicateSeatTickets":  0,
+                                                     "duplicateTicketOrdinal":  0
+                                                 },
+                                  "tableHashes":  [
+                                                      {
+                                                          "table":  "booking_items",
+                                                          "sha256":  "eff931c04fa0f77125008ffe113162a03ee06da0bf8234dd0e0fafe50ba10225"
+                                                      },
+                                                      {
+                                                          "table":  "booking_status_history",
+                                                          "sha256":  "67613ff6a2c545e4f602a866748171c7146379397580b7d085edf79a96ab3711"
+                                                      },
+                                                      {
+                                                          "table":  "bookings",
+                                                          "sha256":  "47a693b90000d817b3d04be2349a66db55aa9b3d96d1404d9fc0cf2062905ca7"
+                                                      },
+                                                      {
+                                                          "table":  "compensation_attempts",
+                                                          "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                      },
+                                                      {
+                                                          "table":  "event_projections",
+                                                          "sha256":  "ccb7aa08148afd3917f6043c64572755045ba03fb58a93e6a41a9041c883ae01"
+                                                      },
+                                                      {
+                                                          "table":  "events",
+                                                          "sha256":  "85d0974ee864c78e9d24dd7a4022db6edd1817fe08a3b4901cc4f944f1797672"
+                                                      },
+                                                      {
+                                                          "table":  "idempotency_keys",
+                                                          "sha256":  "ceb90dd2cc35fa7a3311082e8c6eb6b0f39f7bdcf90f80b14c764486afb58e6d"
+                                                      },
+                                                      {
+                                                          "table":  "inbox_events",
+                                                          "sha256":  "72c990dba4a644fc2b1d243a3bc3a5f0e58fdbf20e1ade6852051c18cf3c64e0"
+                                                      },
+                                                      {
+                                                          "table":  "inventory_ga",
+                                                          "sha256":  "e918470d445234e41926ad0ee7c9f45e5ba36732f8565af7c0b787080d33dd09"
+                                                      },
+                                                      {
+                                                          "table":  "message_failures",
+                                                          "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                      },
+                                                      {
+                                                          "table":  "outbox_events",
+                                                          "sha256":  "c5c215a985cc1f12abc5bbf7311cbb4e9553ae3848404fa1aa5f8cbf379fd99c"
+                                                      },
+                                                      {
+                                                          "table":  "payment_compensations",
+                                                          "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                      },
+                                                      {
+                                                          "table":  "payments",
+                                                          "sha256":  "043fa7fbb38936570246c3bb21a10e4af7642b7dd7eef8c6dfe05e1d0be6e65f"
+                                                      },
+                                                      {
+                                                          "table":  "projection_events",
+                                                          "sha256":  "aba260b4074b6b862021f39db36ff41b60343aea44b03d077ae3bfe768f61891"
+                                                      },
+                                                      {
+                                                          "table":  "seats",
+                                                          "sha256":  "4cf7f212083185f8b320d9093f77c4ca044d848e7a620ceffc859a8d192a3e57"
+                                                      },
+                                                      {
+                                                          "table":  "ticket_types",
+                                                          "sha256":  "8c5351b52226eb612918ff6991f429a1dddd7b5f1239dab9d120e2602963c3fe"
+                                                      },
+                                                      {
+                                                          "table":  "tickets",
+                                                          "sha256":  "9262e8a0e8236d8dedc39aa7d20bc510f74afdbf15d1c115eb9385d9412c8710"
+                                                      },
+                                                      {
+                                                          "table":  "users",
+                                                          "sha256":  "450b59c7d5a0e7e01b5ff669dbf5591e8fc90a5449942050b3b0599831344a58"
+                                                      }
+                                                  ],
+                                  "migrationHistoryHash":  "4e7319f349a5bf540fcc57320105b4fb1bf03f2fa90ad18ae9097dea792967d9"
+                              },
+                    "before":  {
+                                   "ga":  [
+                                              {
+                                                  "held":  0,
+                                                  "sold":  1,
+                                                  "capacity":  100
+                                              }
+                                          ],
+                                   "seats":  [
+                                                 {
+                                                     "label":  "A1",
+                                                     "owner":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                     "status":  "SOLD"
+                                                 },
+                                                 {
+                                                     "label":  "A2",
+                                                     "owner":  null,
+                                                     "status":  "AVAILABLE"
+                                                 },
+                                                 {
+                                                     "label":  "A3",
+                                                     "owner":  null,
+                                                     "status":  "AVAILABLE"
+                                                 },
+                                                 {
+                                                     "label":  "A4",
+                                                     "owner":  null,
+                                                     "status":  "AVAILABLE"
+                                                 }
+                                             ],
+                                   "counts":  {
+                                                  "seats":  4,
+                                                  "users":  2,
+                                                  "events":  2,
+                                                  "tickets":  2,
+                                                  "bookings":  2,
+                                                  "payments":  2,
+                                                  "inbox_events":  8,
+                                                  "inventory_ga":  1,
+                                                  "ticket_types":  2,
+                                                  "booking_items":  2,
+                                                  "outbox_events":  6,
+                                                  "idempotency_keys":  2,
+                                                  "message_failures":  0,
+                                                  "event_projections":  2,
+                                                  "projection_events":  6,
+                                                  "compensation_attempts":  0,
+                                                  "payment_compensations":  0,
+                                                  "booking_status_history":  4
+                                              },
+                                   "tickets":  [
+                                                   {
+                                                       "id":  "4a597ade-f6c6-4e1e-9aef-c2140df9f8ec",
+                                                       "itemId":  "ae25d646-e55b-4e7f-826f-ecb3eb0e258f",
+                                                       "seatId":  "40000000-0000-4000-8000-000000000001",
+                                                       "ordinal":  1,
+                                                       "bookingId":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                       "seatLabel":  "A1",
+                                                       "codeSha256":  "4fcaf2b98a21d7a14b7629bf4e70e37eb6c2b114e855fe4f50132cc460d3d3e3"
+                                                   },
+                                                   {
+                                                       "id":  "b4039420-3114-4ef9-b237-5ef928971fb9",
+                                                       "itemId":  "deaa7da5-5192-455f-b646-d4c3e73bc0a5",
+                                                       "seatId":  null,
+                                                       "ordinal":  1,
+                                                       "bookingId":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                       "seatLabel":  null,
+                                                       "codeSha256":  "4433bcbd51d850e689814af71666203c0d6c65dda252192d89018c4a353c3386"
+                                                   }
+                                               ],
+                                   "bookings":  [
+                                                    {
+                                                        "id":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                        "mode":  "GA",
+                                                        "units":  1,
+                                                        "status":  "CONFIRMED",
+                                                        "totalVnd":  100000
+                                                    },
+                                                    {
+                                                        "id":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                        "mode":  "SEATED",
+                                                        "units":  1,
+                                                        "status":  "CONFIRMED",
+                                                        "totalVnd":  200000
+                                                    }
+                                                ],
+                                   "database":  "ticketing_readme",
+                                   "migrations":  [
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "1",
+                                                          "checksum":  534994926,
+                                                          "installedOn":  "2026-11-14T11:02:53.747547"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "2",
+                                                          "checksum":  2037578376,
+                                                          "installedOn":  "2026-11-14T11:02:53.790838"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "3",
+                                                          "checksum":  -475844455,
+                                                          "installedOn":  "2026-11-14T11:02:53.892938"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "4",
+                                                          "checksum":  -727577109,
+                                                          "installedOn":  "2026-11-14T11:02:53.938897"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "5",
+                                                          "checksum":  -704638016,
+                                                          "installedOn":  "2026-11-14T11:02:53.964201"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "6",
+                                                          "checksum":  -2081481639,
+                                                          "installedOn":  "2026-11-14T11:02:54.013115"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "7",
+                                                          "checksum":  -1625388130,
+                                                          "installedOn":  "2026-11-14T11:02:54.038119"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "8",
+                                                          "checksum":  2046874239,
+                                                          "installedOn":  "2026-11-14T11:02:54.064185"
+                                                      },
+                                                      {
+                                                          "success":  true,
+                                                          "version":  "9",
+                                                          "checksum":  -1407983870,
+                                                          "installedOn":  "2026-11-14T11:02:54.105397"
+                                                      }
+                                                  ],
+                                   "violations":  {
+                                                      "oversell":  0,
+                                                      "invalidTickets":  0,
+                                                      "wrongSoldOwner":  0,
+                                                      "duplicateHistory":  0,
+                                                      "duplicateSeatTickets":  0,
+                                                      "duplicateTicketOrdinal":  0
+                                                  },
+                                   "tableHashes":  [
+                                                       {
+                                                           "table":  "booking_items",
+                                                           "sha256":  "eff931c04fa0f77125008ffe113162a03ee06da0bf8234dd0e0fafe50ba10225"
+                                                       },
+                                                       {
+                                                           "table":  "booking_status_history",
+                                                           "sha256":  "67613ff6a2c545e4f602a866748171c7146379397580b7d085edf79a96ab3711"
+                                                       },
+                                                       {
+                                                           "table":  "bookings",
+                                                           "sha256":  "47a693b90000d817b3d04be2349a66db55aa9b3d96d1404d9fc0cf2062905ca7"
+                                                       },
+                                                       {
+                                                           "table":  "compensation_attempts",
+                                                           "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                       },
+                                                       {
+                                                           "table":  "event_projections",
+                                                           "sha256":  "ccb7aa08148afd3917f6043c64572755045ba03fb58a93e6a41a9041c883ae01"
+                                                       },
+                                                       {
+                                                           "table":  "events",
+                                                           "sha256":  "85d0974ee864c78e9d24dd7a4022db6edd1817fe08a3b4901cc4f944f1797672"
+                                                       },
+                                                       {
+                                                           "table":  "idempotency_keys",
+                                                           "sha256":  "ceb90dd2cc35fa7a3311082e8c6eb6b0f39f7bdcf90f80b14c764486afb58e6d"
+                                                       },
+                                                       {
+                                                           "table":  "inbox_events",
+                                                           "sha256":  "72c990dba4a644fc2b1d243a3bc3a5f0e58fdbf20e1ade6852051c18cf3c64e0"
+                                                       },
+                                                       {
+                                                           "table":  "inventory_ga",
+                                                           "sha256":  "e918470d445234e41926ad0ee7c9f45e5ba36732f8565af7c0b787080d33dd09"
+                                                       },
+                                                       {
+                                                           "table":  "message_failures",
+                                                           "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                       },
+                                                       {
+                                                           "table":  "outbox_events",
+                                                           "sha256":  "c5c215a985cc1f12abc5bbf7311cbb4e9553ae3848404fa1aa5f8cbf379fd99c"
+                                                       },
+                                                       {
+                                                           "table":  "payment_compensations",
+                                                           "sha256":  "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+                                                       },
+                                                       {
+                                                           "table":  "payments",
+                                                           "sha256":  "043fa7fbb38936570246c3bb21a10e4af7642b7dd7eef8c6dfe05e1d0be6e65f"
+                                                       },
+                                                       {
+                                                           "table":  "projection_events",
+                                                           "sha256":  "aba260b4074b6b862021f39db36ff41b60343aea44b03d077ae3bfe768f61891"
+                                                       },
+                                                       {
+                                                           "table":  "seats",
+                                                           "sha256":  "4cf7f212083185f8b320d9093f77c4ca044d848e7a620ceffc859a8d192a3e57"
+                                                       },
+                                                       {
+                                                           "table":  "ticket_types",
+                                                           "sha256":  "8c5351b52226eb612918ff6991f429a1dddd7b5f1239dab9d120e2602963c3fe"
+                                                       },
+                                                       {
+                                                           "table":  "tickets",
+                                                           "sha256":  "9262e8a0e8236d8dedc39aa7d20bc510f74afdbf15d1c115eb9385d9412c8710"
+                                                       },
+                                                       {
+                                                           "table":  "users",
+                                                           "sha256":  "450b59c7d5a0e7e01b5ff669dbf5591e8fc90a5449942050b3b0599831344a58"
+                                                       }
+                                                   ],
+                                   "migrationHistoryHash":  "4e7319f349a5bf540fcc57320105b4fb1bf03f2fa90ad18ae9097dea792967d9"
+                               },
+                    "commands":  [
+                                     {
+                                         "exitCode":  0,
+                                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -Port 18080 -FrontendAddress ::1 -StopServices",
+                                         "workingDirectory":  "D:\\ticketing-t101-94eeadabbaa1"
+                                     },
+                                     {
+                                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -Port 18080",
+                                         "ready":  true,
+                                         "workingDirectory":  "D:\\ticketing-t101-94eeadabbaa1"
+                                     },
+                                     {
+                                         "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-frontend.ps1 -BindAddress ::1",
+                                         "ready":  true,
+                                         "workingDirectory":  "D:\\ticketing-t101-94eeadabbaa1"
+                                     }
+                                 ],
+                    "status":  "PASS",
+                    "notes":  "First restart already preserved data but temporary audit failed to read live log; complete corrected stop/start/audit repeated and passed, keeping earlier failure report",
+                    "sql":  "docs/evidence/t10-1-restart-2026-11-14.sql",
+                    "finished":  "2026-11-14T18:32:43.7083291+07:00",
+                    "httpBefore":  {
+                                       "health":  {
+                                                      "/actuator/health/liveness":  {
+                                                                                        "http":  200,
+                                                                                        "status":  "UP"
+                                                                                    },
+                                                      "/actuator/health/readiness":  {
+                                                                                         "http":  200,
+                                                                                         "status":  "UP"
+                                                                                     },
+                                                      "/actuator/health":  {
+                                                                               "http":  200,
+                                                                               "status":  "UP"
+                                                                           }
+                                                  },
+                                       "frontend":  200,
+                                       "customerBookings":  [
+                                                                "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                                "f46bb63a-ec94-414e-8381-85d51aed6e7b"
+                                                            ],
+                                       "adminBookings":  [
+                                                             "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                             "f46bb63a-ec94-414e-8381-85d51aed6e7b"
+                                                         ],
+                                       "tickets":  [
+                                                       {
+                                                           "bookingId":  "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+                                                           "seatLabel":  null,
+                                                           "ordinal":  1,
+                                                           "id":  "b4039420-3114-4ef9-b237-5ef928971fb9",
+                                                           "codeSha256":  "4433bcbd51d850e689814af71666203c0d6c65dda252192d89018c4a353c3386"
+                                                       },
+                                                       {
+                                                           "bookingId":  "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+                                                           "seatLabel":  "A1",
+                                                           "ordinal":  1,
+                                                           "id":  "4a597ade-f6c6-4e1e-9aef-c2140df9f8ec",
+                                                           "codeSha256":  "4fcaf2b98a21d7a14b7629bf4e70e37eb6c2b114e855fe4f50132cc460d3d3e3"
+                                                       }
+                                                   ]
+                                   }
+                },
+    "startupBuild":  {
+                         "boot":  {
+                                      "note":  "Launcher build has no IT variables: 9 unit/H2 pass, 121 integration skipped; full 130/0-skip gate ran separately before initial product startup",
+                                      "skipped":  121,
+                                      "errors":  0,
+                                      "tests":  130,
+                                      "failures":  0
+                                  },
+                         "restart":  {
+                                         "note":  "Launcher build has no IT variables: 9 unit/H2 pass, 121 integration skipped; full 130/0-skip gate ran separately before initial product startup",
+                                         "skipped":  121,
+                                         "errors":  0,
+                                         "tests":  130,
+                                         "failures":  0
+                                     }
+                     },
+    "completion":  {
+                       "status":  "PASS",
+                       "filesRead":  27,
+                       "sensitiveFindings":  0,
+                       "originalEnvMatchesInitialBaseline":  true,
+                       "initialContainerStatesUnchanged":  true,
+                       "initialVolumesRetained":  true,
+                       "testCloneRuntimeMatchesHead":  true
+                   },
+    "actualProductOperations":  {
+                                    "agent":  "Read-only HTTP/SQL before and after README stop/start; no new booking/payment POST during restart",
+                                    "tableFingerprintsEqual":  18,
+                                    "invariantViolationsPerSnapshot":  {
+                                                                           "oversell":  0,
+                                                                           "invalidTickets":  0,
+                                                                           "wrongSoldOwner":  0,
+                                                                           "duplicateHistory":  0,
+                                                                           "duplicateSeatTickets":  0,
+                                                                           "duplicateTicketOrdinal":  0
+                                                                       },
+                                    "chromeByUser":  "One GA booking/payment/ticket, one A1 booking/payment/ticket, customer history and admin dashboard",
+                                    "state":  {
+                                                  "inboxRows":  8,
+                                                  "seatA1":  "SOLD",
+                                                  "otherSeats":  "AVAILABLE",
+                                                  "confirmed":  2,
+                                                  "tickets":  2,
+                                                  "gaSold":  1,
+                                                  "outboxRows":  6,
+                                                  "gaAvailable":  99,
+                                                  "historyRows":  4,
+                                                  "gaHeld":  0
+                                              },
+                                    "flywayRowsUnchanged":  9,
+                                    "httpGetsPerPhase":  10
+                                },
+    "probeFailures":  [
+                          "Direct dot-source in an initial probe was blocked by shell policy before SQL; reran using README process-scoped ExecutionPolicy Bypass, no machine policy change",
+                          "Read-only audit initially referenced bookings.mode; corrected join to ticket_types.mode, no application/schema change",
+                          "PowerShell actuator response Content was Byte[]; temporary audit now decodes UTF-8 as existing verify-local already does, health itself stayed 200/UP",
+                          "First successful product restart had post-check ReadAllText sharing error while JVM log writer remained open; switched temporary audit to shared Get-Content and repeated entire cycle successfully"
+                      ],
+    "artifacts":  {
+                      "lastLogs":  "restart-backend.stdout.log",
+                      "lastVerification":  "reports/t10-1/restart-verification.json",
+                      "initialLogs":  "boot-backend.stdout.log",
+                      "failedProbeReports":  [
+                                                 "restart-attempt-1-query-error.json",
+                                                 "restart-attempt-2-health-parser.json",
+                                                 "restart-attempt-3-live-log-sharing.json"
+                                             ],
+                      "sql":  "docs/evidence/t10-1-restart-2026-11-14.sql",
+                      "raw":  "reports/t10-1/ (ignored)"
+                  },
+    "finalRuntime":  {
+                         "frontend":  "http://localhost:5173",
+                         "services":  [
+                                          {
+                                              "Service":  "kafka",
+                                              "State":  "running",
+                                              "Health":  "healthy",
+                                              "Image":  "apache/kafka:4.2.2",
+                                              "Publishers":  [
+                                                                 {
+                                                                     "URL":  "127.0.0.1",
+                                                                     "TargetPort":  9092,
+                                                                     "PublishedPort":  19092,
+                                                                     "Protocol":  "tcp"
+                                                                 }
+                                                             ]
+                                          },
+                                          {
+                                              "Service":  "postgres",
+                                              "State":  "running",
+                                              "Health":  "healthy",
+                                              "Image":  "postgres:17.11",
+                                              "Publishers":  [
+                                                                 {
+                                                                     "URL":  "127.0.0.1",
+                                                                     "TargetPort":  5432,
+                                                                     "PublishedPort":  15432,
+                                                                     "Protocol":  "tcp"
+                                                                 }
+                                                             ]
+                                          }
+                                      ],
+                         "backend":  "http://127.0.0.1:18080",
+                         "backendLauncherPid":  25964,
+                         "readiness":  "http://127.0.0.1:18080/actuator/health/readiness",
+                         "health":  "http://127.0.0.1:18080/actuator/health",
+                         "keptRunning":  true,
+                         "frontendLauncherPid":  5940
+                     },
+    "limits":  [
+                   "Chrome flows confirmed by user, not automated by agent; image attachments/paths were not exposed, so no claimed screenshot inspection/archive",
+                   "Restart audit uses read-only HTTP/SQL, not a new Chrome visual check after restart",
+                   "Controlled README stop of two settled CONFIRMED bookings, not power loss or an in-flight COMMIT crash test",
+                   "One Windows host with warm tool/image caches, one PG/Kafka node; no cold-cache machine/HA or real money",
+                   "Full integration suite was the earlier T10.1 clean-clone gate; this turn reran startup build, restart and data audit, not all 130 tests",
+                   "Inner UUID test resources from initial gate were cleaned by its existing harness; original resources and product volumes retained",
+                   "T10.2-T10.4 not started; no commit or push"
+               ],
+    "fingerprintRepresentation":  "Public tableHashes normalized to [{table,sha256}] from the SQL map, retaining all 18 names and checksums; no scanner allowlist added.",
+    "finalDocsScan":  {
+                          "resolution":  "Verified SQL rowset SHA256 fingerprints, normalized map to table/sha256 rows; no allowlist or checksum removed",
+                          "scope":  "docs working tree",
+                          "exitCode":  0,
+                          "initialGenericApiKeyFindings":  2,
+                          "findings":  0,
+                          "report":  "reports/t10-1/final-docs-secrets.json",
+                          "tool":  "Gitleaks 8.30.1"
+                      }
+}

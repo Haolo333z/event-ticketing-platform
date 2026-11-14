@@ -241,7 +241,7 @@
   - **Phụ thuộc:** T9.2. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** MSG-01, PAY-02 và recovery; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo (In Progress, 2026-11-14):** gate local migration/config/secret đã PASS. CI#38/db5105f đỏ backend do test đọc completion log trước server finally; bản sửa test với gate xác định đã PASS130/130 trên Linux, build/SBOM đạt. Chờ GitHub Actions của commit chứa bản sửa xanh; chưa commit/push hoặc T10.1. [Audit trước](evidence/t9-4-audit-2026-11-14.json), [sửa CI#38](evidence/ci38-backend-fix-2026-11-14.json).
+- [x] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo (Done, 2026-11-14):** migration/config/secret gate local đạt; lỗi race CI#38 đã sửa. Xác nhận run#39 đúng SHA984e95d7dc7aca0b7ea94743e27e21d5d713d906, cả4job backend/frontend/contracts/secrets success. [Audit](evidence/t9-4-audit-2026-11-14.json), [sửa CI#38](evidence/ci38-backend-fix-2026-11-14.json), [CI#39](evidence/t9-4-ci39-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo. 
   - **Phụ thuộc:** T9.3. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
@@ -249,17 +249,17 @@
 
 ## Tuần 10 — Đóng gói/báo cáo
 
-- [ ] **T10.1 — Demo từ môi trường sạch** theo README.
+- [x] **T10.1 — Demo từ môi trường sạch (Done, 2026-11-14)** theo README: clone984e95d/project/volume/cổng riêng; seed và V1–V9 sạch. Chủ dự án xác nhận Chrome GA1vé và ghếA1 đềuCONFIRMED, history/admin đúng2booking. Restart đúng runbook:18bảng nghiệp vụ và9row Flyway giữ nguyên, HTTP health200/UP,2booking/2vé còn nguyên. [Bằng chứng](evidence/t10-1-clean-demo-2026-11-14.json), [nguồn Chrome](evidence/t10-1-chrome-user-2026-11-14.md).
   - **Mục tiêu/phạm vi:** Demo từ môi trường sạch theo README.
   - **Phụ thuộc:** T9.4. **Module/file:** docs/demo/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** demo từ DB sạch theo runbook; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T10.2 — Chuẩn bị dữ liệu, persona demo và kịch bản 5–10 phút.**
+- [x] **T10.2 — Chuẩn bị dữ liệu, persona demo và kịch bản 5–10 phút (Done, 2026-11-14):** hai lượt tập trên project/volume/fixture riêng,8/8bước mỗi lượt; lượt có định giờ365,499giây gồm310giây xem/thuyết minh. GA/ghế/idempotency/late refund/outage/replay, SQL và Stop/Start đạt. [Runbook](DEMO_AND_RECOVERY.md), [bằng chứng](evidence/t10-2-rehearsal-2026-11-14.json). Chưa kiểm tra Chrome trực tiếp trong T10.2.
   - **Mục tiêu/phạm vi:** Chuẩn bị dữ liệu, persona demo và kịch bản 5–10 phút. 
   - **Phụ thuộc:** T10.1. **Module/file:** docs/demo/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** kịch bản demo 5–10 phút có seed; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T10.3 — Báo cáo** về bất biến, test concurrency tuần 3–4, outbox/recovery, kết quả và giới hạn.
+- [x] **T10.3 — Báo cáo (Done, 2026-11-14):** bản tiếng Việt43trang Word/PDF,8sơ đồ/24bảng/46mục lục đúng trang; số đo nối evidence, CSV300mẫu và407counter được đối chiếu, từng PNG cuối đã rà.130test gate trước tách9testlauncher/121skip; không bịa Chrome/tiền thật/exactly-once. [Word](report/bao-cao-do-an.docx), [PDF](report/bao-cao-do-an.pdf), [bằng chứng](evidence/t10-3-report-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Báo cáo về bất biến, test concurrency tuần 3–4, outbox/recovery, kết quả và giới hạn.
   - **Phụ thuộc:** T10.2. **Module/file:** docs/demo/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

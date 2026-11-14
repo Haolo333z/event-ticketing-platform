@@ -1,0 +1,1225 @@
+{
+  "task": "T10.3",
+  "status": "DONE",
+  "date": "2026-11-14",
+  "timezone": "Asia/Saigon",
+  "sourceHead": "984e95d7dc7aca0b7ea94743e27e21d5d713d906",
+  "scope": "Report authoring, evidence reconciliation, Office render and QA only; no T10.4 or commit/push",
+  "artifacts": [
+    {
+      "path": "docs\\report\\bao-cao-do-an.docx",
+      "bytes": 707011,
+      "sha256": "14ce6c15d41ee283bf30f16ff59cc8fbcc61eecb3bb3ea9ef48112afd61a95a3"
+    },
+    {
+      "path": "docs\\report\\bao-cao-do-an.pdf",
+      "bytes": 883996,
+      "sha256": "82766fa4987e4ac6d03d1052c0a9a32ee0eb149708fccd39f367ad3907484c2e"
+    },
+    {
+      "path": "docs\\report\\BAO_CAO.md",
+      "bytes": 94212,
+      "sha256": "76bba4f72c360542f3599a6e2a14aa83f654a2812f14fa391efd9cc6ec464285"
+    }
+  ],
+  "quality": {
+    "status": "PASS",
+    "pages": 43,
+    "renderedPngs": 43,
+    "tocEntries": 46,
+    "tocChecks": [
+      {
+        "title": "CHƯƠNG 1 BÀI TOÁN VÀ MỤC TIÊU",
+        "page": 6,
+        "matches": true
+      },
+      {
+        "title": "1.1 Bài toán đặt vé đa hình thức",
+        "page": 6,
+        "matches": true
+      },
+      {
+        "title": "1.2 Mục tiêu phạm vi và đối chiếu kế hoạch",
+        "page": 7,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 2 YÊU CẦU VÀ BẤT BIẾN",
+        "page": 8,
+        "matches": true
+      },
+      {
+        "title": "2.1 Tác nhân và chức năng",
+        "page": 8,
+        "matches": true
+      },
+      {
+        "title": "2.2 Yêu cầu phi chức năng và bảo mật",
+        "page": 9,
+        "matches": true
+      },
+      {
+        "title": "2.3 Các bất biến dùng để nghiệm thu",
+        "page": 10,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 3 KIẾN TRÚC VÀ CÁC QUYẾT ĐỊNH",
+        "page": 11,
+        "matches": true
+      },
+      {
+        "title": "3.1 Kiến trúc tổng thể",
+        "page": 11,
+        "matches": true
+      },
+      {
+        "title": "3.2 Stack và phân chia module",
+        "page": 12,
+        "matches": true
+      },
+      {
+        "title": "3.3 Ranh giới giao dịch và thứ tự khóa",
+        "page": 13,
+        "matches": true
+      },
+      {
+        "title": "3.4 Dữ liệu bền và truyền sự kiện",
+        "page": 14,
+        "matches": true
+      },
+      {
+        "title": "3.5 Các lựa chọn và giới hạn kiến trúc",
+        "page": 15,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 4 MÔ HÌNH DỮ LIỆU VÀ TRẠNG THÁI",
+        "page": 16,
+        "matches": true
+      },
+      {
+        "title": "4.1 Quan hệ dữ liệu lõi",
+        "page": 16,
+        "matches": true
+      },
+      {
+        "title": "4.2 Catalog tồn kho và idempotency",
+        "page": 17,
+        "matches": true
+      },
+      {
+        "title": "4.3 Ledger vé outbox và dữ liệu phục hồi",
+        "page": 18,
+        "matches": true
+      },
+      {
+        "title": "4.4 State machine của booking và tài nguyên",
+        "page": 19,
+        "matches": true
+      },
+      {
+        "title": "4.5 Migration và dữ liệu mẫu tái lập",
+        "page": 20,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 5 TRIỂN KHAI CÁC LUỒNG NGHIỆP VỤ",
+        "page": 21,
+        "matches": true
+      },
+      {
+        "title": "5.1 Giữ và bán vé GA",
+        "page": 21,
+        "matches": true
+      },
+      {
+        "title": "5.2 Ghế định danh và đặt nhiều ghế nguyên tử",
+        "page": 22,
+        "matches": true
+      },
+      {
+        "title": "5.3 Idempotency cho booking và payment",
+        "page": 23,
+        "matches": true
+      },
+      {
+        "title": "5.4 Expiry Worker và nhả hold",
+        "page": 24,
+        "matches": true
+      },
+      {
+        "title": "5.5 Thanh toán mô phỏng và phân xử với expiry",
+        "page": 25,
+        "matches": true
+      },
+      {
+        "title": "5.6 Phát vé và bù trừ mô phỏng",
+        "page": 26,
+        "matches": true
+      },
+      {
+        "title": "5.7 Outbox publisher sau commit",
+        "page": 27,
+        "matches": true
+      },
+      {
+        "title": "5.8 Consumer retry DLQ và dữ liệu lỗi bền",
+        "page": 28,
+        "matches": true
+      },
+      {
+        "title": "5.9 Replay có quyền và audit",
+        "page": 29,
+        "matches": true
+      },
+      {
+        "title": "5.10 Giao diện logging metrics và health",
+        "page": 30,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 6 PHƯƠNG PHÁP KIỂM THỬ",
+        "page": 31,
+        "matches": true
+      },
+      {
+        "title": "6.1 Các lớp kiểm tra và môi trường",
+        "page": 31,
+        "matches": true
+      },
+      {
+        "title": "6.2 Thiết kế phép đo 50 request đồng thời",
+        "page": 32,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 7 KẾT QUẢ THỰC NGHIỆM",
+        "page": 33,
+        "matches": true
+      },
+      {
+        "title": "7.1 Các gate và cách đọc số test",
+        "page": 33,
+        "matches": true
+      },
+      {
+        "title": "7.2 Số liệu tải theo từng lượt",
+        "page": 34,
+        "matches": true
+      },
+      {
+        "title": "7.3 Đối chiếu PostgreSQL sau hold và sau bán",
+        "page": 35,
+        "matches": true
+      },
+      {
+        "title": "7.4 Kafka outage duplicate retry DLQ và replay",
+        "page": 36,
+        "matches": true
+      },
+      {
+        "title": "7.5 Payment expiry rollback và khởi động lại",
+        "page": 37,
+        "matches": true
+      },
+      {
+        "title": "7.6 Demo sạch và lượt tập 5 đến 10 phút",
+        "page": 38,
+        "matches": true
+      },
+      {
+        "title": "CHƯƠNG 8 ĐÁNH GIÁ VÀ KẾT LUẬN",
+        "page": 39,
+        "matches": true
+      },
+      {
+        "title": "8.1 Kết quả đạt được và hướng phát triển",
+        "page": 39,
+        "matches": true
+      },
+      {
+        "title": "TÀI LIỆU THAM KHẢO",
+        "page": 40,
+        "matches": true
+      },
+      {
+        "title": "PHỤ LỤC A LỆNH TÁI HIỆN TRÊN WINDOWS",
+        "page": 41,
+        "matches": true
+      },
+      {
+        "title": "PHỤ LỤC B TRUY VẤN ĐỐI CHIẾU CHỈ ĐỌC",
+        "page": 42,
+        "matches": true
+      },
+      {
+        "title": "PHỤ LỤC C MA TRẬN TRUY VẾT VÀ BÀN GIAO",
+        "page": 43,
+        "matches": true
+      }
+    ],
+    "tables": 24,
+    "figures": 8,
+    "editableParagraphs": 384,
+    "placeholders": [
+      "[CẦN ĐIỀN TÊN TRƯỜNG]",
+      "[CẦN ĐIỀN KHOA HOẶC VIỆN]",
+      "[CẦN ĐIỀN]",
+      "[CẦN ĐIỀN]",
+      "[CẦN ĐIỀN]",
+      "[CẦN ĐIỀN]",
+      "[CẦN ĐIỀN]"
+    ],
+    "fonts": [
+      "BAAAAA+TimesNewRomanPS-BoldMT",
+      "CAAAAA+TimesNewRomanPSMT",
+      "DAAAAA+Consolas"
+    ],
+    "pageBounds": [
+      {
+        "page": 1,
+        "characters": 317,
+        "minX": 91.4,
+        "maxX": 532.28,
+        "bodyBottom": 399.4,
+        "images": 0
+      },
+      {
+        "page": 2,
+        "characters": 1712,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 618.6,
+        "images": 0
+      },
+      {
+        "page": 3,
+        "characters": 2861,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 628.7,
+        "images": 0
+      },
+      {
+        "page": 4,
+        "characters": 2808,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 628.7,
+        "images": 0
+      },
+      {
+        "page": 5,
+        "characters": 1395,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 625.2,
+        "images": 0
+      },
+      {
+        "page": 6,
+        "characters": 1551,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 588.6,
+        "images": 0
+      },
+      {
+        "page": 7,
+        "characters": 1523,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 613.9,
+        "images": 0
+      },
+      {
+        "page": 8,
+        "characters": 1610,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 686.4,
+        "images": 0
+      },
+      {
+        "page": 9,
+        "characters": 1606,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 623.1,
+        "images": 0
+      },
+      {
+        "page": 10,
+        "characters": 1653,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 650.9,
+        "images": 0
+      },
+      {
+        "page": 11,
+        "characters": 998,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 641.8,
+        "images": 1
+      },
+      {
+        "page": 12,
+        "characters": 1512,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 583.5,
+        "images": 0
+      },
+      {
+        "page": 13,
+        "characters": 1318,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 684.9,
+        "images": 1
+      },
+      {
+        "page": 14,
+        "characters": 1329,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 702.0,
+        "images": 1
+      },
+      {
+        "page": 15,
+        "characters": 1516,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 636.5,
+        "images": 0
+      },
+      {
+        "page": 16,
+        "characters": 1314,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 716.4,
+        "images": 1
+      },
+      {
+        "page": 17,
+        "characters": 1623,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 645.6,
+        "images": 0
+      },
+      {
+        "page": 18,
+        "characters": 1691,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 699.8,
+        "images": 0
+      },
+      {
+        "page": 19,
+        "characters": 1357,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 736.3,
+        "images": 1
+      },
+      {
+        "page": 20,
+        "characters": 1406,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 656.2,
+        "images": 0
+      },
+      {
+        "page": 21,
+        "characters": 1473,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 557.7,
+        "images": 0
+      },
+      {
+        "page": 22,
+        "characters": 1268,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 684.9,
+        "images": 1
+      },
+      {
+        "page": 23,
+        "characters": 1543,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 583.9,
+        "images": 0
+      },
+      {
+        "page": 24,
+        "characters": 1636,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 667.5,
+        "images": 0
+      },
+      {
+        "page": 25,
+        "characters": 1368,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 736.3,
+        "images": 1
+      },
+      {
+        "page": 26,
+        "characters": 1499,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 619.4,
+        "images": 0
+      },
+      {
+        "page": 27,
+        "characters": 1535,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 537.9,
+        "images": 0
+      },
+      {
+        "page": 28,
+        "characters": 1316,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 684.9,
+        "images": 1
+      },
+      {
+        "page": 29,
+        "characters": 1395,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 659.0,
+        "images": 0
+      },
+      {
+        "page": 30,
+        "characters": 1696,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 640.3,
+        "images": 0
+      },
+      {
+        "page": 31,
+        "characters": 1601,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 659.9,
+        "images": 0
+      },
+      {
+        "page": 32,
+        "characters": 1683,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 577.6,
+        "images": 0
+      },
+      {
+        "page": 33,
+        "characters": 1432,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 624.3,
+        "images": 0
+      },
+      {
+        "page": 34,
+        "characters": 1504,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 672.2,
+        "images": 0
+      },
+      {
+        "page": 35,
+        "characters": 1508,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 666.8,
+        "images": 0
+      },
+      {
+        "page": 36,
+        "characters": 1564,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 604.9,
+        "images": 0
+      },
+      {
+        "page": 37,
+        "characters": 1704,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 636.5,
+        "images": 0
+      },
+      {
+        "page": 38,
+        "characters": 1640,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 670.9,
+        "images": 0
+      },
+      {
+        "page": 39,
+        "characters": 1635,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 646.8,
+        "images": 0
+      },
+      {
+        "page": 40,
+        "characters": 2164,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 577.0,
+        "images": 0
+      },
+      {
+        "page": 41,
+        "characters": 1532,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 587.9,
+        "images": 0
+      },
+      {
+        "page": 42,
+        "characters": 1591,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 589.7,
+        "images": 0
+      },
+      {
+        "page": 43,
+        "characters": 1610,
+        "minX": 85.2,
+        "maxX": 538.63,
+        "bodyBottom": 737.9,
+        "images": 0
+      }
+    ],
+    "recoveryCountersChecked": 407,
+    "sourceClaims": {
+      "status": "PASS",
+      "csvMeasuredRows": 300,
+      "validatedRounds": [
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[0]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 10,
+          "conflicts": 40,
+          "otherErrors": 0
+        },
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[1]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 1,
+          "conflicts": 49,
+          "otherErrors": 0
+        },
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[2]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 10,
+          "conflicts": 40,
+          "otherErrors": 0
+        },
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[3]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 1,
+          "conflicts": 49,
+          "otherErrors": 0
+        },
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[4]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 10,
+          "conflicts": 40,
+          "otherErrors": 0
+        },
+        {
+          "source": "t9-2-load-2026-11-14.json",
+          "pointer": "measurements[5]",
+          "csvRows": 50,
+          "percentilesAndThroughputIndependentlyMatched": true,
+          "success": 1,
+          "conflicts": 49,
+          "otherErrors": 0
+        }
+      ],
+      "backendGateTests": 130,
+      "launcherExecuted": 9,
+      "launcherSkipped": 121,
+      "recoverySnapshots": 37,
+      "countersPerSnapshot": 11,
+      "demoSeconds": 365.499
+    },
+    "finalArtifacts": [
+      {
+        "path": "docs\\report\\bao-cao-do-an.docx",
+        "bytes": 707011,
+        "sha256": "14ce6c15d41ee283bf30f16ff59cc8fbcc61eecb3bb3ea9ef48112afd61a95a3"
+      },
+      {
+        "path": "docs\\report\\bao-cao-do-an.pdf",
+        "bytes": 883996,
+        "sha256": "82766fa4987e4ac6d03d1052c0a9a32ee0eb149708fccd39f367ad3907484c2e"
+      },
+      {
+        "path": "docs\\report\\BAO_CAO.md",
+        "bytes": 94212,
+        "sha256": "76bba4f72c360542f3599a6e2a14aa83f654a2812f14fa391efd9cc6ec464285"
+      }
+    ],
+    "visualReview": {
+      "status": "PASS",
+      "reviewedPages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "method": "Opened every 150dpi PNG of render-final; final revision compared PNG SHA256,40identical,then opened changed pages25/31/37 from render-reviewed",
+      "noClippingOrOverlapObserved": true,
+      "vietnameseGlyphsReadable": true,
+      "diagramsAndTablesReviewed": true
+    },
+    "pageImageHashes": [
+      {
+        "page": 1,
+        "sha256": "3563c91590bd3bfd3d5d1481b8f62f778c2fad625384582abe4ed7198efc63a8"
+      },
+      {
+        "page": 2,
+        "sha256": "c012cd7013d563d78de323bb071fee866758d49a873c06f4159109f4f4a0353b"
+      },
+      {
+        "page": 3,
+        "sha256": "6e8cde1d74a38da9636fd7b1a3ebe15f58dbb3fc939f868921ee0174da3ada15"
+      },
+      {
+        "page": 4,
+        "sha256": "75773695b46601c9fbe2ed7a6643b7718ee09f28d326632a49f09580359c317a"
+      },
+      {
+        "page": 5,
+        "sha256": "7bc04a8b2607e82768f8e130d5eff78c8070c4ce36bd9744420c979ff7616856"
+      },
+      {
+        "page": 6,
+        "sha256": "a53c9ae7cd7b9e04793038c9a9853b933bec84319b0aba8d146af511ccd58c5e"
+      },
+      {
+        "page": 7,
+        "sha256": "68f6f72bd6324248a1b1e001e02cff631f5207266731612835e1317e12e59a8b"
+      },
+      {
+        "page": 8,
+        "sha256": "596a8cc6ba70395f084e7ad2cfcae3b7042aef2aac2895da8d43527398977775"
+      },
+      {
+        "page": 9,
+        "sha256": "f84dc68f9d7bcf4f0170275011ed41744e5bf137fb76e00eb1d77662d33813fe"
+      },
+      {
+        "page": 10,
+        "sha256": "dce513a15285bef343bc72746ec6bfa6b610cb11b33e06aa56680e352811166f"
+      },
+      {
+        "page": 11,
+        "sha256": "78bfb7f95ce83a356dc3bda49f8dd179c81366d25db662a1289e4ee3cf87ccfc"
+      },
+      {
+        "page": 12,
+        "sha256": "981e8f5b653fa378e330cced15e3aab1c31088261d0d2ed361e5815a6dd94b90"
+      },
+      {
+        "page": 13,
+        "sha256": "1ea35b4cb08ab0eda0a6eeeac0116da37833ab9c3c924b9660a262a5aa9b1a42"
+      },
+      {
+        "page": 14,
+        "sha256": "5969e5a56515ebc86adfba510af0615d312d5bfeeed26a8adcec4be5bd4b731d"
+      },
+      {
+        "page": 15,
+        "sha256": "4007cb6a879621c6a659aa3b92462939c3bd59632cc682d9d6ac8ba2c97744ab"
+      },
+      {
+        "page": 16,
+        "sha256": "52c8a6f274dc0263201c0fb0ce1f7d70f906aa11c23af8cda242109becd67590"
+      },
+      {
+        "page": 17,
+        "sha256": "288fe7c08562b371bd2652dae86ba3f811b547327ffc0487dde1fe9a910d59ae"
+      },
+      {
+        "page": 18,
+        "sha256": "b8c7170160759cde1f9ac92b8511e650800bd10e814daae4d3b144ea87f7a1a4"
+      },
+      {
+        "page": 19,
+        "sha256": "bbc1f1ca8dd148d5045e5a9b863e619731b0e0d1329cc36f95bb648ebfcaa889"
+      },
+      {
+        "page": 20,
+        "sha256": "de8b1f88dc68096805d20013288741ba1b65ed355df8402f88e4cafde89b28ce"
+      },
+      {
+        "page": 21,
+        "sha256": "b9829cda9919e9ba53ee0e36799b291aa1b030f41e426b61f8b510c6016519b5"
+      },
+      {
+        "page": 22,
+        "sha256": "e4006b059ef4079525fa51fd96271ae261d069492aa7644e5c9686efc51bbd0b"
+      },
+      {
+        "page": 23,
+        "sha256": "21ca225b8d3ca854466c47b06a37768d8e86ef662717a5a54886e11bb16e4aeb"
+      },
+      {
+        "page": 24,
+        "sha256": "87296a055a523f5249055164e8b2be9da165aa6ab15011c449013e27ced3d969"
+      },
+      {
+        "page": 25,
+        "sha256": "878e66150d9d2ebcc2086d16a7525c31cc852496035e5fac0c30a9035ae3290a"
+      },
+      {
+        "page": 26,
+        "sha256": "5163a6cff727839e1f7fac199f68100822c8ab4cd43f008d209f7ed50928de5b"
+      },
+      {
+        "page": 27,
+        "sha256": "9d647c85b88befa9d3d9d552ef8f497dc672908736b8930ddc5c35a6712cd551"
+      },
+      {
+        "page": 28,
+        "sha256": "e9f981a15073f3958bc686372870bd4081ccd644659a9bac5862c0c8831680fb"
+      },
+      {
+        "page": 29,
+        "sha256": "5486b275b031367bcb51f729694278c59ec4a1052ee106e5f3efd183442ce306"
+      },
+      {
+        "page": 30,
+        "sha256": "b8294562e3e028e62bfffd4512fe844b29ebd55c28b4f6a0d1ee3d14e6d07b52"
+      },
+      {
+        "page": 31,
+        "sha256": "15e0af1a6adfdf979998e950b2856391e76ab17937bc50da793fe1d22fb04b3a"
+      },
+      {
+        "page": 32,
+        "sha256": "a8684d050efebe9726c418b562e2ad68cf521b53c66299bb7e92c5bcd0ee1cbf"
+      },
+      {
+        "page": 33,
+        "sha256": "82fbc7561e5741d2eb93c8e9cba268857b73664aca9848b2a33a41d4530df4a2"
+      },
+      {
+        "page": 34,
+        "sha256": "739bb17cb7e8fd1e2096383294c2c956175d4eff492e9625b34ae2080b1996a4"
+      },
+      {
+        "page": 35,
+        "sha256": "30d96fdc2c1c701124e3bbd88eb2b12b1921b651157b6eea14b28d876f1a7950"
+      },
+      {
+        "page": 36,
+        "sha256": "5b4b1a68d208d03f08564c3df47b21ee0a4b61b33d90ec9ea0541f9f99dcf5c3"
+      },
+      {
+        "page": 37,
+        "sha256": "56fc0db536f1232fe27d467195346604cbfe622a050acecdd2a4fd7605d3c9a1"
+      },
+      {
+        "page": 38,
+        "sha256": "cdb93e475b894c465aa46d19f4dec93b472f7cd66db8b075c372ba03a5568d18"
+      },
+      {
+        "page": 39,
+        "sha256": "9a09a54f2c8cf9192b3824d5e034b7cbff56f204411bee32ec417165ac8378dd"
+      },
+      {
+        "page": 40,
+        "sha256": "ed2d552492fee005c98bdabc8a73c0708edcfc2afc7730d6360a1ebdf548e884"
+      },
+      {
+        "page": 41,
+        "sha256": "a0dcb4b0613057a0f0217720d3348e129a85da2fa05bf5202be335197bbedcb9"
+      },
+      {
+        "page": 42,
+        "sha256": "2d7ab26ecb6102953eea5b97e3a511e12c7283fc9c7e53be82f9941ac0a51687"
+      },
+      {
+        "page": 43,
+        "sha256": "e69faa2bf75df98ca75b767886d769e81641b70b2731a01815cd3788e74c743c"
+      }
+    ]
+  },
+  "sourceFingerprints": [
+    {
+      "path": "docs/evidence/t9-1-invariants-2026-11-14.json",
+      "sha256": "e89da98a74552f2454c614bea5848850ad0ff75d3bbdb8585f51bd27135390bc"
+    },
+    {
+      "path": "docs/evidence/t9-2-load-2026-11-14.json",
+      "sha256": "175839763173ffc2b3f9213e966dedb1c1cbc7817853687af429fb707b4eed88"
+    },
+    {
+      "path": "docs/evidence/t9-3-recovery-2026-11-14.json",
+      "sha256": "d0c7cfb1834c158c210823fbbfe737318c1d83df5f197c71867be1ad809a8c5b"
+    },
+    {
+      "path": "docs/evidence/t9-3-snapshots-2026-11-14.json",
+      "sha256": "12713f0289293199d72f2c1c01369b7bb052496a5427f38f99aa4427918c2e2c"
+    },
+    {
+      "path": "docs/evidence/t9-4-audit-2026-11-14.json",
+      "sha256": "bcc73e2855a89fc9a85ba1bfc137c1f391f97e582920cacef2f4837d69cffafe"
+    },
+    {
+      "path": "docs/evidence/t9-4-ci39-2026-11-14.json",
+      "sha256": "0de9209a20d9443228514be0b592d941096c0623881294318ad26e3653e6ae7b"
+    },
+    {
+      "path": "docs/evidence/t10-1-clean-demo-2026-11-14.json",
+      "sha256": "c8b217ae8f31029f8cc3354b10daa8963213010070217a72f0525a9dda1eb125"
+    },
+    {
+      "path": "docs/evidence/t10-2-rehearsal-2026-11-14.json",
+      "sha256": "d6ca728d44cf520d7abfeb7ddb97636dc20d8bf2dbfb8eec96ced86c5190fe11"
+    },
+    {
+      "path": "docs/adr/0001-stack-and-local-environment.md",
+      "sha256": "f738f5f65051f1bcca1ee14703efe09d477f2b3ef9db6792877a1a46c34b3c62"
+    },
+    {
+      "path": "docs/adr/0002-api-domain-contract.md",
+      "sha256": "8d8382bddaaa0ce2f75dc0f29f81d84fe21bdbf1a74f55ffb3bfb0614aee55f2"
+    },
+    {
+      "path": "docs/adr/0003-catalog-implementation.md",
+      "sha256": "d6a11e126a9df67ab1f98d45683d61ffcf3ff1c7da3be645d6421505e5e4118e"
+    },
+    {
+      "path": "docs/adr/0004-ga-booking.md",
+      "sha256": "288261a41748905de38a48b4e90fbd2e674eef65dd4ded103c5ca2aae2414bda"
+    },
+    {
+      "path": "docs/adr/0005-seats-and-expiry.md",
+      "sha256": "576b7b23eacfdb84b3f94ce1f3bc321e26e286958112800b5717819421fb3be0"
+    },
+    {
+      "path": "docs/adr/0006-payment-results-and-tickets.md",
+      "sha256": "4ab8c09910ee186911fa3f9f65de6ad112f4ea5c409ccb5882929ba92199ebd4"
+    },
+    {
+      "path": "docs/adr/0007-kafka-and-recovery.md",
+      "sha256": "7da0441abf85e09b0e57bfef660be5990b11641800ea25ec53221fbad1dd8f5a"
+    },
+    {
+      "path": "docs/adr/0008-demo-ui-and-security-review.md",
+      "sha256": "01377200600eec1bb8104b1bd79583ed9493ab359d3a842cee4d51424a03400e"
+    },
+    {
+      "path": "docs/RULES.md",
+      "sha256": "e8733ea52d62fb012b05e84269e7518c5444b674ed2312e786fefb14c2560791"
+    },
+    {
+      "path": "docs/PRD.md",
+      "sha256": "aa8f28809c281504c483296f8afa9c43cfc93a457a72a7bf3bb7de5b5abf7d48"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "304c709a9159accadb6da491c11258232592540d6c8e1bb5f57f8e1531a3e81a"
+    },
+    {
+      "path": "docs/DESIGN.md",
+      "sha256": "0b659009a2ba7a7ecb59b4ccaf8ab29e5588c0518421510f4ae90da0f0925282"
+    },
+    {
+      "path": "docs/DATA_MODEL.md",
+      "sha256": "b1c14c3ad0b9583d52181904b5005ef6bfb31d8d071e265318468bd2cbb72a9b"
+    },
+    {
+      "path": "docs/TEST_PLAN.md",
+      "sha256": "25de0b613fb0e54a08de9d6dc14be2a34f041d1c0621b6fe36eeec2887202b43"
+    }
+  ],
+  "oldPlan": {
+    "pathName": "Quy_Trinh_Xay_Dung_He_Thong_Dat_Ve_Le_Huu_Hao.docx",
+    "role": "Historical goal comparison only, not current status or evidence",
+    "sha256": "283759e4550475a60567a9ae4e770419fcebd3c98e9618ad92d09f5b57b49ae6"
+  },
+  "sourcePolicy": {
+    "backend130": "Historical E1/E3/E4 gates, not rerun by T10.3",
+    "launcher": "T10.2 executed9 and skipped121; kept separate",
+    "load": "300nonwarmup CSV samples matched six50request bursts and all percentiles/throughput",
+    "snapshots": "37snapshots times11counter checks, not407independent tests",
+    "chrome": "T10.1 user confirmation only, no screenshots accessed or fabricated; T10.2 HTTP/SQL timed review",
+    "payment": "Simulation only, no real money",
+    "delivery": "at-least-once with deduplication, no cross-system exactly-once claim"
+  },
+  "references": [
+    {
+      "id": "R1",
+      "url": "https://www.postgresql.org/docs/17/transaction-iso.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R2",
+      "url": "https://www.postgresql.org/docs/17/explicit-locking.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R3",
+      "url": "https://kafka.apache.org/42/design/design/",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R4",
+      "url": "https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R5",
+      "url": "https://docs.spring.io/spring-boot/reference/features/logging.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R6",
+      "url": "https://spec.openapis.org/oas/v3.1.0.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    },
+    {
+      "id": "R7",
+      "url": "https://documentation.red-gate.com/fd/migrations-271585107.html",
+      "checkedOn": "2026-11-14",
+      "kind": "Official primary documentation"
+    }
+  ],
+  "commands": [
+    "primary-runtime/python.exe -X utf8 tools/report/build_report.py",
+    "docker build -t ticketing-t103-render:local -f reports/t10-3/Dockerfile.render reports/t10-3",
+    "primary-runtime/python.exe -X utf8 tools/report/render_report.py docs/report/bao-cao-do-an.docx --output_dir reports/t10-3/render-reviewed --dpi 150 --emit_pdf",
+    "primary-runtime/python.exe -X utf8 tools/report/verify_report.py reports/t10-3/render-reviewed",
+    "gitleaks8.30.1 dir reports/t10-3/secret-candidate --redact --no-banner --report-format json",
+    "gitleaks8.30.1 dir tools/report --redact --no-banner --report-format json"
+  ],
+  "renderEnvironment": {
+    "primaryPython": "C:\\Users\\tinht\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "canonicalRenderer": "C:\\Users\\tinht\\.codex\\plugins\\cache\\openai-primary-runtime\\documents\\26.1112.11217\\skills\\documents\\render_docx.py",
+    "conversion": "isolated Docker LibreOffice; Windows bundle libreOfficeVersion=null",
+    "image": "ticketing-t103-render:local",
+    "ports": [],
+    "productVolumes": false
+  },
+  "renderIterations": [
+    {
+      "version": "v1",
+      "result": "FIX_REQUIRED",
+      "issues": [
+        "Inherited blue title rule/theme font",
+        "Expiry arrow could appear attached to CONFIRMED",
+        "Delivery and DB publisher mark looked serialized"
+      ]
+    },
+    {
+      "version": "v2",
+      "result": "FIX_REQUIRED",
+      "issues": [
+        "Fenced PowerShell comments falsely included in TOC; two reference-source errors"
+      ]
+    },
+    {
+      "version": "render-final",
+      "result": "VISUALLY_REVIEWED_ALL43",
+      "followUp": [
+        "Clarified paymentSCHEDULED versus booking state",
+        "Full PENDING_PAYMENT label and CPU spacing"
+      ]
+    },
+    {
+      "version": "render-reviewed",
+      "result": "PASS",
+      "changedPages": [
+        25,
+        31,
+        37
+      ],
+      "identicalPages": 40,
+      "allFinalPagesCovered": 43
+    }
+  ],
+  "security": {
+    "gitleaksReportFindings": 0,
+    "gitleaksToolFindings": 0,
+    "rawEnvOrLogsPublished": false
+  },
+  "preservation": {
+    "existingWorkingTreeFiles": [
+      {
+        "path": "README.md",
+        "sha256": "7F4774F2D58F22E4528D1D720157559BE3427DF2DA27524FBB118FF7F203EFC4",
+        "unchanged": true
+      },
+      {
+        "path": "docs/DEMO_AND_RECOVERY.md",
+        "sha256": "D219BA9A220C31D9C3D0E7DA2F3E7C09F006D25402D52D175AC1B60CE82A1B3A",
+        "unchanged": true
+      },
+      {
+        "path": "docs/TEST_PLAN.md",
+        "sha256": "25DE0B613FB0E54A08DE9D6DC14BE2A34F041D1C0621B6FE36EEEC2887202B43",
+        "unchanged": true
+      },
+      {
+        "path": "infra/README.md",
+        "sha256": "74E3F9DB04F17EC133884F7019BAD48F47177F866676B638DB7DBE12E44ECACA",
+        "unchanged": true
+      },
+      {
+        "path": "docs/evidence/t10-1-chrome-user-2026-11-14.md",
+        "sha256": "52848A253C96D220B58A4634AD7A2046A960BF2645B77B4D3C7C518F4D8D4DAD",
+        "unchanged": true
+      },
+      {
+        "path": "docs/evidence/t10-1-clean-demo-2026-11-14.json",
+        "sha256": "C8B217AE8F31029F8CC3354B10DAA8963213010070217A72F0525A9DDA1EB125",
+        "unchanged": true
+      },
+      {
+        "path": "docs/evidence/t10-1-restart-2026-11-14.sql",
+        "sha256": "49D6F0813D77B4CC805BB971A3D3584B84E9B9C6396727811821FD0B59C9876C",
+        "unchanged": true
+      },
+      {
+        "path": "docs/evidence/t10-2-rehearsal-2026-11-14.json",
+        "sha256": "D6CA728D44CF520D7ABFEB7DDB97636DC20D8BF2DBFB8EEC96CED86C5190FE11",
+        "unchanged": true
+      },
+      {
+        "path": "docs/evidence/t9-4-ci39-2026-11-14.json",
+        "sha256": "0DE9209A20D9443228514BE0B592D941096C0623881294318AD26E3653E6AE7B",
+        "unchanged": true
+      },
+      {
+        "path": "infra/demo-audit.sql",
+        "sha256": "76A880BD1D1C4651BAFFBE1FB9EECF73BD60124E500E769072D5B2CC3BDC9758",
+        "unchanged": true
+      },
+      {
+        "path": "infra/demo-rehearsal.ps1",
+        "sha256": "4F8AD00C828DE7AB5C3AC81DB512668272FDFE585A670CF257591B0A51C611DA",
+        "unchanged": true
+      }
+    ],
+    "existingEnvironmentFiles": [
+      {
+        "file": ".env",
+        "unchanged": true
+      },
+      {
+        "file": ".env",
+        "unchanged": true
+      },
+      {
+        "file": ".env",
+        "unchanged": true
+      }
+    ],
+    "productDatabaseAccessed": false,
+    "productVolumeMountedInRenderer": false,
+    "productProcessStopped": false
+  },
+  "limits": [
+    "No university template supplied;7clear personal/institution placeholders must be filled",
+    "MicrosoftWord GUI was not used; DOCX layout validated through isolated LibreOffice and150dpiPNG inspection, recheck after school-template edits",
+    "No new backend/frontend/contract suite, live data mutation or load test in T10.3; results cited from stored evidence",
+    "TOC heading labels are static with PAGEREF fields; add/remove headings requires rebuilding TOC",
+    "Local report render image retained; no production deployment/tag/slide/T10.4 performed"
+  ]
+}

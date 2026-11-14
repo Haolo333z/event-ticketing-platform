@@ -224,4 +224,8 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --wait postgres
 
 Root/readiness trả 503 khi dependency cần thiết DOWN; liveness vẫn có thể 200. Health không lộ chi tiết public. Log JSON trên terminal backend giúp tra correlation ID; không chia sẻ .env hoặc payload thanh toán.
 
-Tài liệu chuẩn: [TASKS](docs/TASKS.md), [PROGRESS](docs/PROGRESS.md), [PRD](docs/PRD.md), [TEST_PLAN](docs/TEST_PLAN.md), [ADR](docs/adr). T8.4 chỉ hướng dẫn/vận hành, chưa làm T9.1.
+## Tập trình diễn 5–10 phút (T10.2)
+
+Theo [runbook người thuyết trình](docs/DEMO_AND_RECOVERY.md): `infra/demo-rehearsal.ps1 -Action Prepare`, `NewRun`, rồi `Rehearse -Paced`, chạy bằng `powershell -NoProfile -ExecutionPolicy Bypass -File`. Script tạo bản sao working tree/project/volume riêng, API18081, PG15433, Kafka19093, UI **127.0.0.1:5173**; không reset demo hay sửa `.env` hiện có. Nếu IPv4:5173 bận thì dừng, không tự thay dịch vụ cũ. `Stop` giữ volume; `Start` khởi động lại; `NewRun` tạo fixture mới để tập lại.
+
+Tài liệu chuẩn: [TASKS](docs/TASKS.md), [PROGRESS](docs/PROGRESS.md), [PRD](docs/PRD.md), [TEST_PLAN](docs/TEST_PLAN.md), [ADR](docs/adr). Trạng thái thực và giới hạn kiểm chứng xem PROGRESS.
