@@ -4,13 +4,13 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Quan sát/vận hành — T8.4 hoàn thành local ngày2026-11-14
-- **Tiến độ:** T1.1–T7.4 và T8.1–T8.4 Done; README đã chạy từ clone/database/volume sạch
-- **Task đang làm:** T8.4 đã kiểm chứng từ HEAD1e157a9, working tree ban đầu sạch; chưa commit/push
-- **Task tiếp theo:** T9.1 (chưa triển khai)
-- **Blocker:** Không có blocker T8.4 local. Chưa kiểm chứng máy Windows mới hoàn toàn, cache lạnh, GitHub Actions/Linux hoặc visual Chrome; giới hạn đầy đủ trong nhật ký T8.4.
+- **Giai đoạn:** Kiểm chứng tích hợp — T9.1 hoàn thành local ngày2026-11-14
+- **Tiến độ:** T1.1–T7.4, T8.1–T8.4 và T9.1 Done; bất biến/rollback/restart đã chạy lại với PG/Kafka thật
+- **Task đang làm:** T9.1 đã kiểm chứng từ HEADaa8b9f3, working tree ban đầu sạch; chưa commit/push
+- **Task tiếp theo:** T9.2 (chưa triển khai)
+- **Blocker:** Không có lỗi còn lại ở gate T9.1. Chưa chạy benchmark T9.2, GitHub Actions/Linux, visual Chrome hoặc fault mọi crash window; giới hạn trong nhật ký T9.1.
 
-- **Task trong TASKS:** 37/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 38/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
 ## Đã hoàn thành
 
@@ -605,3 +605,67 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Liv
 ```
 
 Muốn lặp nghiệm thu môi trường sạch, dùng nguyên mục “Kiểm chứng môi trường sạch, song song demo” trong README ở clone mới với project/port riêng; không áp dụng khối sửa .env lên workspace demo. Chrome demo hiện có tại http://127.0.0.1:5173; hướng dẫn Khách hàng/Quản trị/Khôi phục trong README. Không chạy smoke verify-part4…8 lên dữ liệu cần giữ chỉ để kiểm tra README.
+
+### 2026-11-14 — T9.1: chạy lại bất biến, rollback và restart với PostgreSQL/Kafka thật
+
+**Phạm vi và rà soát:** chỉ T9.1, bắt đầu từ commit `aa8b9f3344ce51d52d706d2bd502021ee0b3c2d2` (hoàn thiện hướng dẫn chạy và vận hành hệ thống), Git ban đầu sạch. Đọc RULES/TASKS/TEST_PLAN/PROGRESS, đối chiếu PRD/ARCHITECTURE/DESIGN/DATA_MODEL/API_CONTRACT/EVENT_CATALOG và ADR0006/0007. Rà fixture, truy vấn/assertion và cleanup của PostgresBookingTest, PostgresSeatExpiryTest, PostgresPaymentTest, KafkaRecoveryTest, PostgresMetricsTest cùng các harness live hiện có. Không thấy khoảng trống trong các bất biến/rollback/restart được yêu cầu nên **không thêm test nghiệp vụ, không sửa code backend/frontend, API, migration hoặc dữ liệu mẫu**.130test giữ nguyên; không đổi expected hoặc bỏ assertion. Các mô tả/counter giai đoạn trước trong TEST_PLAN là lịch sử; gate T9.1 mới ghi coverage hiện hành, không coi số cũ là kết quả mới.
+
+**File thay đổi:** thêm `infra/test-invariants.ps1` chỉ điều phối kiểm tra và thu bằng chứng; cập nhật infra/README, TEST_PLAN (ma trận coverage T9.1), TASKS, PROGRESS và [evidence T9.1](evidence/t9-1-invariants-2026-11-14.json). Runner clone đúng HEAD vào TEMP, từ chối khi code/test ứng dụng khác HEAD hoặc có source test chưa track để tránh kiểm chứng code cũ; không nạp cấu hình .env workspace. Nó chỉ đọc hash .env gốc trước/sau, tạo .env/password/project/volume/cổng riêng, chạy các gate sẵn có, yêu cầu subprocess exit0/backend0fail-error-skip và giữ nguyên tài nguyên có sẵn. Không tự commit/push.
+
+**Lệnh thực tế từ gốc repository Windows:**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1
+```
+
+**Môi trường thực tế:** Windows11 Home Single Language, i5-11400H6core/12logical, RAM16948453376byte (~15,78GiB), Docker memory8208908288byte (~7,65GiB). Temurin java/javac25.0.5+8, Node26.13.0/npm11.20.0, Docker Client+Server29.9.1/Compose5.6.0, PostgreSQL17.11, Kafka4.2.2; baseline pool10/min2/acquisition2000ms và BookingPolicy lock1500ms/statement5000ms/attempt5000ms/total10000ms. Test quyết định tắt scheduler theo annotation; ca lifecycle dừng/resume scheduler thật; live checkoutTTL4s/worker1s, admin/recoveryTTL60s/worker1s. Không sửa cấu hình demo.
+
+**Cô lập lần chạy:** `C:\Users\tinht\AppData\Local\Temp\ticketing-invariants-541fd5b97e32`, project cùng tên, PostgreSQL49363/Kafka49364, HTTP port ngẫu nhiên mỗi harness. Checkout bắt đầu không có .env/target/node_modules, volume project mới. Full backend tạo thêm2database UUID và broker test `ticketing-kafka-it-db68f3701592` riêng; stop/start chỉ broker test đó. Live harness dùng DB/topic/group UUID trên broker project kiểm tra; không truy cập database demo. Bắt đầu08:05, kết thúc08:09ngày2026-11-14 (thời gian đầy đủ trong JSON). Runner exit0;9/9subprocess đạt.
+
+| Lệnh thực thi trong checkout riêng | Kết quả mới |
+|---|---|
+| npm.cmd ci --prefix frontend; npm.cmd ci --prefix tools/contracts | PASS cài dependency từ node_modules chưa tồn tại |
+| npm.cmd test --prefix frontend |54/54PASS,0FAIL/skip |
+| npm.cmd run build --prefix frontend |PASS TypeScript/Vite |
+| npm.cmd test --prefix tools/contracts |69case PASS,18operation OpenAPI3.1 |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live |130/130backend PASS,0failure/error/skip;121case PostgreSQL/Kafka thật +9unit/H2.74HTTP schema check và admin/customer/recovery live PASS |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1 |GA live PASS; SQL held3/sold0/capacity3 sau success/replay/conflict |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1 |Ghế/expiry/rebook/GA-expiry và JVM restart PASS;74HTTP schema check PASS |
+| powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka |GA3vé+ghế2vé, failure/cancel/late, Kafka và JVM restart PASS;74HTTP schema check PASS |
+
+Tổng HTTP là **3lượt×74=222response đã kiểm chứng**, cùng74kiểm tra schema chạy ở3database riêng, không gọi là222scenario khác nhau.5nhóm live là admin/customer, recovery, GA, ghế/expiry và payment/Kafka. Không cộng số assertion thành số test. Backend phân lớp chính: GA16, ghế/expiry23, payment30, Kafka19; tất cả17class/130case và tên từng case có trong JSON/JUnit.
+
+**Bất biến đo và đối chiếu thực tế:**
+
+| Nhóm | Kết quả/SQL được kiểm chứng |
+|---|---|
+| GA-01 |50command/5customer và50HTTP, capacity10: mỗi ca10success/40conflict,held10,bookings10; SQL SUM(quantity)=10 ở ca command, outbox/key khớp booking. Live riêng held3/sold0/capacity3. Không oversell |
+| SEAT-01 |50command tranh cùng2ghế:1success/49conflict,2HELD/1booking/COUNT(DISTINCTowner)=1.50HTTP tranh1ghế:1HTTP202/49HTTP409,1HELD/1booking. Hai tập giao nhau:1success/1conflict,2HELD/1owner/1booking/1outbox, ghế riêng bên thua không bị giữ dở |
+| IDEM-01/02/03 |20request cùng key GA →1bookingId/1body,held2/1outbox;20danh sách ghế đảo thứ tự →1ID/1body/2HELD/1outbox. Đổi payload409. Khóa inventory/unique-key quá hạn trả503 BOOKING_BUSY; rollback không để booking/key/outbox/partial hold; cùng key retry được |
+| EXP-01/SEAT-02 |20worker →1EXPIRED transition,0HELD;history2/outbox2 là1held+1expired, không phải2lần expiry. Worker lặp no-op; deadline đã qua nhưng worker chưa commit không được chiếm ghế; sau rebook worker/key cũ không nhả owner mới. GA release về0 rồi booking khác giữ đủ capacity4 |
+| Worker thật |Dừng TaskScheduler: SQL overdue0→2 (GA+ghế), tuổi quá hạn0,076035s→0,715313s; resume →2booking EXPIRED, overdue0/oldestAge0, GAheld0/ghếAVAILABLE. Không gọi expiry inline trong ca này |
+| MSG-01/TICKET-02 |10payment duplicate + consumer restart +5BookingConfirmed replay →3vé,1payment inbox/1CONFIRMED transition,sold3. ACK Kafka rồi DB mark thất bại →gửi lại cùngID,1audit inbox/1projection.10failure/expiry notification lặp không nhả hold3 của booking khác |
+| Replay no-op |HTTP replay payment và BookingConfirmed qua Kafka thật: hash snapshot nghiệp vụ trước/sau cùng `c858d402f17cc6cd34a3ed64b4035c0b`, tickets2/history2/businessEvents3 không tăng. Live mất response gửi2HTTP cùng request →1audit, vé2→2/history2→2, inbox/receipt giữ nguyên |
+| Rollback GA/ghế/expiry |PostgreSQL trigger lỗi sau outbox hoặc khóa ghế thứ2: rollback booking/item/key/hold/history/outbox liên quan, không partial hold. Expiry lỗi giữ PENDING_PAYMENT/2HELD/history1/outbox1, bỏ fault thì expire được. Deadlock40P01 thật:1deadlock/3attempt/2transaction commit, không hold/booking giả |
+| Rollback payment/consumer |Lỗi recording rollback ledger/version/outbox; lỗi ticket/history/compensation rollback confirm/release/inbox/history/outbox nhưng giữ result bền nếu đã commit trước. Consumer3delivery lỗi:0ticket/0inbox,held2/PENDING_PAYMENT,0BookingConfirmed; bỏ fault/replay →2vé/1inbox. Không coi hai transaction record/process là atomic |
+| Restart/late success |Broker/consumer restart từ suite; JVM restart cùng DB ghế không chạy lại Flyway. JVM restart payment SCHEDULED giữ cùng intent, xử lý late success thành REFUND_REQUIRED/0vé, refund mô phỏng COMPLETED trên1nghĩa vụ; retry intent không đổi. Owner ghế mới vẫn giữ2ghế khi booking cũ late success |
+
+Ca near-deadline8vòng lần này có8CONFIRMED/0REFUND_REQUIRED theo recorded_at PostgreSQL; không sửa kỳ vọng để ép phân bố. Nhánh late success được kiểm chứng riêng bằng ca EXPIRED/reallocated-seat/+1microsecond. Cancel/success8vòng:3CONFIRMED/5CANCELLED,held0/sold3. Callback20HTTP+20nội bộ:1payment/1confirmedEvent/3vé/held0/sold3. Đây là hồi quy tính đúng, không phải benchmark hay bảo đảm mọi lịch xen kẽ.
+
+**Truy vấn sau live:** query nguyên văn, thứ tự và giá trị nằm trong `sqlAudits` của evidence. `test-part5-ui`:0HELD thiếuowner/deadline,0EXPIRED cònown ghế,0GAoversell,0BookingExpired trùng; count7chỉ là subsetV1–V7. `test-part6-ui -Kafka`:0vé trênbooking khácCONFIRMED,0ordinal/booking mismatch,0GAnegative/oversell,0SOLD thuộcowner khôngCONFIRMED,0payment cócompensation trùng;9migrationV1–V9. Admin/recovery SQL:2tickets/sold2/history2/businessEvents3/audit1/paymentInbox1. Các query chạy trong database mới riêng, không giả định số liệu demo; script fail ngay nếu kết quả khác. Bằng chứng gồm SQL assert ở test JDBC, output psql của harness và artifact số đo, không chỉ HTTP status.
+
+**Bảo toàn demo và cleanup:** trước gate không có container hoặc backend/frontend demo đang chạy; giữ nguyên trạng thái dừng, không khởi động demo để lấy fingerprint. ID/state tất cả container có sẵn không đổi, mọi volume có sẵn còn nguyên, hash .env gốc không đổi. Không kết nối/mount/reset/xóa database hoặc volume demo. Harness chỉ drop DB/broker/volume UUID do chính nó tạo. Project ngoài T9.1 đã stop cảPG/Kafka, clone và2volume riêng được giữ để xem lại; không có listener test còn chạy. Không tuyên bố đã hash nội dung database demo vì đã giữ DB đó dừng.
+
+**Bằng chứng:** [t9-1-invariants-2026-11-14.json](evidence/t9-1-invariants-2026-11-14.json) chứa sourceHEAD, SHA256runner/log, command/exit từng bước, JUnit130case, coverage, part4/5/6/7/82 đo thật, truy vấn/result và giới hạn. Log/JUnit/artifact gốc tại `reports/t9-1/ticketing-invariants-541fd5b97e32/` (ignored); summary.json và surefire-reports/artifacts/frontend-reports được giữ sau cleanupDB. Logs JVM live nằm trong TEMP theo UUID mà harness ghi. Quét log không thấy password đã sinh/bearer fixture; parser PowerShell, liên kết docs và git diff --check đã kiểm tra. Không có testFAIL cần sửa, không đổi code nghiệp vụ để đạt test.
+
+**Nghiệm thu:** T9.1 Done,38/45task Done. T9.2/T9.3 chưa đánh dấu hoặc triển khai. Chưa commit/push.
+
+**Giới hạn:** một máy Windows/một broker cho mỗi project, cacheMaven/npm/image còn ấm; không HA/mấtổđĩa/tải dài hạn. Chưa GitHub Actions/Linux, Chrome visual QA, payment/refund thật; chưa fault riêng pool exhaustion/statement cancellation/mất mạng đúngCOMMIT hoặc mọi cửa sổ crash. Các burst50request là test đã có chạy lại, chưa có báo cáo máy/latency/p95/TPS theo T9.2; không suy an toàn tuyệt đối từ một lần suite. Test dùng DBclock/trigger/advisory lock để kiểm soát lỗi trong database riêng. Demo không chạy nên không lấy fingerprint dữ liệu bên trong; cách cô lập và bảo toàn cấu hình/container/volume đã được đối chiếu.
+
+Tự chạy lại đúng gate trên Windows từ gốc repo:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1
+```
+
+Runner in đường dẫn summary mỗi lượt; mọi lượt tạo tài nguyên mới, không cần bật demo hoặc sửa .env gốc. Vì runner kiểm chứng HEAD nên source ứng dụng/test phải khớp HEAD; các thay đổi docs và runner T9.1 hiện tại không cản lệnh này. Không dùng verify-part4…8 lên demo để thay gate cô lập.

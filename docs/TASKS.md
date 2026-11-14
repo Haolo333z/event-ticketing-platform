@@ -226,7 +226,7 @@
 
 ## Tuần 9 — Kiểm chứng tích hợp
 
-- [ ] **T9.1 — Chạy lại bất biến:** inventory, idempotency, expiry, event trùng.
+- [x] **T9.1 — Chạy lại bất biến (Done, 2026-11-14):** giữ nguyên130test backend hiện có, chạy PG/Kafka thật từ HEADaa8b9f3 trong clone/project riêng;130/130 backend,54/54frontend,69contract,3×74HTTP và5nhóm live đạt. SQL không oversell/partial hold/vé hoặc release trùng; rollback, scheduler/consumer/JVM restart và replay no-op có bằng chứng. [Kết quả](evidence/t9-1-invariants-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Chạy lại bất biến: inventory, idempotency, expiry, event trùng.
   - **Phụ thuộc:** T8.4. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

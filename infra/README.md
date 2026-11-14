@@ -27,6 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Liv
 
 | Script | Cô lập / tác động |
 |---|---|
+| test-invariants.ps1 | Gate T9.1: clone HEAD vào TEMP, tạo .env/project/volume/cổng riêng, chạy full backend và UI GA/ghế/expiry/payment/Kafka/restart đã có. Không nạp cấu hình .env workspace/khởi động demo, chỉ đọc hash để kiểm tra bảo toàn; từ chối code/test chưa khớp HEAD. Thu JUnit/artifact/log tại reports/t9-1/runId; dừng project riêng và giữ volume/copy để kiểm tra |
 | test-recovery.ps1 [-Live] | Toàn backend qua test-part8/test-part7; -Live thêm test-part8-ui |
 | test-part8.ps1 [-Tests ...] | Hai DB UUID trên PG cấu hình, broker/volume UUID riêng; dọn đúng tài nguyên test tự tạo, không xóa demo |
 | test-part8-ui.ps1 | DB/JAR/JVM riêng, HTTP port tự chọn, topic/group UUID trên broker cấu hình. HTTP contract, dashboard/pagination, recovery/replay trùng, SQL/log/prod guard. Dọn DB/JVM/JAR test; topic tới retention7ngày |

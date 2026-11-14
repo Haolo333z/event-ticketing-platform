@@ -1,5 +1,23 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T9.1 — Chạy lại bất biến từ HEAD hiện tại
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1` tạo clone HEAD và `.env`/project/volume/cổng riêng, không nạp cấu hình `.env` workspace hoặc khởi động demo (chỉ đọc hash file để kiểm tra bảo toàn). Từ chối nếu code ứng dụng/test chưa khớp HEAD để không báo nhầm kết quả của code cũ. Chạy lại ca sẵn có; chỉ thêm test nghiệp vụ khi xác định khoảng trống. Runner mới chỉ điều phối và thu bằng chứng, không thêm scenario hoặc sửa bất biến.
+
+| Bất biến | Ca hiện có cần chạy và đối chiếu SQL |
+|---|---|
+| GA không vượt capacity | PostgresBookingTest:50usecase/50HTTP capacity10; SELECT held_count, số booking/outbox và SUM(quantity); số thành công phải khớp allocation |
+| Ghế không hai owner / không partial hold | PostgresSeatExpiryTest:50command tập ghế đảo thứ tự,50HTTP một ghế,2tập giao nhau một phần; COUNT(DISTINCT held_by_booking_id), booking_items, AVAILABLE/HELD; ghế của bên thua không bị giữ dở |
+| Idempotency |20request cùng key GA và20danh sách ghế đảo thứ tự →1ID/1body/1outbox; đổi payload409; inventory/unique-key timeout và rollback không để booking/key/hold dở |
+| Expiry nhả đúng một lần |20worker →1EXPIRED transition,1BookingExpired,0HELD; worker lặp/replay sau rebook không nhả owner mới. Ca PostgresMetricsTest dừng scheduler thật rồi resume, đối chiếu SQL overdue/GA/ghế |
+| Kafka gửi/nhận lặp |KafkaRecoveryTest: ACK rồi DB mark thất bại gửi lại cùng ID,10payment duplicate/consumer restart/5BookingConfirmed replay; inbox/payment history/ticket không tăng; snapshot nghiệp vụ trước/sau HTTP replay giống nhau |
+| Rollback |Lỗi thật qua PostgreSQL trigger ở GA/ghế/expiry, ledger/ticket/history/compensation và inbox consumer; no partial writes. Consumer3delivery lỗi giữ0ticket/0inbox, sau replay có đúng vé/1inbox |
+| Restart |Kafka broker/consumer restart từ suite; test-part5-ui restart JVM cùngDB và Flyway không chạy lại; test-part6-ui -Kafka restart kết quả payment SCHEDULED, ledger/intent giữ nguyên, late success không phát vé và compensation không trùng |
+
+Gate chạy full backend bằng `test-recovery.ps1 -Live`, sau đó `test-part4-ui.ps1`, `test-part5-ui.ps1`, `test-part6-ui.ps1 -Kafka`; frontend/build và contract cũng chạy lại. Ghi JUnit từng ca và các artifact part4/5/6/7, log SQL/live trước khi harness dọn DB UUID. Chỉ PASS khi không fail/error/skip, các subprocess exit0 và tài nguyên demo được giữ nguyên. Kết quả tại `reports/t9-1/<runId>/summary.json`; số thực/bằng chứng công bố ở PROGRESS, không lấy số lịch sử dưới đây làm kết quả mới.
+
+Các burst50request là hồi quy đã có, không thay nghiệm thu máy/latency/p95/TPS của T9.2. Fault/restart trong gate cũng là chạy lại TEST_PLAN, không tự đánh dấu T9.3. Không khẳng định đã kiểm chứng mất mạng chính xác tại COMMIT, crash mọi cửa sổ, cluster nhiều broker hoặc tải dài hạn.
+
 ## Gate T8.3 — Recovery view và replay có kiểm soát
 
 - Tái sử dụng POST replay T6.4, không xóa inbox hoặc tạo force/reset. `KafkaRecoveryTest` phát lại PaymentResultRecorded/BookingConfirmed đã xử lý qua HTTP/Kafka thật. Đợi log DUPLICATE từ consumer, so hash toàn snapshot nghiệp vụ trước/sau: booking, items, tickets, history, payments, inventory, event business và inbox/projection rows không đổi. Cùng requestId/reason không append audit/reset attempts;3request mới hết budget, request thứ4 bị409, request cũ vẫn202, payload có force bị400.
