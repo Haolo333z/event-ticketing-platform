@@ -1,0 +1,424 @@
+﻿{
+    "task":  "T9.4",
+    "status":  "IN_PROGRESS_AWAITING_GITHUB_ACTIONS_FOR_FIX",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "head":  "db5105f42f762c42b87498f44dd63c21b3a8f8a8",
+    "initialWorkingTree":  "clean at db5105f; fix remains uncommitted",
+    "ciFailure":  {
+                      "run":  38,
+                      "runId":  43560036198,
+                      "jobId":  132341445099,
+                      "head":  "db5105f42f762c42b87498f44dd63c21b3a8f8a8",
+                      "failedStep":  6,
+                      "failedCommand":  "sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom",
+                      "failureLines":  [
+                                           {
+                                               "line":  1488,
+                                               "text":  "2026-11-14T05:10:31.0512918Z [ERROR] Tests run: 19, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 72.32 s \u003c\u003c\u003c FAILURE! -- in com.haolo.ticketing.KafkaRecoveryTest"
+                                           },
+                                           {
+                                               "line":  1489,
+                                               "text":  "2026-11-14T05:10:31.0542703Z [ERROR] com.haolo.ticketing.KafkaRecoveryTest.httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput) -- Time elapsed: 0.168 s \u003c\u003c\u003c FAILURE!"
+                                           },
+                                           {
+                                               "line":  1497,
+                                               "text":  "2026-11-14T05:10:31.0704783Z \tat com.haolo.ticketing.KafkaRecoveryTest.httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(KafkaRecoveryTest.java:436)"
+                                           },
+                                           {
+                                               "line":  2050,
+                                               "text":  "2026-11-14T05:10:46.7284186Z [ERROR] Tests run: 130, Failures: 1, Errors: 0, Skipped: 0"
+                                           },
+                                           {
+                                               "line":  2074,
+                                               "text":  "2026-11-14T05:10:46.7821115Z ##[error]Process completed with exit code 1."
+                                           }
+                                       ],
+                      "trace":  [
+                                    {
+                                        "line":  1322,
+                                        "time":  "2026-11-14T05:10:17.296625211Z",
+                                        "stage":  "outbox_committed",
+                                        "outcome":  "COMMITTED",
+                                        "correlationId":  "59bcc0bb-b5ae-423f-9267-005e15a5a475",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "http-nio-127.0.0.1-auto-3-exec-6"
+                                    },
+                                    {
+                                        "line":  1323,
+                                        "time":  "2026-11-14T05:10:17.299331976Z",
+                                        "stage":  "http_request",
+                                        "correlationId":  "59bcc0bb-b5ae-423f-9267-005e15a5a475",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "http-nio-127.0.0.1-auto-3-exec-6"
+                                    },
+                                    {
+                                        "line":  1324,
+                                        "time":  "2026-11-14T05:10:17.307315748Z",
+                                        "stage":  "outbox_published",
+                                        "outcome":  "PUBLISHED",
+                                        "correlationId":  "59bcc0bb-b5ae-423f-9267-005e15a5a475",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "main"
+                                    },
+                                    {
+                                        "line":  1325,
+                                        "time":  "2026-11-14T05:10:17.315476106Z",
+                                        "stage":  "consumer_processed",
+                                        "outcome":  "APPLIED",
+                                        "correlationId":  "59bcc0bb-b5ae-423f-9267-005e15a5a475",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "audit-listener-0-C-2"
+                                    },
+                                    {
+                                        "line":  1326,
+                                        "time":  "2026-11-14T05:10:17.417016074Z",
+                                        "stage":  "consumer_processed",
+                                        "outcome":  "DUPLICATE",
+                                        "correlationId":  "59bcc0bb-b5ae-423f-9267-005e15a5a475",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "main"
+                                    },
+                                    {
+                                        "line":  1327,
+                                        "time":  "2026-11-14T05:10:17.434707682Z",
+                                        "stage":  "http_request",
+                                        "correlationId":  "932e5901-57ab-4e3c-9146-19f176ab4d65",
+                                        "bookingId":  "301a30d2-ef4b-45b0-8af6-951cb9e0de2a",
+                                        "eventId":  "e975a9b8-69c3-4c12-95c2-f744de11a6ad",
+                                        "thread":  "http-nio-127.0.0.1-auto-3-exec-7"
+                                    }
+                                ]
+                  },
+    "classification":  "Test synchronization race, not booking API/data/migration failure or Node/artifact warning",
+    "cause":  "HttpClient receiving the response body does not join the server CorrelationFilter finally block. Immediate CapturedOutput read races with http_request log. CI log contains the correct replay trace; controlled filter gate deterministically reproduces the premature assertion.",
+    "changes":  [
+                    {
+                        "path":  "backend/src/test/java/com/haolo/ticketing/KafkaRecoveryTest.java",
+                        "purpose":  "Bounded await by correlation for HTTP completion logs; retain event/booking/status/durable correlation, stage, idempotency, poison redaction and MDC cleanup assertions"
+                    },
+                    {
+                        "path":  "backend/src/test/java/com/haolo/ticketing/HttpCompletionGate.java",
+                        "purpose":  "Test-only servlet gate: flush actual response, hold outer completion log, release in try-with-resources; finite latch deadlines"
+                    }
+                ],
+    "regression":  {
+                       "red":  {
+                                   "run":  "ticketing-ci38-40c1aa94d432-red-0f691a",
+                                   "exitCode":  1,
+                                   "command":  "sh ./mvnw -B -ntp -Dtest=KafkaRecoveryTest#httpOutboxAndRealKafkaCarrySameIdsAndSafeJson test",
+                                   "tests":  {
+                                                 "skipped":  0,
+                                                 "errors":  0,
+                                                 "tests":  1,
+                                                 "failures":  1
+                                             },
+                                   "result":  "Expected old assertion failure at KafkaRecoveryTest.java:455 under response-flushed/log-paused schedule"
+                               },
+                       "green":  {
+                                     "run":  "ticketing-ci38-40c1aa94d432-targeted-02c33b",
+                                     "exitCode":  0,
+                                     "command":  "sh ./mvnw -B -ntp -Dtest=KafkaRecoveryTest#httpOutboxAndRealKafkaCarrySameIdsAndSafeJson test",
+                                     "tests":  {
+                                                   "skipped":  0,
+                                                   "errors":  0,
+                                                   "tests":  1,
+                                                   "failures":  0
+                                               },
+                                     "result":  "PASS with deterministic gate still enabled"
+                                 },
+                       "test":  "KafkaRecoveryTest.httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput)"
+                   },
+    "fullBackend":  {
+                        "classes":  [
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  3,
+                                            "class":  "com.haolo.ticketing.DemoAuthConfigurationTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  2,
+                                            "class":  "com.haolo.ticketing.HealthEndpointTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  19,
+                                            "class":  "com.haolo.ticketing.KafkaRecoveryTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  1,
+                                            "class":  "com.haolo.ticketing.operations.OperationsMetricsTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  9,
+                                            "class":  "com.haolo.ticketing.PostgresAdminTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  16,
+                                            "class":  "com.haolo.ticketing.PostgresBookingTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  2,
+                                            "class":  "com.haolo.ticketing.PostgresCatalogTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  10,
+                                            "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  5,
+                                            "class":  "com.haolo.ticketing.PostgresMetricsTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  4,
+                                            "class":  "com.haolo.ticketing.PostgresOutboxTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  30,
+                                            "class":  "com.haolo.ticketing.PostgresPaymentTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  1,
+                                            "class":  "com.haolo.ticketing.PostgresProductionProfileTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  1,
+                                            "class":  "com.haolo.ticketing.PostgresSchemaTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  23,
+                                            "class":  "com.haolo.ticketing.PostgresSeatExpiryTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  1,
+                                            "class":  "com.haolo.ticketing.PostgresSeedTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  1,
+                                            "class":  "com.haolo.ticketing.TicketingApplicationTest",
+                                            "failures":  0
+                                        },
+                                        {
+                                            "skipped":  0,
+                                            "errors":  0,
+                                            "tests":  2,
+                                            "class":  "com.haolo.ticketing.TraceContextTest",
+                                            "failures":  0
+                                        }
+                                    ],
+                        "note":  "130 distinct suite tests; focused green repeats one included test, not 131 distinct tests",
+                        "build":  "PASS",
+                        "command":  "sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom",
+                        "started":  "2026-11-14T12:31:10.0691686+07:00",
+                        "tests":  {
+                                      "skipped":  0,
+                                      "errors":  0,
+                                      "tests":  130,
+                                      "failures":  0
+                                  },
+                        "exitCode":  0,
+                        "sbom":  "PASS",
+                        "finished":  "2026-11-14T12:34:31.1475589+07:00",
+                        "run":  "ticketing-kafka-it-ci38-40c1aa94d432-full-92e8bc"
+                    },
+    "environment":  {
+                        "freshDatabases":  [
+                                               "ticketing_ci_ef5153c3b0044c1c92766b9171fbfb6a",
+                                               "ticketing_kafka_ci_ef5153c3b0044c1c92766b9171fbfb6a"
+                                           ],
+                        "profile":  "test",
+                        "imageId":  "sha256:8bbafa596475cc9dee1350c5ce53f1581c6336728c12827916a3719f37eed1e8",
+                        "postgres":  "17.11",
+                        "project":  "ticketing-kafka-it-ci38-40c1aa94d432",
+                        "imageNote":  "Locally built Temurin JDK + Docker CLI 29.9.1 + unzip; same pinned JDK/PG/Kafka as workflow, not identical GitHub runner hardware",
+                        "os":  "Linux containers on Docker Desktop Windows host",
+                        "kafka":  "4.2.2 KRaft",
+                        "timezone":  "UTC",
+                        "maven":  "Wrapper 3.9.16, SHA256 checked",
+                        "jdk":  "Temurin 25.0.5+8",
+                        "image":  "ticketing-ci38-jdk:25.0.5",
+                        "jvmContainerMemory":  "3 GiB",
+                        "network":  "Own Docker bridge, Kafka INTERNAL listener"
+                    },
+    "provenance":  {
+                       "documentationWrittenAfterTest":  true,
+                       "method":  "Fresh source-only snapshot from git tracked + nonignored untracked working tree, hashes checked before/after; no HEAD-only clone and no existing target",
+                       "testedFiles":  [
+                                           {
+                                               "sha256":  "A252A090813451756177FEFD9061915EC0866FB3BC7AABDD3A3F0EC6D2546146",
+                                               "path":  "backend/src/test/java/com/haolo/ticketing/HttpCompletionGate.java"
+                                           },
+                                           {
+                                               "sha256":  "02AEA2311C70DCAB96F971268333B1DD0D6E74ECDE9DD9A47F95BB37603559D9",
+                                               "path":  "backend/src/test/java/com/haolo/ticketing/KafkaRecoveryTest.java"
+                                           }
+                                       ],
+                       "runtimeFilesStillMatch":  186,
+                       "candidateFiles":  232
+                   },
+    "postchecks":  {
+                       "preexistingContainersUnchanged":  true,
+                       "linuxCompileLoadExit":  0,
+                       "logFilesRead":  38,
+                       "workspaceEnvUnchanged":  true,
+                       "preexistingVolumesRetained":  true,
+                       "logFindings":  0,
+                       "runtimeFilesMatch":  186,
+                       "status":  "PASS",
+                       "compileCommand":  "javac -d /tmp/ticketing-load-client tools/load/HttpBurst.java (Linux, source snapshot readonly)"
+                   },
+    "attempts":  [
+                     {
+                         "run":  "ticketing-ci38-40c1aa94d432-full-b21321",
+                         "exitCode":  1,
+                         "error":  "Backend validation failed",
+                         "tests":  {
+                                       "skipped":  0,
+                                       "errors":  0,
+                                       "tests":  130,
+                                       "failures":  4
+                                   },
+                         "phase":  "full",
+                         "status":  "FAIL"
+                     },
+                     {
+                         "run":  "ticketing-ci38-40c1aa94d432-red-0f691a",
+                         "exitCode":  1,
+                         "error":  null,
+                         "tests":  {
+                                       "skipped":  0,
+                                       "errors":  0,
+                                       "tests":  1,
+                                       "failures":  1
+                                   },
+                         "phase":  "red",
+                         "status":  "EXPECTED_TEST_FAILURE"
+                     },
+                     {
+                         "run":  "ticketing-ci38-40c1aa94d432-red-875e30",
+                         "exitCode":  1,
+                         "error":  "Expected original race assertion to fail, not an unrelated error",
+                         "tests":  {
+                                       "skipped":  0,
+                                       "errors":  0,
+                                       "tests":  1,
+                                       "failures":  1
+                                   },
+                         "phase":  "red",
+                         "status":  "FAIL"
+                     },
+                     {
+                         "run":  "ticketing-ci38-40c1aa94d432-red-eccede",
+                         "exitCode":  1,
+                         "error":  "Cannot find path \u0027C:\\Users\\tinht\\AppData\\Local\\Temp\\ticketing-ci38-40c1aa94d432-red-eccede\\backend\\target\\surefire-reports\u0027 because it does not exist.",
+                         "tests":  null,
+                         "phase":  "red",
+                         "status":  "FAIL"
+                     },
+                     {
+                         "run":  "ticketing-ci38-40c1aa94d432-targeted-02c33b",
+                         "exitCode":  0,
+                         "error":  null,
+                         "tests":  {
+                                       "skipped":  0,
+                                       "errors":  0,
+                                       "tests":  1,
+                                       "failures":  0
+                                   },
+                         "phase":  "targeted",
+                         "status":  "PASS"
+                     },
+                     {
+                         "run":  "ticketing-kafka-it-ci38-40c1aa94d432-full-92e8bc",
+                         "exitCode":  0,
+                         "error":  null,
+                         "tests":  {
+                                       "skipped":  0,
+                                       "errors":  0,
+                                       "tests":  130,
+                                       "failures":  0
+                                   },
+                         "phase":  "full",
+                         "status":  "PASS"
+                     }
+                 ],
+    "preparationFailures":  [
+                                "First Linux image lacked unzip, causing wrapper fallback to tar.gz to differ from pinned ZIP checksum; added unzip to test image, never changed repository checksum",
+                                "First reproduction runner compared a JUnit name without its CapturedOutput parameter suffix; corrected runner and repeated expected-red run",
+                                "First full Linux setup named broker ticketing-ci38-..., so 4 safety-prefix assertions failed before outage actions; changed owned project to ticketing-kafka-it-ci38-..., did not loosen guards, reran full 130 tests"
+                            ],
+    "preservation":  {
+                         "noVolumeDeleted":  true,
+                         "noDemoDatabaseOpened":  true,
+                         "preexistingVolumesRetained":  true,
+                         "preexistingContainersUnchanged":  true,
+                         "noCommitOrPush":  true,
+                         "workspaceEnvUnchanged":  true,
+                         "productionWorkflowFrontendContractsMigrationsUnchanged":  true
+                     },
+    "rawEvidence":  "reports/ci38/ (ignored): CI extract, per-attempt source hash manifest, JUnit, Maven output, SBOM in snapshot, own Linux test runner and environment; never publish linux.env or raw logs",
+    "limits":  [
+                   "GitHub run #38 remains failed for db5105f; no remote run contains this uncommitted fix",
+                   "No frontend/contracts/secrets job rerun or workflow changes; those jobs already passed and their sources are unchanged",
+                   "No full DOM/browser integration rerun: production code is unchanged; focus is failed Maven backend step and next javac step",
+                   "Linux containers use a local Docker bridge and Maven cache with memory limit, not GitHub-hosted runner hardware",
+                   "Test preparation failures remain recorded; only final green run is backend acceptance evidence; T10.1 not started"
+               ],
+    "finalSourceScan":  {
+                            "sourceFiles":  233,
+                            "status":  "PASS",
+                            "secretFindings":  0,
+                            "diffCheckExit":  0,
+                            "details":  "reports/ci38/final-source-scan.json"
+                        }
+}

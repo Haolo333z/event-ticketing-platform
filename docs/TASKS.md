@@ -241,7 +241,7 @@
   - **Phụ thuộc:** T9.2. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** MSG-01, PAY-02 và recovery; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo (In Progress, 2026-11-14):** gate local trên full working tree PASS (130 backend/54 frontend/69 contract/7 load-tool, V1–V9 sạch/restart, secret/dependency scan). Chờ GitHub Actions cho candidate sau khi chủ dự án tự commit/push; run #37 chỉ chứng minh HEAD502d34e. [Bằng chứng](evidence/t9-4-audit-2026-11-14.json).
+- [ ] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo (In Progress, 2026-11-14):** gate local migration/config/secret đã PASS. CI#38/db5105f đỏ backend do test đọc completion log trước server finally; bản sửa test với gate xác định đã PASS130/130 trên Linux, build/SBOM đạt. Chờ GitHub Actions của commit chứa bản sửa xanh; chưa commit/push hoặc T10.1. [Audit trước](evidence/t9-4-audit-2026-11-14.json), [sửa CI#38](evidence/ci38-backend-fix-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo. 
   - **Phụ thuộc:** T9.3. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

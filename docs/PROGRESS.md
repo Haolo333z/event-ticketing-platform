@@ -6,9 +6,9 @@
 
 - **Giai đoạn:** Kiểm chứng tích hợp — đang rà soát T9.4 ngày2026-11-14
 - **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.3 Done; fault/recovery có snapshot SQL trước/sau
-- **Task đang làm:** T9.4 đã PASS gate local trên full working tree; giữ In Progress vì chưa có GitHub Actions cho candidate chưa commit. Giữ thay đổi T9.2–T9.3, chưa commit/push
+- **Task đang làm:** T9.4: sửa test race lộ ở backend CI #38 của db5105f. Bản sửa working tree đã PASS 130/130 backend trên Linux container; chờ GitHub Actions của commit chứa bản sửa, chưa commit/push
 - **Task tiếp theo:** Chỉ cân nhắc T10.1 sau khi nghiệm thu T9.4; chưa làm Phần10
-- **Giới hạn:** GitHub Actions #37 xanh cho HEAD502d34e; chưa chứng minh candidate T9.2–T9.4. Không còn test lỗi trong lượt local; chưa làm Phần10.
+- **Giới hạn:** GitHub Actions #38 của db5105f vẫn đỏ backend, ba job còn lại xanh. Local Linux PASS không thay thế CI cho bản sửa chưa commit; T9.4 vẫn In Progress, chưa làm Phần10.
 
 - **Task trong TASKS:** 40/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
 
@@ -878,3 +878,57 @@ Toàn bộ version/checksum/installed_on và snapshot seed **giống hệt** tr�
 **Giới hạn:** local Windows, dependency/image/cache đã có, không phải máy mới/cache lạnh; chưa GitHub-hosted Linux cho candidate, shellcheck/pyflakes hoặc Chrome visual QA. Secret/dependency scan tại thời điểm chạy và90log không chứng minh mọi cấu hình log/tấn công; không có tài khoản/tiền thật. Một PostgreSQL/Kafka node; chưa HA/mất đĩa, pool exhaustion/statement cancellation độc lập hoặc cắt mạng đúng COMMIT. T9.2 benchmark giữ nguyên, không suy thêm SLO từ lượt audit này.
 
 **Tự kiểm tra lại trên Windows:** Docker Desktop Linux Server chạy, Java/Javac25.0.5+8, Node26.13.0/npm11.20.0 và Internet. Từ gốc repo dùng lệnh `test-invariants.ps1 -WorkingTree` ở trên, không sửa source trong khi gate chạy. Xem exit0 và summary của UUID mới, không đọc nhầm report cũ. Khi vẫn có sửa config/harness chưa commit, default hoặc `-RecoveryEvidence` có thể từ chối bởi guard HEAD; dùng `-WorkingTree` để kiểm tra candidate hiện tại. Không chạy verify smoke có ghi dữ liệu lên demo cần giữ.
+
+### 2026-11-14 — T9.4: sửa backend CI #38, đồng bộ test với log hoàn tất HTTP
+
+**Đầu vào/phạm vi:** working tree sạch tại `db5105f42f762c42b87498f44dd63c21b3a8f8a8`; T9.2–T9.4 trước đó đã được chủ dự án commit. Đọc log trực tiếp của [backend job132341445099, run #38](https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43560036198/job/132341445099), xác minh run đúng SHA này; đọc workflow/script/test/commit diff và quy tắc trước sửa. Chỉ xử lý backend trong T9.4; giữ nguyên workflow và code của contracts/frontend/secrets đã xanh. Không sửa production code, schema/migration, dữ liệu demo, stack hoặc các bất biến booking/recovery. Không commit/push hoặc làm T10.1.
+
+**Lệnh/bước đầu tiên gây CI exit1:** step6 `Build, test and generate dependency SBOM`, cwd backend:
+
+```sh
+sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom
+```
+
+Surefire báo `KafkaRecoveryTest.httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput)`, assertion ở **KafkaRecoveryTest.java:436 tại commit db5105f**, `expected: <true> but was: <false>`. Log tải xuống: failure đầu ở dòng1488–1497 lúc05:10:31Z; tổng kết dòng2050 **130test/1failure/0error/0skip** (129pass), rồi BUILD FAILURE và dòng2074 `Process completed with exit code 1` lúc05:10:46Z. Không phải Node.js warning hoặc thiếu artifact; các bước compile-load/Node/live UI/dependency phía sau bị skip vì Maven đã thất bại. Artifact UI thiếu là hệ quả, không phải nguyên nhân.
+
+**Nguyên nhân đã kiểm chứng:** lỗi đồng bộ của test, không phải API/idempotency hoặc dữ liệu PostgreSQL. `CorrelationFilter` ghi `http_request` trong finally **sau** `chain.doFilter`. HttpClient có thể nhận đủ HTTP202/body trước khi thread server đến dòng ghi log. Test đọc ngay ảnh chụp `CapturedOutput`, nên đôi lúc chưa có log replay. Chính log CI vẫn có bản ghi replay đúng event/booking với correlation mới (dòng1327); original outbox/publisher/consumer giữ correlation ban đầu (dòng1322–1326). Immediate assertion này cũng đã tồn tại ở parent502d34e; không quy lỗi cho công cụ tải mới hoặc các snapshot T9.3 chỉ vì chúng cùng commit.
+
+**Bản sửa và regression có điều khiển:**
+
+- `KafkaRecoveryTest.java`: chờ bounded theo correlation ID cho log HTTP replay/payment/GET tiếp theo; chờ đủ4stage đầu thay vì chỉ consumer. Giữ kiểm tra event ID, booking ID, HTTP202, body replay giống gốc, durable outbox correlation không đổi, consumer duplicate, payment path, redaction poison và không rò MDC sang request sau. Không tăng timeout hoặc bật retry test để che lỗi; thiếu log vẫn làm test timeout/fail.
+- `HttpCompletionGate.java` mới trong **src/test** và cấu hình test riêng được import vào KafkaRecoveryTest: filter nằm bên trong CorrelationFilter, flush response thật rồi chặn việc thoát filter theo đúng correlation được chọn. Test xác nhận đã nhận HTTP202 nhưng completion log chưa được ghi; thả latch trong try-with-resources rồi chờ và kiểm tra đầy đủ log. Latch hữu hạn10s và helper await hiện có25s; không tạo sleep cố định để hy vọng hết race. Không có filter/gate mới trong ứng dụng production, không giả HTTP hoặc ghi log giả.
+- Dựng cùng lịch thực thi với assertion cũ → **1test/1failure đúng assertion log replay**; dùng bản sửa với gate vẫn bật → **1/1PASS**. Đây là chứng minh trước/sau có điều khiển, không chỉ chạy lặp đến lúc xanh.
+
+**Môi trường gần CI và working tree:** Linux amd64 container Temurin25.0.5+8, Maven Wrapper3.9.16 có kiểm SHA, PostgreSQL17.11/Kafka4.2.2 thật, profile test/UTC, Docker CLI29.9.1 qua socket để stop/start **broker riêng**. JVM container memory3GiB. Project cuối `ticketing-kafka-it-ci38-40c1aa94d432`, hai DB UUID mới (tên đầy đủ theo summary/evidence); cổng host riêng, kết nối nội bộ postgres:5432/kafka:29092. Không nạp `.env` gốc. Mỗi lượt tạo snapshot source-only mới từ tracked + untracked không ignore, **232 file**, không có target cũ; SHA256 kiểm trước/sau, kể cả helper chưa commit. Shared Maven cache chỉ là dependency; byte source/test được copy trực tiếp từ working tree, không từ HEAD. Cuối lượt **186 file runtime/test/config/harness** vẫn khớp snapshot đã chạy; phần viết sau test chỉ là tài liệu/evidence.
+
+**Lệnh thực chạy và kết quả:** runner Linux cục bộ lưu ở `reports/ci38/run-backend.ps1` (ignored, dùng riêng workspace này), tạo snapshot/DB/topic riêng và stop project khi xong, giữ volume/DB. Lệnh PowerShell gọi runner và lệnh thực bên trong Linux:
+
+| Lượt | Lệnh | Kết quả |
+|---|---|---|
+| Đỏ có điều khiển, trước sửa assertion | `powershell -NoProfile -ExecutionPolicy Bypass -File reports/ci38/run-backend.ps1 -Phase red` → `sh ./mvnw -B -ntp '-Dtest=KafkaRecoveryTest#httpOutboxAndRealKafkaCarrySameIdsAndSafeJson' test` | Run `ticketing-ci38-40c1aa94d432-red-0f691a`: **1test/1failure/0error/0skip**, Maven exit1 đúng assertion cũ tại dòng455 của bản instrumented; runner ghi EXPECTED_TEST_FAILURE, không gọi là test PASS |
+| Xanh, giữ gate | Cùng lệnh Maven focused, runner `-Phase targeted` | `ticketing-ci38-40c1aa94d432-targeted-02c33b`: **1/1PASS**, exit0,12:26:53–12:27:41 +07:00 |
+| Toàn backend, đúng bước Maven CI | Runner `-Phase full` → `sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom` | `ticketing-kafka-it-ci38-40c1aa94d432-full-92e8bc`: **130/130PASS**,0failure/error/skip,17class, build/SBOM PASS, exit0;12:31:10–12:34:31 +07:00 |
+| Bước CI kế tiếp từng bị skip | Linux snapshot readonly, `javac -d /tmp/ticketing-load-client tools/load/HttpBurst.java` | PASS/exit0, output ban đầu chưa có; không sửa công cụ load |
+| Kiểm tra sau suite | SHA source, đọc log/JUnit đã đóng writer, hash `.env`/container/volume trước-sau; `git diff --check` |186 source hash khớp, **38 file log/JUnit/compile:0 finding** cho password test, bearer, Authorization, payload/raw event; demo/env/resource giữ nguyên; diff PASS |
+
+130test cuối gồm **19Kafka/recovery** và các hồi quy PostgreSQL: booking16,ghế/expiry23,payment30,outbox4,dashboard/security10,metrics5,admin9,catalog2,schema1,seed1,prodguard1, cộng9test unit/H2. Giữ các ca tranh50request GA/ghế, rollback/unique/idempotency, expiry release đúng1lần, late success/REFUND_REQUIRED, duplicate/retry/DLQ/replay, broker outage/consumer restart. Không cộng focused1 lần nữa thành131test khác nhau, không tuyên bố có37snapshot mới vì lần Maven này không bật RECOVERY_EVIDENCE_DIR. Không chạy lại benchmark T9.2 hoặc các job frontend/contracts/secrets đã xanh vì không có thay đổi của chúng.
+
+**Các lượt chuẩn bị lỗi được giữ, không dùng làm bằng chứng xanh:**
+
+1. `red-eccede`: image Linux tối giản thiếu unzip; wrapper fallback tar.gz không khớp checksum ZIP đã pin, dừng trước test. Thêm unzip vào **image kiểm tra**, không sửa wrapper/hash dự án.
+2. `red-875e30`: test thực sự fail đúng assertion cũ, nhưng guard runner so tên JUnit thiếu hậu tố `(CapturedOutput)` nên runner đánhFAIL. Sửa guard của runner và chạy lại red0f691a; giữ cả report cũ.
+3. `full-b21321`:130test/4failure, cả4 ở guard tiền tố container trước thao tác outage vì project kiểm tra ban đầu tên `ticketing-ci38-...`. CI thật vốn dùng `ticketing-kafka-it-ci`. Đổi **project test riêng** sang `ticketing-kafka-it-ci38-...`, giữ nguyên guard/assertion, chạy lại full92e8bc đạt130/130. Không đổi expected để chấp nhận cấu hình sai, không bỏ ca lỗi.
+
+**Bằng chứng:** [ci38-backend-fix-2026-11-14.json](evidence/ci38-backend-fix-2026-11-14.json) chứa nguyên nhân/log line, trace metadata an toàn, hash2file test, đỏ/xanh/full,17class, mọi attempt/giới hạn. Raw extract CI, runner/Dockerfile, manifest232file, JUnit, Maven logs và SBOM ở `reports/ci38/`/snapshot TEMP (ignored). Không đưa `linux.env`, password hoặc raw payment/log vào Git/báo cáo. Đối chiếu trước/sau: `.env` gốc không đổi, mọi container có sẵn giữ nguyên ID/state, mọi volume có sẵn còn nguyên; không mở/reset/mount DB demo. Các project/JVM test đã dừng, không xóa volume.
+
+Sau khi ghi tài liệu/evidence, tạo snapshot source-only **233file** hiện tại và chạy `gitleaks.exe dir . --redact --no-banner --report-format=json --report-path <reports/ci38>/final-secrets.json`: exit0/**0finding**; `git diff --check` exit0. Đây là quét bổ sung cho bản sửa backend, không tuyên bố đã chạy lại job secrets trên GitHub. Manifest cuối/kết quả ở `reports/ci38/final-source-scan.json`;186hash runtime đã test vẫn khớp.
+
+**Trạng thái/giới hạn:** T9.4 vẫn **In Progress**; run #38 còn đỏ cho db5105f, chưa có run cho bản sửa chưa commit. Linux container chạy đúng phiên bản/profile/lệnh của bước lỗi, nhưng khác máy GitHub-hosted, network dùng bridge/internal listener, Maven cache giữ ấm; không gọi đây là đã chạy GitHub Actions. Chưa chạy lại cả job DOM UI phía sau Maven hoặc Chrome visual vì production/frontend không đổi. Chưa commit/push hoặc làm T10.1. Chỉ đánh dấu Done sau khi chủ dự án tự commit/push và CI của **đúng SHA có bản sửa** xanh.
+
+Tự kiểm tra working tree trên Windows bằng gate cô lập đã có (không dùng bản clone HEAD cũ):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -WorkingTree
+```
+
+Lệnh này chạy rộng hơn lần sửa backend và tạo môi trường riêng, cần Docker Desktop/JDK25/Node26. Runner `reports/ci38/run-backend.ps1 -Phase full` chỉ là bằng chứng Linux có thể chạy lại trong workspace hiện tại với image/context đã dựng, không phải script phân phối trong clone mới. Xem exit code/JUnit của UUID mới; không đọc nhầm report đỏ hoặc report130PASS cũ để chứng minh source mới.

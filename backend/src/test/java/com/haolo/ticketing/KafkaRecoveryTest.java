@@ -18,6 +18,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.*;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
 import com.haolo.ticketing.bookings.*;
 import com.haolo.ticketing.payments.*;
 import com.haolo.ticketing.expiry.ExpiryService;
@@ -35,7 +40,18 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test") @DirtiesContext @ExtendWith(OutputCaptureExtension.class)
 @EnabledIfEnvironmentVariable(named="KAFKA_IT_BOOTSTRAP",matches=".+")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Import(KafkaRecoveryTest.HttpCompletionConfiguration.class)
 class KafkaRecoveryTest {
+    @TestConfiguration(proxyBeanMethods=false)
+    static class HttpCompletionConfiguration {
+        @Bean HttpCompletionGate httpCompletionGate(){return new HttpCompletionGate();}
+        @Bean FilterRegistrationBean<HttpCompletionGate> completionGateRegistration(HttpCompletionGate gate){
+            var registration=new FilterRegistrationBean<>(gate);
+            registration.setOrder(Ordered.HIGHEST_PRECEDENCE+1);
+            return registration;
+        }
+    }
+    @Autowired HttpCompletionGate httpCompletion;
     @Autowired RecoveryQuery recovery;
     @Autowired io.micrometer.core.instrument.MeterRegistry metrics;
     double retries(String stage,String consumer){return metrics.get("ticketing.messaging.retries").tags("stage",stage,"consumer",consumer).counter().count();}
@@ -410,6 +426,15 @@ class KafkaRecoveryTest {
         return output.getOut().lines().filter(s->s.startsWith("{")).map(s->{try{return json.readTree(s);}catch(Exception ex){throw new AssertionError("Invalid JSON log",ex);}})
             .filter(n->n.path("eventId").asString().equals(eventId.toString())&&n.has("stage")).toList();
     }
+    Optional<tools.jackson.databind.JsonNode> httpTrace(CapturedOutput output,String correlation){
+        return output.getOut().lines().filter(s->s.startsWith("{")).map(json::readTree)
+            .filter(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(correlation)).findFirst();
+    }
+    tools.jackson.databind.JsonNode awaitHttpTrace(CapturedOutput output,String correlation){
+        // Receiving the body does not join the server thread's filter-finally completion log.
+        await(()->httpTrace(output,correlation).isPresent());
+        return httpTrace(output,correlation).orElseThrow();
+    }
     @Test @Order(16) void httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput output)throws Exception{
         UUID correlation=UUID.randomUUID();String secret="private-payment-"+UUID.randomUUID();
         var body=json.writeValueAsString(Map.of("eventId",event,"ticketTypeId",type,"quantity",1));
@@ -421,19 +446,26 @@ class KafkaRecoveryTest {
         assertEquals(correlation.toString(),response.headers().firstValue("X-Correlation-Id").orElseThrow());
         UUID booking=UUID.fromString(json.readTree(response.body()).path("bookingId").asString());UUID message=eventId(booking,"BookingHeld");
         assertEquals(correlation,publisher.event(message).correlationId());flush(booking);await(()->inbox(EventConsumer.AUDIT,message)==1);
-        await(()->traceLines(output,message).stream().anyMatch(n->n.path("stage").asString().equals("consumer_processed")));
+        var requiredStages=Set.of("http_request","outbox_committed","outbox_published","consumer_processed");
+        await(()->traceLines(output,message).stream().map(n->n.path("stage").asString()).collect(java.util.stream.Collectors.toSet()).containsAll(requiredStages));
         var lines=traceLines(output,message);var stages=lines.stream().map(n->n.path("stage").asString()).collect(java.util.stream.Collectors.toSet());
         assertTrue(stages.containsAll(Set.of("http_request","outbox_committed","outbox_published","consumer_processed")),stages.toString());
         for(var line:lines){assertEquals(correlation.toString(),line.path("correlationId").asString());assertEquals(booking.toString(),line.path("bookingId").asString());}
         consumer.accept(EventConsumer.AUDIT,booking.toString(),codec.encode(publisher.event(message)));
         assertTrue(traceLines(output,message).stream().anyMatch(n->n.path("outcome").asString().equals("DUPLICATE")));
         // Replay links the original message without replacing its durable correlation ID.
-        UUID retryCorrelation=UUID.randomUUID();var retry=http.send(HttpRequest.newBuilder(request.uri())
-            .header("Content-Type","application/json").header("Authorization","Bearer demo-customer-token")
-            .header("Idempotency-Key",request.headers().firstValue("Idempotency-Key").orElseThrow()).header("X-Correlation-Id",retryCorrelation.toString())
-            .POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
-        assertEquals(202,retry.statusCode());assertEquals(response.body(),retry.body());assertEquals(correlation,publisher.event(message).correlationId());
-        assertTrue(traceLines(output,message).stream().anyMatch(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(retryCorrelation.toString())));
+        UUID retryCorrelation=UUID.randomUUID();
+        try(var completion=httpCompletion.pause(retryCorrelation)){
+            var retry=http.send(HttpRequest.newBuilder(request.uri())
+                .header("Content-Type","application/json").header("Authorization","Bearer demo-customer-token")
+                .header("Idempotency-Key",request.headers().firstValue("Idempotency-Key").orElseThrow()).header("X-Correlation-Id",retryCorrelation.toString())
+                .POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+            assertEquals(202,retry.statusCode());assertEquals(response.body(),retry.body());assertEquals(correlation,publisher.event(message).correlationId());
+            completion.awaitResponseFlushed();
+            assertTrue(httpTrace(output,retryCorrelation.toString()).isEmpty(),"Real response arrived while the test gate still blocks completion logging");
+        }
+        var retryLog=awaitHttpTrace(output,retryCorrelation.toString());
+        assertEquals(message.toString(),retryLog.path("eventId").asString());assertEquals(booking.toString(),retryLog.path("bookingId").asString());assertEquals(202,retryLog.path("status").intValue());
         // Payment uses a new request correlation, including the actual payment consumer path.
         var paymentResponse=http("POST","/api/bookings/"+booking+"/simulate-payment",json.writeValueAsString(Map.of("scenario","SUCCESS","requestId",UUID.randomUUID())),"demo-customer-token");
         assertEquals(202,paymentResponse.statusCode(),paymentResponse.body());String paymentCorrelation=paymentResponse.headers().firstValue("X-Correlation-Id").orElseThrow();
@@ -441,14 +473,14 @@ class KafkaRecoveryTest {
         await(()->traceLines(output,paymentMessage).stream().anyMatch(n->n.path("consumer").asString().equals(EventConsumer.PAYMENT)&&n.path("stage").asString().equals("consumer_processed")));
         var paymentLines=traceLines(output,paymentMessage);assertTrue(paymentLines.stream().map(n->n.path("stage").asString()).collect(java.util.stream.Collectors.toSet()).containsAll(Set.of("outbox_committed","outbox_published","consumer_processed")));
         for(var line:paymentLines){assertEquals(paymentCorrelation,line.path("correlationId").asString());assertEquals(booking.toString(),line.path("bookingId").asString());}
-        assertTrue(output.getOut().lines().filter(s->s.startsWith("{")).map(json::readTree).anyMatch(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(paymentCorrelation)&&n.path("bookingId").asString().equals(booking.toString())));
+        assertEquals(booking.toString(),awaitHttpTrace(output,paymentCorrelation).path("bookingId").asString());
         // A real poison record must be retried/parked without dumping its raw payment/token fields.
         String poisonKey="poison-trace-"+UUID.randomUUID();kafka.send(topic,poisonKey,"{\"token\":\""+secret+"\",\"paymentPayload\":\""+secret+"\"}").get(8,TimeUnit.SECONDS);
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=?",poisonKey)==2);
         assertFalse(output.getAll().contains(secret));assertFalse(output.getAll().contains("demo-customer-token"));assertFalse(output.getAll().contains("paymentPayload"));
         // A separate request has a different correlation and no stale booking/message IDs.
         var next=http("GET","/api/events",null,null);String nextId=next.headers().firstValue("X-Correlation-Id").orElseThrow();
-        var nextLog=output.getOut().lines().filter(s->s.startsWith("{")).map(json::readTree).filter(n->n.path("stage").asString().equals("http_request")&&n.path("correlationId").asString().equals(nextId)).findFirst().orElseThrow();
+        var nextLog=awaitHttpTrace(output,nextId);
         assertFalse(nextLog.has("bookingId"));assertFalse(nextLog.has("eventId"));
         evidence.add(Map.of("case","T8.1 HTTP/outbox/Kafka JSON trace and poison redaction","correlationId",correlation,"bookingId",booking,"eventId",message,"paymentCorrelationId",paymentCorrelation,"paymentEventId",paymentMessage,"stages",stages,"result","PASS"));
     }

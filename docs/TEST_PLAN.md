@@ -6,6 +6,8 @@ Chạy `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariant
 
 Acceptance CI phải phân biệt local gate trên working tree với GitHub Actions trên commit đã push. Không dùng CI xanh của HEAD để chứng minh các file chưa commit; ghi phần chưa xác minh nếu chưa có remote run cho candidate. Kiểm tra log chỉ chứng minh các log đã thu, không bảo đảm mọi cấu hình log có thể bật.
 
+Hồi quy CI#38: `KafkaRecoveryTest.httpOutboxAndRealKafkaCarrySameIdsAndSafeJson` dùng HttpCompletionGate **chỉ trong test** để flush response thật trước khi cho CorrelationFilter ghi log hoàn tất. Phải nhận202 trong lúc log vẫn bị chặn; thả latch rồi bounded-await đúng correlation và assert message/booking/status, outbox correlation gốc, redaction và MDC cleanup. Không giả định nhận body đồng nghĩa thread server đã ghi log. Test nằm trong suite PostgreSQL/Kafka thật, không skip khi nghiệm thu; bằng chứng đỏ/xanh/full tại PROGRESS và evidence/ci38-backend-fix-2026-11-14.json.
+
 ## Gate T9.3 — Lỗi, rollback và phục hồi (MSG-01/PAY-02)
 
 Lệnh: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -RecoveryEvidence`. Giữ default gate T9.1 từHEAD; chế độ T9.3 vẫn khóa application/config vềHEAD nhưng overlay **test sources hiện tại**, gồm file mới chưatrack, kiểm SHA256 từngfile trước/sau chạy. Không lấy kết quả trên testHEAD cũ để chứng minh bản sửa. Không nạp .env workspace/khởi động demo; DB/broker/topic/group/JVM test riêng theo harness đã có.
