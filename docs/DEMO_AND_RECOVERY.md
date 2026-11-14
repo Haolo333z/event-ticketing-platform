@@ -2,7 +2,7 @@
 
 ## T6 — Quy trình đã triển khai
 
-Các mục sau là kịch bản tổng thể; dashboard/metrics/reset toàn bộ thuộc giai đoạn sau. Lệnh T6 không reset database/volume.
+Dashboard/metrics/recovery UI hiện đã triển khai tại T7–T8; xem README gốc để chạy Windows và PROGRESS để biết bằng chứng. Các lệnh T6 bên dưới giữ làm runbook lỗi; không reset database/volume. verify-part7 ghi fixture, không dùng trên demo cần bảo toàn dữ liệu.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File infra/start-local.ps1 -HoldSeconds 20 -ExpiryIntervalSeconds 1

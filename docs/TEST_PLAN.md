@@ -1,5 +1,42 @@
 # TEST_PLAN — Kiểm thử và bằng chứng đồ án
 
+## Gate T9.4 — Working tree, migration và cấu hình phát hành demo
+
+Chạy `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -WorkingTree`. Snapshot bao gồm tracked/untracked không bị ignore và phản ánh file đã xóa, kiểm SHA256 trước/sau; không nạp `.env` gốc. Tái sử dụng gate T9.3, thêm Gitleaks history/candidate (redacted), actionlint, parse PowerShell, npm audit, SBOM/OSV, 7 test công cụ đo tải và javac. DB chính mới/rỗng chạy JAR hai lần: V1–V9, checksum/installed_on không đổi khi restart, 18 bảng/seed không nhân đôi/readiness UP. Giữ mọi volume; backend UUID DB được giữ trong mode này, UI DB tạm vẫn được harness tự dọn. Không reset demo.
+
+Acceptance CI phải phân biệt local gate trên working tree với GitHub Actions trên commit đã push. Không dùng CI xanh của HEAD để chứng minh các file chưa commit; ghi phần chưa xác minh nếu chưa có remote run cho candidate. Kiểm tra log chỉ chứng minh các log đã thu, không bảo đảm mọi cấu hình log có thể bật.
+
+## Gate T9.3 — Lỗi, rollback và phục hồi (MSG-01/PAY-02)
+
+Lệnh: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -RecoveryEvidence`. Giữ default gate T9.1 từHEAD; chế độ T9.3 vẫn khóa application/config vềHEAD nhưng overlay **test sources hiện tại**, gồm file mới chưatrack, kiểm SHA256 từngfile trước/sau chạy. Không lấy kết quả trên testHEAD cũ để chứng minh bản sửa. Không nạp .env workspace/khởi động demo; DB/broker/topic/group/JVM test riêng theo harness đã có.
+
+| Tiêu chí | Test/script tái sử dụng | Bằng chứng PG/Kafka cần thu | Khoảng trống xử lý T9.3 |
+|---|---|---|---|
+| Kafka dừng→phục hồi | KafkaRecoveryTest.brokerOffOnRetainsOutboxAndOrdersVersions | Stop/start broker thật, health503→200; result/outbox còn bền,versions1/2/3,2vé | Đã có case; thêm snapshot trước/offline/recovered |
+| Consumer restart + duplicate | asynchronousPaymentVersionTwoDuplicateAndConsumerRestart; recoveryHttpReplaysProcessedEventsWithoutAnySecondBusinessEffect |10payment duplicate +1sau restart/5confirmed replay; inbox1,1confirm; hash nghiệp vụ không đổi | Đã có case; xuất SQL trước/sau |
+| ACK Kafka rồi DB mark rollback | acknowledgedSendThenDatabaseFailureResendsSameId | OutboxPENDING nhưng audit inbox1; resend cùngID,projection1 | Đã có fault injection; xuất3snapshot |
+| Consumer rollback/retry/replay | paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka |3delivery lỗi/2retry,0inbox/0vé/held2; sau replay2vé/inbox1/RESOLVED | Đã có case; xuất phaseDEAD/recovered, không ghi exception/payload |
+| Poison→DLQ thật | malformedEventRetriesThenDurableRecoveryAndKafkaDlq |2consumer×3attempt,DBfailure giữ bền; đọc brokerDLQ thật,delivery marker | Đã có case; xuất metadata DB trước/DEAD/published, không raw record |
+| Quyền/audit/budget replay | replayRoleProfileAuditValidationAndBoundedBudget |401/403/prod403; tối đa3request mới,repeat cùngrequest no-op | Đã có case; snapshot audit count0→3,không bỏ inbox |
+| Payment đúng hạn trong outage | timelyDurablePaymentWinsExpiryEvenWhileKafkaHasNotDelivered | Broker thật dừng,record SUCCESS commit,timely=true; expiry confirm2vé/inbox0; broker lên inbox1/không confirm lần2 | **Khoảng trống thực:** ca cũ chỉ chưapublish, không stop broker. Bổ sung stop/record/worker/start trong chính ca đó |
+| Payment late/refund retry | expiredLateSuccessRefundRetryHistoryAndConcurrentDuplicateAreIdempotent |EXPIRED→REFUND_REQUIRED/0vé,1nghĩa vụ,refund failed→completed,12caller chỉ1completion | Đã có case; xuất phase trước/expired/refund fail/recovered |
+| Ghế đã nhận bởi owner mới | PostgresPaymentTest.expiredSeatBookingNeverTakesInventoryFromTheNewOwner |OldREFUND_REQUIRED/0vé/1comp;newPending vẫn giữ2ghế | Đã có case; xuất expired/newowner/lateprocessed |
+| Payment failure/repeat GA+ghế | failureReleasesGaOnceAndRepeatedResultsDoNotSubtractAgain; failureReleasesAllSeatsOnce |1PAYMENT_FAILED/history/event,0vé; held về0,repeat không giảm thêm | Đã có case; xuất trước/released/repeated |
+| Payment chậm và JVM restart | delayedLedgerIsDurableAndMaintenanceRecordsAndProcessesOnce; test-part6-ui.ps1 -Kafka |SCHEDULED result bền,expiry/refund,0vé,cùngintent saurestart,1compCOMPLETED,V1–V9không lặp | Tái sử dụng test +live restart đã có; thêm snapshot ledger unit,giữ SQL/live log |
+
+`RecoveryEvidence` là utility chỉ trong test, bật bằng RECOVERY_EVIDENCE_DIR: SELECT một snapshot theoeventUUID, xuất .sql/.json với ID/status/counter/timestamp, không raw event/error/paymentpayload/token/PII. Mỗi snapshot assert0oversell,GAqtymismatch,duplicate/owner/orphanseat,invalidticket,duplicatehistory/business event/compensation/refund completion. Snapshot failureevent_idNULL bao gồm orphanfailures trong DB Kafka test dùngchung; phân biệt baseline/delta, không giả định database chỉ có2failure. SQL có thể chạy lại trên đúngdatabase test khi harness còn chạy; sau cleanup dùng snapshot/file đã lưu hoặc chạy lại gate để tạoUUID mới.
+
+Giữ130test, không thêm scenario thừa hoặc đổi expected để xanh. Fullbackend/contract/frontend và các live GA/ghế/payment/recovery chạy lại. Chỉ Done sau khi JUnit khôngfail/error/skip, từng tiêu chí có filebằngchứng và commandexit0. Không chữa các đoạn tài liệu lịch sử ngoài phạm vi T9.3; T9.2dirtyfiles được giữ. Giới hạn: controlled worker gọi trực tiếp trong Kafka case, real scheduler/JVMrestart ởlivegate; trigger mô phỏng cửa sổ ACK/DB vàrollback, không nhận đãkill ởmọicửa sổCOMMIT hoặc chịu mấtổđĩa/clusterHA.
+
+## Gate T9.2 — LOAD-01, đo HTTP và đối soát PostgreSQL
+
+- `infra/test-load.ps1`: clone HEAD ứng dụng vào TEMP, .env/project/volume/cổng riêng; không nạp cấu hình hoặc khởi động demo. Overlay duy nhất công cụ load đang sửa; không thay code backend/config pool để làm đẹp kết quả.
+- Mặc định3lượt GA và3lượt SEATED, mỗi lượt50request/50platform worker thread, ready latch + start gate; ghi số worker sẵn sàng, peak HTTP in-flight và độ giãn thời điểm gửi. Một JVM client/HttpClient HTTP1.1 dùng lại giữa các lượt. Warm-up10request mỗi mode dùng fixture riêng, ghi riêng, không cộng vào phép đo. Mọi request có key khác nhau, không tự retry.
+- GA capacity10, quantity1. SEATED2ghế, mọi request chọn cùng cặp, luân phiên đảo seatIds. Chỉ202 có booking hợp lệ là success; chỉ409/INVENTORY_UNAVAILABLE là conflict dự kiến.503/BOOKING_BUSY,4xx khác,5xx, timeout, lỗi mạng/response được ghi riêng và làm gate FAIL; không gộp thành conflict/PASS.
+- Đồng hồ client monotonic: latency từ trước send tới đọc hết body; p50/p95/p99 nearest-rank, đơn vịms, cho tất cả request và từng outcome. Throughput completed requests / (gate→response cuối), đơn vịrequest/s; báo riêng success/s. Đây là burst hữu hạn, không phải TPS ổn định hoặc thời gian thanh toán. Không có SLO p95/TPS cố định trong TASKS để tự đặt rồi tuyên bố đạt.
+- Sau từng lượt (kể cả warm-up): query read-only một snapshot theo event/request UUID mới; so success ID với booking/key/item/history/outbox, failed key không còn row; GA held+sold<=capacity và khớp quantity; ghế có đúngowner, không active allocation trùng/partial hold. Sau đó simulate SUCCESS và chờ Kafka confirm ngoài cửa sổ đo; query sold/ticket/ordinal/owner lại để kiểm tra không bán trùng. Lưu query, snapshot trước/sau và số vi phạm (oversell=0, rollbackArtifacts=0). Không dùng seed/demo counts làm assertion.
+- Lưu máy/CPU/RAM/OS/JDK/Node/Docker/PG/Kafka, JVM/HTTP worker, pool thực tế từ Actuator Hikari gauges, timeout/hold/worker config, mỗi response/latency và mọi lỗi. Unit checks của công cụ phải bắt cách phân loại503/400/mạng và percentile; gate chỉ Done khi các lượt đủconcurrency, zero unexpected errors và SQL đồng nhất. T9.3 chưa thực hiện.
+
 ## Gate T9.1 — Chạy lại bất biến từ HEAD hiện tại
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1` tạo clone HEAD và `.env`/project/volume/cổng riêng, không nạp cấu hình `.env` workspace hoặc khởi động demo (chỉ đọc hash file để kiểm tra bảo toàn). Từ chối nếu code ứng dụng/test chưa khớp HEAD để không báo nhầm kết quả của code cũ. Chạy lại ca sẵn có; chỉ thêm test nghiệp vụ khi xác định khoảng trống. Runner mới chỉ điều phối và thu bằng chứng, không thêm scenario hoặc sửa bất biến.
@@ -60,7 +97,7 @@ Các burst50request là hồi quy đã có, không thay nghiệm thu máy/latenc
 
 `infra/test-part6-ui.ps1 -Kafka`: 50HTTP responseOpenAPI, checkout DOM API thật GA3+seats2/5véunique, failure/cancel/late success/expiry, JVMrestart scheduledresult, compensationCOMPLETED và SQL0oversell/0vésaiowner/0nghĩavụtrùng/V1–V9mộtlần. Frontend26ca; staticcontract49payload. Không coi jsdom là browser visual QA; YAMLlint không chứng minh remote CI xanh. Các mục Phần4–6 dưới đây giữ bằng chứng lịch sử.
 
-> Kế hoạch toàn dự án và kết quả đến Phần6. Payment/ghế/expiry/vé đã có bằng chứng dưới đây;Kafka/inbox/refund worker vẫn là kế hoạch. Kết quả thực tại PROGRESS/evidence/part6-2026-11-12.json. Các gate Phần4/5 giữ số liệu lịch sử của chúng.
+> Các mục Phần4–6 dưới đây là bằng chứng lịch sử tại thời điểm đó (khi Kafka/inbox/refund worker chưa triển khai). Hiện tại các chức năng này đã có; xem gate T9.1–T9.4 phía trên và PROGRESS. Không dùng giới hạn hoặc số test của Phần6 để mô tả trạng thái hiện tại.
 
 ## Nguyên tắc
 
@@ -95,7 +132,7 @@ Test nghiệp vụ dùng PostgreSQL thật trong môi trường cô lập; Kafka
 | COMP-01 | 6 | late success lặp, refund simulator fail rồi retry | một payment chỉ có một compensation; chỉ một lần hoàn tất; booking giữ REFUND_REQUIRED |
 | MSG-02 | 6 | payment consumer chỉ nhận PaymentResultRecorded có aggregateVersion > 1, DB booking.version đã tăng; projection gặp gap thật | payment được phân xử từ row bền, không bị bỏ vì version; projection dừng event vượt gap và đưa recovery |
 | SEC-01 | 7 | token lạ, CUSTOMER gọi admin, profile khác bật mock auth | 401/403/fail startup |
-| LOAD-01 | 9 | >=50 request đồng thời ghế/GA trên máy demo | báo cáo success/conflict/latency, DB invariant, không bịa TPS |
+| LOAD-01 | 9 | >=50 request đồng thời mỗi loại ghế/GA trên máy kiểm chứng, dùng project/database riêng | báo cáo máy/luồng/pool, success/conflict/lỗi khác, throughput/p50/p95/p99 và DB invariant; không suy thành sustained TPS |
 
 ## Cách chạy và chứng cứ
 

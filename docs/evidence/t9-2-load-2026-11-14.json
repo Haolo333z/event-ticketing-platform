@@ -1,0 +1,1360 @@
+﻿{
+    "task":  "T9.2",
+    "status":  "PASS",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "sourceHead":  "502d34e1092076d3f4a91d1f6892d6febca939cc",
+    "initialWorkingTreeClean":  true,
+    "started":  "2026-11-14T08:49:15.6245433+07:00",
+    "finished":  "2026-11-14T08:49:56.0698374+07:00",
+    "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-load.ps1 -Requests 50 -Rounds 3",
+    "runnerExitCode":  0,
+    "runnerSha256":  "8D8961DDF7C85D7F67CA111A08C20D82CD50BCE36F71CDF4F1A457F9B4B7C1B9",
+    "tools":  [
+                  {
+                      "sha256":  "6B4062EC55414A97CEA0A73A9A6B9E55F1C7E663DC882EBE11286AF586EF4603",
+                      "path":  "tools/load/HttpBurst.java"
+                  },
+                  {
+                      "sha256":  "12D2D785F72F601C56B0BCD4132000DA4CE1AEFA9D778403A991D3E7FD37D2DD",
+                      "path":  "tools/load/booking-load.mjs"
+                  },
+                  {
+                      "sha256":  "A2D4F9D64C6A54F5E290212FA2E387ABB6D60455D9BF2B8A9222DC3D0C1CC06C",
+                      "path":  "tools/load/statistics.mjs"
+                  },
+                  {
+                      "sha256":  "C007605972B06BED4597B06FCDD805E0A837EC6C430BDFF7B6ADC5808F1CD160",
+                      "path":  "tools/load/statistics.test.mjs"
+                  }
+              ],
+    "machine":  {
+                    "docker":  "29.9.1 / 29.9.1",
+                    "ramBytes":  16948453376,
+                    "freeMemoryKiB":  2529440,
+                    "cpu":  "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+                    "dockerResources":  "CPUs=12;MemoryBytes=8208916480",
+                    "java":  "openjdk 25.0.5 2026-10-20 LTS OpenJDK Runtime Environment Temurin-25.0.5+8 (build 25.0.5+8-LTS) OpenJDK 64-Bit Server VM Temurin-25.0.5+8 (build 25.0.5+8-LTS, mixed mode, sharing)",
+                    "os":  "Microsoft Windows 11 Home Single Language",
+                    "compose":  "Docker Compose version v5.6.0",
+                    "cores":  6,
+                    "logicalProcessors":  12,
+                    "node":  "v26.13.0"
+                },
+    "images":  {
+                   "kafka":  "apache/kafka:4.2.2",
+                   "postgres":  "postgres:17.11"
+               },
+    "configuration":  {
+                          "rounds":  3,
+                          "totalTimeoutMs":  "10000",
+                          "clientWorkers":  50,
+                          "holdTtlSeconds":  "600",
+                          "messagingEnabled":  true,
+                          "expiryIntervalSeconds":  "5",
+                          "backendJvm":  "-Xms256m -Xmx512m",
+                          "poolMin":  "2",
+                          "clientJvm":  "-Xms128m -Xmx256m",
+                          "requests":  50,
+                          "expiryEnabled":  "true",
+                          "attemptTimeoutMs":  "5000",
+                          "poolAcquisitionTimeoutMs":  2000,
+                          "identity":  "One seeded customer principal, unique idempotency key per request; local/test fixture only",
+                          "poolMax":  "10",
+                          "transport":  "Loopback HTTP/1.1; same host for client/server/containers",
+                          "statementTimeoutMs":  "5000",
+                          "lockTimeoutMs":  "1500"
+                      },
+    "observedPool":  {
+                         "max":  10,
+                         "min":  2,
+                         "source":  "Actuator Hikari gauges"
+                     },
+    "isolation":  {
+                      "postgresPort":  55661,
+                      "freshVolumes":  true,
+                      "database":  "ticketing_load",
+                      "backendPort":  55663,
+                      "kafkaPort":  55662
+                  },
+    "project":  "ticketing-load-dbe3d57c0fb2",
+    "checkout":  "C:\\Users\\tinht\\AppData\\Local\\Temp\\ticketing-load-dbe3d57c0fb2",
+    "retainedOwnedVolumes":  [
+                                 "ticketing-load-dbe3d57c0fb2_kafka_demo",
+                                 "ticketing-load-dbe3d57c0fb2_postgres_demo"
+                             ],
+    "method":  {
+                   "percentile":  "Nearest rank ceil(p*n), sorted actual samples; p99 for50samples equals max",
+                   "settlement":  "After hold SQL, simulate SUCCESS for winners, wait CONFIRMED through running application/Kafka and query sold/tickets; excluded from booking latency",
+                   "responses":  "202 with valid PENDING_PAYMENT booking ID=success;409 INVENTORY_UNAVAILABLE=expected conflict; every other HTTP/code/transport/invalid response counts as other error and fails gate",
+                   "latency":  "System.nanoTime immediately before send until entire response body read; milliseconds; no automatic retry",
+                   "throughput":  "n completed requests / seconds from gate release to last full response; success/s separately. Aggregate=sum(n)/sum(burst windows); no settlement/setup/warmup time",
+                   "generator":  "One long-lived Java25 HttpClient HTTP1.1;50platform worker threads, CountDownLatch ready/start gate; Node orchestrates fixtures/audits only",
+                   "warmup":  "10GA +10SEATED on separate event fixtures, excluded from measured results. Client/JVM/backend reused;50connection burst may still encounter new connections/JIT"
+               },
+    "totals":  {
+                   "passingRounds":  6,
+                   "backendBuild":  "PASS package -DskipTests; full backend suite NOT rerun in T9.2; production code unchanged",
+                   "seatedRequests":  150,
+                   "toolTestFailures":  0,
+                   "otherErrors":  0,
+                   "toolTests":  7,
+                   "measuredRounds":  6,
+                   "warmupRequests":  20,
+                   "success":  33,
+                   "gaRequests":  150,
+                   "expectedConflicts":  267,
+                   "measuredRequests":  300
+               },
+    "aggregates":  {
+                       "GA":  {
+                                  "requests":  150,
+                                  "success":  30,
+                                  "expectedConflict":  120,
+                                  "otherErrors":  0,
+                                  "outcomes":  {
+                                                   "success":  {
+                                                                   "count":  30,
+                                                                   "p50Ms":  91.9037,
+                                                                   "p95Ms":  171.9708,
+                                                                   "p99Ms":  179.7903,
+                                                                   "maxMs":  179.7903
+                                                               },
+                                                   "expectedConflict":  {
+                                                                            "count":  120,
+                                                                            "p50Ms":  172.8295,
+                                                                            "p95Ms":  252.8266,
+                                                                            "p99Ms":  260.0202,
+                                                                            "maxMs":  261.0753
+                                                                        }
+                                               },
+                                  "latency":  {
+                                                  "count":  150,
+                                                  "p50Ms":  163.8826,
+                                                  "p95Ms":  251.749,
+                                                  "p99Ms":  260.0202,
+                                                  "maxMs":  261.0753
+                                              },
+                                  "elapsedMs":  654.7153000000001,
+                                  "completedRequestsPerSecond":  229.10721652602282,
+                                  "successfulBookingsPerSecond":  45.82144330520456
+                              },
+                       "SEATED":  {
+                                      "requests":  150,
+                                      "success":  3,
+                                      "expectedConflict":  147,
+                                      "otherErrors":  0,
+                                      "outcomes":  {
+                                                       "expectedConflict":  {
+                                                                                "count":  147,
+                                                                                "p50Ms":  99.608,
+                                                                                "p95Ms":  143.4615,
+                                                                                "p99Ms":  152.9266,
+                                                                                "maxMs":  155.9545
+                                                                            },
+                                                       "success":  {
+                                                                       "count":  3,
+                                                                       "p50Ms":  45.4013,
+                                                                       "p95Ms":  47.9055,
+                                                                       "p99Ms":  47.9055,
+                                                                       "maxMs":  47.9055
+                                                                   }
+                                                   },
+                                      "latency":  {
+                                                      "count":  150,
+                                                      "p50Ms":  98.1443,
+                                                      "p95Ms":  143.4615,
+                                                      "p99Ms":  152.9266,
+                                                      "maxMs":  155.9545
+                                                  },
+                                      "elapsedMs":  440.92100000000005,
+                                      "completedRequestsPerSecond":  340.1969967409127,
+                                      "successfulBookingsPerSecond":  6.8039399348182545
+                                  }
+                   },
+    "measurements":  [
+                         {
+                             "name":  "round1-ga",
+                             "mode":  "GA",
+                             "round":  1,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "2046f64e-d882-4dba-a29f-432f49f3a54b",
+                             "ticketTypeId":  "1da96953-8c74-48ae-8ba4-99f4bccbec29",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  8.9375,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  10,
+                                             "expectedConflict":  40,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "success":  {
+                                                                              "count":  10,
+                                                                              "p50Ms":  119.3425,
+                                                                              "p95Ms":  179.7903,
+                                                                              "p99Ms":  179.7903,
+                                                                              "maxMs":  179.7903
+                                                                          },
+                                                              "expectedConflict":  {
+                                                                                       "count":  40,
+                                                                                       "p50Ms":  225.4044,
+                                                                                       "p95Ms":  259.1923,
+                                                                                       "p99Ms":  261.0753,
+                                                                                       "maxMs":  261.0753
+                                                                                   }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  213.4756,
+                                                             "p95Ms":  259.1923,
+                                                             "p99Ms":  261.0753,
+                                                             "maxMs":  261.0753
+                                                         },
+                                             "elapsedMs":  264.3094,
+                                             "completedRequestsPerSecond":  189.1722352666988,
+                                             "successfulBookingsPerSecond":  37.834447053339765
+                                         },
+                             "afterHold":  {
+                                               "held":  10,
+                                               "keys":  10,
+                                               "sold":  0,
+                                               "items":  10,
+                                               "pending":  10,
+                                               "tickets":  0,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "0b8ac407-9486-403b-b077-83f3e70e3719",
+                                                                  "2fe197a6-5578-4e9e-92e4-0c74546c5d1b",
+                                                                  "36197ec7-3e48-432c-9fa1-c9b6516a965b",
+                                                                  "5c06893a-44b6-4af2-9e1d-317046feb4c3",
+                                                                  "79d70e24-f607-489f-a8ec-089a8ec371e0",
+                                                                  "82b85ae8-225c-4050-951b-637b01ab3bab",
+                                                                  "97f058ed-58bc-4bce-89fc-ddd1a4ea68dd",
+                                                                  "a11023f9-a182-4e27-abcb-fc9d8fd4e0fc",
+                                                                  "c51af5ec-dbe1-4f61-86f5-f5925e9ab656",
+                                                                  "d26d2279-628e-4120-8a88-02329fb6574b"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  10,
+                                               "sold":  10,
+                                               "items":  10,
+                                               "pending":  0,
+                                               "tickets":  10,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  10,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "0b8ac407-9486-403b-b077-83f3e70e3719",
+                                                                  "2fe197a6-5578-4e9e-92e4-0c74546c5d1b",
+                                                                  "36197ec7-3e48-432c-9fa1-c9b6516a965b",
+                                                                  "5c06893a-44b6-4af2-9e1d-317046feb4c3",
+                                                                  "79d70e24-f607-489f-a8ec-089a8ec371e0",
+                                                                  "82b85ae8-225c-4050-951b-637b01ab3bab",
+                                                                  "97f058ed-58bc-4bce-89fc-ddd1a4ea68dd",
+                                                                  "a11023f9-a182-4e27-abcb-fc9d8fd4e0fc",
+                                                                  "c51af5ec-dbe1-4f61-86f5-f5925e9ab656",
+                                                                  "d26d2279-628e-4120-8a88-02329fb6574b"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  10,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  10,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         },
+                         {
+                             "name":  "round1-seated",
+                             "mode":  "SEATED",
+                             "round":  1,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "f481d29f-bf29-4fca-acc2-390ceb62ac5d",
+                             "ticketTypeId":  "d43ad47e-3b12-4b9f-b9db-f8e2d60cecd9",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  5.046799999999999,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  1,
+                                             "expectedConflict":  49,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "expectedConflict":  {
+                                                                                       "count":  49,
+                                                                                       "p50Ms":  104.4176,
+                                                                                       "p95Ms":  149.0461,
+                                                                                       "p99Ms":  155.9545,
+                                                                                       "maxMs":  155.9545
+                                                                                   },
+                                                              "success":  {
+                                                                              "count":  1,
+                                                                              "p50Ms":  47.9055,
+                                                                              "p95Ms":  47.9055,
+                                                                              "p99Ms":  47.9055,
+                                                                              "maxMs":  47.9055
+                                                                          }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  102.9208,
+                                                             "p95Ms":  149.0461,
+                                                             "p99Ms":  155.9545,
+                                                             "maxMs":  155.9545
+                                                         },
+                                             "elapsedMs":  156.3846,
+                                             "completedRequestsPerSecond":  319.72457646085354,
+                                             "successfulBookingsPerSecond":  6.394491529217071
+                                         },
+                             "afterHold":  {
+                                               "held":  2,
+                                               "keys":  1,
+                                               "sold":  0,
+                                               "items":  2,
+                                               "pending":  1,
+                                               "tickets":  0,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "52bb9765-87e8-4b13-8fb1-002d5e51bac1"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  1,
+                                               "sold":  2,
+                                               "items":  2,
+                                               "pending":  0,
+                                               "tickets":  2,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  1,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "52bb9765-87e8-4b13-8fb1-002d5e51bac1"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  1,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  1,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         },
+                         {
+                             "name":  "round2-ga",
+                             "mode":  "GA",
+                             "round":  2,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "0c1cd36b-1366-476a-9e76-3fe860e2d050",
+                             "ticketTypeId":  "31b04b22-1737-49d4-b227-ffaf0777bc22",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  9.5105,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  10,
+                                             "expectedConflict":  40,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "expectedConflict":  {
+                                                                                       "count":  40,
+                                                                                       "p50Ms":  147.2417,
+                                                                                       "p95Ms":  172.8295,
+                                                                                       "p99Ms":  176.7171,
+                                                                                       "maxMs":  176.7171
+                                                                                   },
+                                                              "success":  {
+                                                                              "count":  10,
+                                                                              "p50Ms":  69.8402,
+                                                                              "p95Ms":  112.4402,
+                                                                              "p99Ms":  112.4402,
+                                                                              "maxMs":  112.4402
+                                                                          }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  136.4779,
+                                                             "p95Ms":  172.8295,
+                                                             "p99Ms":  176.7171,
+                                                             "maxMs":  176.7171
+                                                         },
+                                             "elapsedMs":  180.8237,
+                                             "completedRequestsPerSecond":  276.5124261919206,
+                                             "successfulBookingsPerSecond":  55.30248523838413
+                                         },
+                             "afterHold":  {
+                                               "held":  10,
+                                               "keys":  10,
+                                               "sold":  0,
+                                               "items":  10,
+                                               "pending":  10,
+                                               "tickets":  0,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "186d0696-85de-4a59-93e7-16b177dab560",
+                                                                  "21cd6f1f-f833-45ad-a827-9b3ad6a08687",
+                                                                  "3bbc206b-933b-48e1-a7d5-0dc3125868d2",
+                                                                  "3fc42849-6b9d-406b-bd18-c87b5d130fbf",
+                                                                  "4b3d1e25-56e4-4d7d-9107-54d9ea690086",
+                                                                  "528e07a2-ccd4-40ad-a8d2-004a7fe58fc7",
+                                                                  "52b137ad-94b3-45fb-a573-ab2381dee71d",
+                                                                  "6395d234-2a1c-4509-bd62-319972d461b3",
+                                                                  "c650a3f7-6ea7-4cee-8158-898f9af60032",
+                                                                  "dff5a185-e955-4cdb-9899-0a284b082ed6"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  10,
+                                               "sold":  10,
+                                               "items":  10,
+                                               "pending":  0,
+                                               "tickets":  10,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  10,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "186d0696-85de-4a59-93e7-16b177dab560",
+                                                                  "21cd6f1f-f833-45ad-a827-9b3ad6a08687",
+                                                                  "3bbc206b-933b-48e1-a7d5-0dc3125868d2",
+                                                                  "3fc42849-6b9d-406b-bd18-c87b5d130fbf",
+                                                                  "4b3d1e25-56e4-4d7d-9107-54d9ea690086",
+                                                                  "528e07a2-ccd4-40ad-a8d2-004a7fe58fc7",
+                                                                  "52b137ad-94b3-45fb-a573-ab2381dee71d",
+                                                                  "6395d234-2a1c-4509-bd62-319972d461b3",
+                                                                  "c650a3f7-6ea7-4cee-8158-898f9af60032",
+                                                                  "dff5a185-e955-4cdb-9899-0a284b082ed6"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  10,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  10,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         },
+                         {
+                             "name":  "round2-seated",
+                             "mode":  "SEATED",
+                             "round":  2,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "246cb52f-031c-4359-a9c7-f99a80cdfe3e",
+                             "ticketTypeId":  "b7e56ced-b6ae-4c5e-b512-531514761e7c",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  3.4704,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  1,
+                                             "expectedConflict":  49,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "expectedConflict":  {
+                                                                                       "count":  49,
+                                                                                       "p50Ms":  94.4933,
+                                                                                       "p95Ms":  137.8517,
+                                                                                       "p99Ms":  144.9674,
+                                                                                       "maxMs":  144.9674
+                                                                                   },
+                                                              "success":  {
+                                                                              "count":  1,
+                                                                              "p50Ms":  45.4013,
+                                                                              "p95Ms":  45.4013,
+                                                                              "p99Ms":  45.4013,
+                                                                              "maxMs":  45.4013
+                                                                          }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  92.5633,
+                                                             "p95Ms":  137.8517,
+                                                             "p99Ms":  144.9674,
+                                                             "maxMs":  144.9674
+                                                         },
+                                             "elapsedMs":  145.001,
+                                             "completedRequestsPerSecond":  344.82520810201305,
+                                             "successfulBookingsPerSecond":  6.896504162040261
+                                         },
+                             "afterHold":  {
+                                               "held":  2,
+                                               "keys":  1,
+                                               "sold":  0,
+                                               "items":  2,
+                                               "pending":  1,
+                                               "tickets":  0,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "9b742c8f-1ad6-428c-bc9d-dff4685bb6a3"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  1,
+                                               "sold":  2,
+                                               "items":  2,
+                                               "pending":  0,
+                                               "tickets":  2,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  1,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "9b742c8f-1ad6-428c-bc9d-dff4685bb6a3"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  1,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  1,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         },
+                         {
+                             "name":  "round3-ga",
+                             "mode":  "GA",
+                             "round":  3,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "dc163fcd-159d-474d-9c47-f53b12eb6371",
+                             "ticketTypeId":  "d297256b-05b6-4a40-87d1-e340f8ee83ca",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  10.860800000000001,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  10,
+                                             "expectedConflict":  40,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "expectedConflict":  {
+                                                                                       "count":  40,
+                                                                                       "p50Ms":  169.3724,
+                                                                                       "p95Ms":  198.1676,
+                                                                                       "p99Ms":  206.2848,
+                                                                                       "maxMs":  206.2848
+                                                                                   },
+                                                              "success":  {
+                                                                              "count":  10,
+                                                                              "p50Ms":  87.0224,
+                                                                              "p95Ms":  132.7399,
+                                                                              "p99Ms":  132.7399,
+                                                                              "maxMs":  132.7399
+                                                                          }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  162.7744,
+                                                             "p95Ms":  198.1676,
+                                                             "p99Ms":  206.2848,
+                                                             "maxMs":  206.2848
+                                                         },
+                                             "elapsedMs":  209.5822,
+                                             "completedRequestsPerSecond":  238.56987854884622,
+                                             "successfulBookingsPerSecond":  47.713975709769244
+                                         },
+                             "afterHold":  {
+                                               "held":  10,
+                                               "keys":  10,
+                                               "sold":  0,
+                                               "items":  10,
+                                               "pending":  10,
+                                               "tickets":  0,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "05949aeb-9f8c-4e04-a706-594f7e4ecd5a",
+                                                                  "29edc894-7a39-496b-a5e4-c0a4accaf5a5",
+                                                                  "2ef99a62-247d-4a2c-b264-70afa1057ad9",
+                                                                  "5222df56-260e-41a2-960c-9959a050ca19",
+                                                                  "581f16ba-2a48-420e-86be-1fdaddda64db",
+                                                                  "5cd48efa-7c3d-42f8-beb3-c44252ef3456",
+                                                                  "6ac00dfa-419d-4388-beef-867599018b77",
+                                                                  "7d281c69-f15e-4ff4-a6ae-8060dacd1bb8",
+                                                                  "adc42de7-eb17-499a-8ff4-acee7f95b941",
+                                                                  "ea4e4005-7297-4306-9e2e-257b29c44dd8"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  10,
+                                               "sold":  10,
+                                               "items":  10,
+                                               "pending":  0,
+                                               "tickets":  10,
+                                               "bookings":  10,
+                                               "capacity":  10,
+                                               "oversell":  0,
+                                               "confirmed":  10,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "05949aeb-9f8c-4e04-a706-594f7e4ecd5a",
+                                                                  "29edc894-7a39-496b-a5e4-c0a4accaf5a5",
+                                                                  "2ef99a62-247d-4a2c-b264-70afa1057ad9",
+                                                                  "5222df56-260e-41a2-960c-9959a050ca19",
+                                                                  "581f16ba-2a48-420e-86be-1fdaddda64db",
+                                                                  "5cd48efa-7c3d-42f8-beb3-c44252ef3456",
+                                                                  "6ac00dfa-419d-4388-beef-867599018b77",
+                                                                  "7d281c69-f15e-4ff4-a6ae-8060dacd1bb8",
+                                                                  "adc42de7-eb17-499a-8ff4-acee7f95b941",
+                                                                  "ea4e4005-7297-4306-9e2e-257b29c44dd8"
+                                                              ],
+                                               "heldEvents":  10,
+                                               "itemQuantity":  10,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  10,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  10,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  10,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         },
+                         {
+                             "name":  "round3-seated",
+                             "mode":  "SEATED",
+                             "round":  3,
+                             "warmup":  false,
+                             "status":  "PASS",
+                             "eventId":  "efb02bba-5ac9-448f-8a97-64a83436f594",
+                             "ticketTypeId":  "dd2a7039-a0c7-4460-ba75-d7ab33be0d52",
+                             "concurrency":  {
+                                                 "configured":  50,
+                                                 "distinctWorkers":  50,
+                                                 "startSpreadMs":  5.446300000000001,
+                                                 "readyWorkers":  50,
+                                                 "peakInFlight":  50
+                                             },
+                             "summary":  {
+                                             "requests":  50,
+                                             "success":  1,
+                                             "expectedConflict":  49,
+                                             "otherErrors":  0,
+                                             "outcomes":  {
+                                                              "expectedConflict":  {
+                                                                                       "count":  49,
+                                                                                       "p50Ms":  99.8492,
+                                                                                       "p95Ms":  131.0829,
+                                                                                       "p99Ms":  134.0737,
+                                                                                       "maxMs":  134.0737
+                                                                                   },
+                                                              "success":  {
+                                                                              "count":  1,
+                                                                              "p50Ms":  43.8463,
+                                                                              "p95Ms":  43.8463,
+                                                                              "p99Ms":  43.8463,
+                                                                              "maxMs":  43.8463
+                                                                          }
+                                                          },
+                                             "latency":  {
+                                                             "count":  50,
+                                                             "p50Ms":  98.6668,
+                                                             "p95Ms":  131.0829,
+                                                             "p99Ms":  134.0737,
+                                                             "maxMs":  134.0737
+                                                         },
+                                             "elapsedMs":  139.5354,
+                                             "completedRequestsPerSecond":  358.33200750490556,
+                                             "successfulBookingsPerSecond":  7.166640150098111
+                                         },
+                             "afterHold":  {
+                                               "held":  2,
+                                               "keys":  1,
+                                               "sold":  0,
+                                               "items":  2,
+                                               "pending":  1,
+                                               "tickets":  0,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  0,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "c82c95fd-81a4-4d1e-94c8-be4bee0f84c1"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  0,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  0,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "afterSale":  {
+                                               "held":  0,
+                                               "keys":  1,
+                                               "sold":  2,
+                                               "items":  2,
+                                               "pending":  0,
+                                               "tickets":  2,
+                                               "bookings":  1,
+                                               "capacity":  2,
+                                               "oversell":  0,
+                                               "confirmed":  1,
+                                               "badTickets":  0,
+                                               "bookingIds":  [
+                                                                  "c82c95fd-81a4-4d1e-94c8-be4bee0f84c1"
+                                                              ],
+                                               "heldEvents":  1,
+                                               "itemQuantity":  2,
+                                               "incompleteKeys":  0,
+                                               "pendingHistory":  1,
+                                               "unexpectedKeys":  0,
+                                               "confirmedEvents":  1,
+                                               "partialBookings":  0,
+                                               "confirmedHistory":  1,
+                                               "orphanSeatOwners":  0,
+                                               "unmappedBookings":  0,
+                                               "negativeInventory":  0,
+                                               "gaQuantityMismatch":  0,
+                                               "duplicateSeatTickets":  0,
+                                               "seatOwnershipMismatch":  0,
+                                               "duplicateTicketOrdinals":  0,
+                                               "duplicateActiveSeatAllocations":  0
+                                           },
+                             "integrity":  {
+                                               "violationCountersSum":  0,
+                                               "oversell":  0,
+                                               "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                               "rollbackArtifacts":  0
+                                           },
+                             "violations":  [
+
+                                            ]
+                         }
+                     ],
+    "warmups":  [
+                    {
+                        "name":  "warmup-ga",
+                        "mode":  "GA",
+                        "round":  0,
+                        "warmup":  true,
+                        "status":  "PASS",
+                        "eventId":  "10bb5020-a9b4-4de6-87a1-f1123d88eb88",
+                        "ticketTypeId":  "a398105c-c992-499a-b614-86a96f0224d1",
+                        "concurrency":  {
+                                            "configured":  50,
+                                            "distinctWorkers":  10,
+                                            "startSpreadMs":  0.1327,
+                                            "readyWorkers":  10,
+                                            "peakInFlight":  10
+                                        },
+                        "summary":  {
+                                        "requests":  10,
+                                        "success":  10,
+                                        "expectedConflict":  0,
+                                        "otherErrors":  0,
+                                        "outcomes":  {
+                                                         "success":  {
+                                                                         "count":  10,
+                                                                         "p50Ms":  182.8834,
+                                                                         "p95Ms":  252.3719,
+                                                                         "p99Ms":  252.3719,
+                                                                         "maxMs":  252.3719
+                                                                     }
+                                                     },
+                                        "latency":  {
+                                                        "count":  10,
+                                                        "p50Ms":  182.8834,
+                                                        "p95Ms":  252.3719,
+                                                        "p99Ms":  252.3719,
+                                                        "maxMs":  252.3719
+                                                    },
+                                        "elapsedMs":  252.4547,
+                                        "completedRequestsPerSecond":  39.61106685674697,
+                                        "successfulBookingsPerSecond":  39.61106685674697
+                                    },
+                        "afterHold":  {
+                                          "held":  10,
+                                          "keys":  10,
+                                          "sold":  0,
+                                          "items":  10,
+                                          "pending":  10,
+                                          "tickets":  0,
+                                          "bookings":  10,
+                                          "capacity":  10,
+                                          "oversell":  0,
+                                          "confirmed":  0,
+                                          "badTickets":  0,
+                                          "bookingIds":  [
+                                                             "3ced392b-8397-4200-9161-7246904e7542",
+                                                             "4c2cac24-e663-4749-be10-10d34cf692a1",
+                                                             "4dccd318-e272-4610-8670-6f0caca1ecc0",
+                                                             "7f0d954e-38f4-44df-b126-7c7132e98b09",
+                                                             "87afff5e-fe20-4c46-99d9-0fa3fb256b42",
+                                                             "8a5f5d3c-54a7-4687-9474-425a5433819d",
+                                                             "9d431767-8371-4dce-a3d4-a55204da0be2",
+                                                             "a837f1e1-b7c6-44fb-8d98-0117702dc21c",
+                                                             "d088f398-eb29-4638-af15-d28e01b5217c",
+                                                             "d7547247-4857-488d-9503-b7f8c192ef24"
+                                                         ],
+                                          "heldEvents":  10,
+                                          "itemQuantity":  10,
+                                          "incompleteKeys":  0,
+                                          "pendingHistory":  10,
+                                          "unexpectedKeys":  0,
+                                          "confirmedEvents":  0,
+                                          "partialBookings":  0,
+                                          "confirmedHistory":  0,
+                                          "orphanSeatOwners":  0,
+                                          "unmappedBookings":  0,
+                                          "negativeInventory":  0,
+                                          "gaQuantityMismatch":  0,
+                                          "duplicateSeatTickets":  0,
+                                          "seatOwnershipMismatch":  0,
+                                          "duplicateTicketOrdinals":  0,
+                                          "duplicateActiveSeatAllocations":  0
+                                      },
+                        "afterSale":  {
+                                          "held":  0,
+                                          "keys":  10,
+                                          "sold":  10,
+                                          "items":  10,
+                                          "pending":  0,
+                                          "tickets":  10,
+                                          "bookings":  10,
+                                          "capacity":  10,
+                                          "oversell":  0,
+                                          "confirmed":  10,
+                                          "badTickets":  0,
+                                          "bookingIds":  [
+                                                             "3ced392b-8397-4200-9161-7246904e7542",
+                                                             "4c2cac24-e663-4749-be10-10d34cf692a1",
+                                                             "4dccd318-e272-4610-8670-6f0caca1ecc0",
+                                                             "7f0d954e-38f4-44df-b126-7c7132e98b09",
+                                                             "87afff5e-fe20-4c46-99d9-0fa3fb256b42",
+                                                             "8a5f5d3c-54a7-4687-9474-425a5433819d",
+                                                             "9d431767-8371-4dce-a3d4-a55204da0be2",
+                                                             "a837f1e1-b7c6-44fb-8d98-0117702dc21c",
+                                                             "d088f398-eb29-4638-af15-d28e01b5217c",
+                                                             "d7547247-4857-488d-9503-b7f8c192ef24"
+                                                         ],
+                                          "heldEvents":  10,
+                                          "itemQuantity":  10,
+                                          "incompleteKeys":  0,
+                                          "pendingHistory":  10,
+                                          "unexpectedKeys":  0,
+                                          "confirmedEvents":  10,
+                                          "partialBookings":  0,
+                                          "confirmedHistory":  10,
+                                          "orphanSeatOwners":  0,
+                                          "unmappedBookings":  0,
+                                          "negativeInventory":  0,
+                                          "gaQuantityMismatch":  0,
+                                          "duplicateSeatTickets":  0,
+                                          "seatOwnershipMismatch":  0,
+                                          "duplicateTicketOrdinals":  0,
+                                          "duplicateActiveSeatAllocations":  0
+                                      },
+                        "integrity":  {
+                                          "violationCountersSum":  0,
+                                          "oversell":  0,
+                                          "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                          "rollbackArtifacts":  0
+                                      },
+                        "violations":  [
+
+                                       ]
+                    },
+                    {
+                        "name":  "warmup-seated",
+                        "mode":  "SEATED",
+                        "round":  0,
+                        "warmup":  true,
+                        "status":  "PASS",
+                        "eventId":  "90e06754-af58-4e53-9174-8c32ac01a0b2",
+                        "ticketTypeId":  "0381ebbf-6f45-4acd-91e2-194f8653ad90",
+                        "concurrency":  {
+                                            "configured":  50,
+                                            "distinctWorkers":  10,
+                                            "startSpreadMs":  0.16849999999999998,
+                                            "readyWorkers":  10,
+                                            "peakInFlight":  10
+                                        },
+                        "summary":  {
+                                        "requests":  10,
+                                        "success":  1,
+                                        "expectedConflict":  9,
+                                        "otherErrors":  0,
+                                        "outcomes":  {
+                                                         "expectedConflict":  {
+                                                                                  "count":  9,
+                                                                                  "p50Ms":  67.3104,
+                                                                                  "p95Ms":  75.72,
+                                                                                  "p99Ms":  75.72,
+                                                                                  "maxMs":  75.72
+                                                                              },
+                                                         "success":  {
+                                                                         "count":  1,
+                                                                         "p50Ms":  53.9418,
+                                                                         "p95Ms":  53.9418,
+                                                                         "p99Ms":  53.9418,
+                                                                         "maxMs":  53.9418
+                                                                     }
+                                                     },
+                                        "latency":  {
+                                                        "count":  10,
+                                                        "p50Ms":  63.0581,
+                                                        "p95Ms":  75.72,
+                                                        "p99Ms":  75.72,
+                                                        "maxMs":  75.72
+                                                    },
+                                        "elapsedMs":  75.9116,
+                                        "completedRequestsPerSecond":  131.7321726850705,
+                                        "successfulBookingsPerSecond":  13.173217268507052
+                                    },
+                        "afterHold":  {
+                                          "held":  2,
+                                          "keys":  1,
+                                          "sold":  0,
+                                          "items":  2,
+                                          "pending":  1,
+                                          "tickets":  0,
+                                          "bookings":  1,
+                                          "capacity":  2,
+                                          "oversell":  0,
+                                          "confirmed":  0,
+                                          "badTickets":  0,
+                                          "bookingIds":  [
+                                                             "b609bff0-50b4-4060-a236-687a771a6ca8"
+                                                         ],
+                                          "heldEvents":  1,
+                                          "itemQuantity":  2,
+                                          "incompleteKeys":  0,
+                                          "pendingHistory":  1,
+                                          "unexpectedKeys":  0,
+                                          "confirmedEvents":  0,
+                                          "partialBookings":  0,
+                                          "confirmedHistory":  0,
+                                          "orphanSeatOwners":  0,
+                                          "unmappedBookings":  0,
+                                          "negativeInventory":  0,
+                                          "gaQuantityMismatch":  0,
+                                          "duplicateSeatTickets":  0,
+                                          "seatOwnershipMismatch":  0,
+                                          "duplicateTicketOrdinals":  0,
+                                          "duplicateActiveSeatAllocations":  0
+                                      },
+                        "afterSale":  {
+                                          "held":  0,
+                                          "keys":  1,
+                                          "sold":  2,
+                                          "items":  2,
+                                          "pending":  0,
+                                          "tickets":  2,
+                                          "bookings":  1,
+                                          "capacity":  2,
+                                          "oversell":  0,
+                                          "confirmed":  1,
+                                          "badTickets":  0,
+                                          "bookingIds":  [
+                                                             "b609bff0-50b4-4060-a236-687a771a6ca8"
+                                                         ],
+                                          "heldEvents":  1,
+                                          "itemQuantity":  2,
+                                          "incompleteKeys":  0,
+                                          "pendingHistory":  1,
+                                          "unexpectedKeys":  0,
+                                          "confirmedEvents":  1,
+                                          "partialBookings":  0,
+                                          "confirmedHistory":  1,
+                                          "orphanSeatOwners":  0,
+                                          "unmappedBookings":  0,
+                                          "negativeInventory":  0,
+                                          "gaQuantityMismatch":  0,
+                                          "duplicateSeatTickets":  0,
+                                          "seatOwnershipMismatch":  0,
+                                          "duplicateTicketOrdinals":  0,
+                                          "duplicateActiveSeatAllocations":  0
+                                      },
+                        "integrity":  {
+                                          "violationCountersSum":  0,
+                                          "oversell":  0,
+                                          "note":  "All listed SQL counters zero and committed IDs/counts equal successful responses; rollbackArtifacts summarizes those counters, not a standalone gauge",
+                                          "rollbackArtifacts":  0
+                                      },
+                        "violations":  [
+
+                                       ]
+                    }
+                ],
+    "samples":  {
+                    "path":  "docs/evidence/t9-2-samples-2026-11-14.csv",
+                    "sha256":  "D77B46D3D058917ED539CB2E89017119659FC7A169B95C2D166798B49FC28CE0",
+                    "rows":  320
+                },
+    "sql":  {
+                "readOnly":  true,
+                "path":  "docs/evidence/t9-2-audits-2026-11-14.sql",
+                "sha256":  "E0DD40381F50819A5CD4CFFC3EFFF87D8231031E659F8E4F0AE44EAD0ED73FBB",
+                "executions":  16,
+                "note":  "8fixtures including warmup, before/after settlement; each single-statement PG snapshot scoped to new UUIDs"
+            },
+    "steps":  [
+                  {
+                      "exitCode":  0,
+                      "command":  "\u0026 node --test tools/load/statistics.test.mjs",
+                      "name":  "tool-tests"
+                  },
+                  {
+                      "exitCode":  0,
+                      "command":  "\u0026 backend/mvnw.cmd -B -ntp -f backend/pom.xml -DskipTests package",
+                      "name":  "backend-build"
+                  },
+                  {
+                      "exitCode":  0,
+                      "command":  "\u0026 node tools/load/booking-load.mjs",
+                      "name":  "measured-load"
+                  }
+              ],
+    "preservation":  {
+                         "logScan":  "PASS",
+                         "preexistingVolumesRetained":  true,
+                         "demoNotStartedOrConnected":  true,
+                         "workspaceEnvUnchanged":  true,
+                         "preexistingContainerStatesUnchanged":  true,
+                         "ownedBackendAndServicesStopped":  true
+                     },
+    "attemptHistory":  [
+                           {
+                               "measuredApiStatus":  "PASS",
+                               "error":  "Exception calling \"ReadAllText\" with \"1\" argument(s): \"The process cannot access the file \u0027D:\\event-ticketing-platform\\reports\\t9-2\\ticketing-load-b255a5e84835\\backend.stderr.log\u0027 because it is being used by another process.\"",
+                               "logScanError":  null,
+                               "summary":  "reports/t9-2/ticketing-load-b255a5e84835/summary.json",
+                               "steps":  [
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 node --test tools/load/statistics.test.mjs",
+                                                 "name":  "tool-tests"
+                                             },
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 backend/mvnw.cmd -B -ntp -f backend/pom.xml -DskipTests package",
+                                                 "name":  "backend-build"
+                                             },
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 node tools/load/booking-load.mjs",
+                                                 "name":  "measured-load"
+                                             }
+                                         ],
+                               "status":  "FAIL",
+                               "project":  "ticketing-load-b255a5e84835"
+                           },
+                           {
+                               "measuredApiStatus":  null,
+                               "error":  "openjdk version \"25.0.5\" 2026-10-20 LTS",
+                               "logScanError":  null,
+                               "summary":  "reports/t9-2/ticketing-load-cf5d03788862/summary.json",
+                               "steps":  [
+
+                                         ],
+                               "status":  "FAIL",
+                               "project":  "ticketing-load-cf5d03788862"
+                           },
+                           {
+                               "measuredApiStatus":  "PASS",
+                               "error":  null,
+                               "logScanError":  null,
+                               "summary":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/summary.json",
+                               "steps":  [
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 node --test tools/load/statistics.test.mjs",
+                                                 "name":  "tool-tests"
+                                             },
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 backend/mvnw.cmd -B -ntp -f backend/pom.xml -DskipTests package",
+                                                 "name":  "backend-build"
+                                             },
+                                             {
+                                                 "exitCode":  0,
+                                                 "command":  "\u0026 node tools/load/booking-load.mjs",
+                                                 "name":  "measured-load"
+                                             }
+                                         ],
+                               "status":  "PASS",
+                               "project":  "ticketing-load-dbe3d57c0fb2"
+                           }
+                       ],
+    "rawLogHashes":  [
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/backend-build.stderr.log"
+                         },
+                         {
+                             "sha256":  "04AD1A1C1306D55C9CADD609C171CD49EF70FA1FAC8BAC1F067EB2394C92C765",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/backend-build.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/backend.stderr.log"
+                         },
+                         {
+                             "sha256":  "24B7BA40BCB3F945618CF27F8A2D8C0EB10F99C5738850E1D3F4F569EC0C9FA3",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/backend.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/client.stderr.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/measured-load.stderr.log"
+                         },
+                         {
+                             "sha256":  "3C35C58F7365BBF8E62E75A88F0E0E3D264F4C22CD6D9ED893FD0DAC60A18AB4",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/measured-load.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/tool-tests.stderr.log"
+                         },
+                         {
+                             "sha256":  "964046108C4C6E2BD5C1D3421C42EFB9836A41086BD4800A075683E768412301",
+                             "path":  "reports/t9-2/ticketing-load-dbe3d57c0fb2/tool-tests.stdout.log"
+                         }
+                     ],
+    "limits":  [
+                   "Loopback single machine, client + backend + Docker contend for sameCPU; one PostgreSQL/Kafka node.",
+                   "Finite closed burst50requests, small hot inventory10GA/2seats, one seeded customer with unique keys; many409expected. Not sustained TPS, maximum accepted bookings capacity, or production SLO.",
+                   "3rounds/mode,150measured samples each; per-round p99=max for50samples, no confidence interval/load endurance.",
+                   "Warm JVM/caches after explicit10request/mode warmup; no claim of fully warmed50connections or cold-start performance.",
+                   "Client end-to-end latency, not server-only latency; payment/confirmation/tickets and setup excluded.",
+                   "No real payment/refund, HA, remote network/TLS, GitHub Actions/Linux or Chrome visual QA.",
+                   "Two runner preparation/postprocessing defects fixed (java -version stderr under PSStop; reading redirected backend log before JVM exit). Earlier runs retained FAIL; final dataset chosen for complete exit0, not minimum latency. No API/transport error in measured rounds of either load-bearing run.",
+                   "Conflict rollback audited; no new crash/network-loss exactly at COMMIT injection or T9.3fault campaign."
+               ]
+}

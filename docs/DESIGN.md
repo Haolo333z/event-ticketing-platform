@@ -29,7 +29,7 @@ Customer có loading/error/empty riêng cho catalog/history/detail, báo snapsho
 - Màn hình vào demo có lựa chọn Khách hàng demo và Quản trị viên demo.
 - Client dùng mock bearer token đã cấu hình cùng dữ liệu seed; token chỉ hoạt động local/test. UI nêu rõ đây là quyền demo.
 - Không cho nhập user ID/role để đổi danh tính; không hiện token trong UI, URL, console hoặc log.
-- Khi đổi persona, xóa state phiên hiện tại rồi gọi API bằng persona mới.
+- Khi đổi persona, xóa dữ liệu hiển thị/quyền của persona cũ rồi đọc API bằng persona mới. Giữ pending command đã lưu theo phạm vi persona/booking để retry cùng key; không tự POST hoặc dùng command của persona khác.
 - API admin vẫn được server kiểm tra role; ẩn nút ở frontend không phải kiểm soát quyền.
 
 ## 3. Màn hình

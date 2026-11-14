@@ -1,6 +1,6 @@
 # PRD — Hệ thống đặt vé sự kiện đa hình thức
 
-> Phiên bản: 0.4 · Trạng thái: bản nền đã qua phản biện, trước khi scaffold code · Chủ dự án: Lê Hữu Hào
+> Phiên bản: 0.4 · Trạng thái: yêu cầu baseline; triển khai đến T8.4, kiểm chứng thực tế tại PROGRESS · Chủ dự án: Lê Hữu Hào
 
 ## 1. Tóm tắt
 

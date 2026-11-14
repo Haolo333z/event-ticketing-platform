@@ -41,6 +41,7 @@ class PostgresPaymentTest {
     DemoPrincipal other;
     final HttpClient http=HttpClient.newHttpClient();
     static final List<Map<String,Object>> evidence=new ArrayList<>();
+    void snap(String scenario,String phase){RecoveryEvidence.capture(jdbc,scenario,phase,event);}
     @BeforeEach void fixture(){
         event=UUID.randomUUID();ga=UUID.randomUUID();seated=UUID.randomUUID();foreign=UUID.randomUUID();other=new DemoPrincipal(foreign,"CUSTOMER");
         jdbc.update("INSERT INTO ticketing.users(id,demo_role,display_name) VALUES (?,'CUSTOMER','Payment test')",foreign);
@@ -121,12 +122,14 @@ class PostgresPaymentTest {
         var pending=record(another,"DELAY_TIMEOUT");code(400,"VALIDATION_ERROR",()->processor.process(another,pending.paymentId()));assertEquals("PENDING_PAYMENT",state(id));assertEquals("PENDING_PAYMENT",state(another));assertEquals(0,rows("tickets",id));
     }
     @Test void failureReleasesGaOnceAndRepeatedResultsDoNotSubtractAgain(){
-        UUID id=ga(3);var input=input("FAILURE");simulator.simulate(owner,id,input,UUID.randomUUID());simulator.simulate(owner,id,input,UUID.randomUUID());pay(id,"FAILURE");
+        UUID id=ga(3);snap("ga-payment-failure","before");var input=input("FAILURE");simulator.simulate(owner,id,input,UUID.randomUUID());snap("ga-payment-failure","released");simulator.simulate(owner,id,input,UUID.randomUUID());pay(id,"FAILURE");
         assertEquals("PAYMENT_FAILED",state(id));assertEquals(0,held());assertEquals(0,sold());assertEquals(0,rows("tickets",id));assertEquals(1,count("BookingPaymentFailed",id));
+        snap("ga-payment-failure","repeated");
     }
     @Test void failureReleasesAllSeatsOnce(){
-        UUID id=seat(2);pay(id,"FAILURE");pay(id,"FAILURE");assertEquals("PAYMENT_FAILED",state(id));assertEquals(0,rows("tickets",id));
+        UUID id=seat(2);snap("seat-payment-failure","before");pay(id,"FAILURE");snap("seat-payment-failure","released");pay(id,"FAILURE");assertEquals("PAYMENT_FAILED",state(id));assertEquals(0,rows("tickets",id));
         assertEquals(3,jdbc.queryForObject("SELECT count(*) FROM ticketing.seats WHERE event_id=? AND status='AVAILABLE' AND held_by_booking_id IS NULL",Integer.class,event));assertEquals(1,count("BookingPaymentFailed",id));
+        snap("seat-payment-failure","repeated");
     }
     @Test void durableTimelyResultWithProcessingLagIsConfirmedByExpiry(){
         UUID id=ga(2);var result=record(id,"SUCCESS");due(id);
@@ -146,16 +149,20 @@ class PostgresPaymentTest {
     }
     @Test void expiredSeatBookingNeverTakesInventoryFromTheNewOwner(){
         UUID old=seat(2);due(old);assertEquals(ExpiryService.Outcome.EXPIRED,expiry.expire(old));
-        UUID next=bookings.create(other,"new-owner",new SeatBookingRequest(event,seated,seats.subList(0,2)),UUID.randomUUID()).bookingId();pay(old,"SUCCESS");
+        snap("late-success-seat-reallocated","expired");
+        UUID next=bookings.create(other,"new-owner",new SeatBookingRequest(event,seated,seats.subList(0,2)),UUID.randomUUID()).bookingId();snap("late-success-seat-reallocated","new-owner-held");pay(old,"SUCCESS");
         assertEquals("REFUND_REQUIRED",state(old));assertEquals("PENDING_PAYMENT",state(next));assertEquals(0,rows("tickets",old));assertEquals(1,rows("payment_compensations",old));
         assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM ticketing.seats WHERE held_by_booking_id=? AND status='HELD'",Integer.class,next));
+        snap("late-success-seat-reallocated","late-result-processed");
         evidence.add(Map.of("scenario","PAY-02-reallocated-seats","oldStatus",state(old),"oldTickets",0,"compensations",1,"newOwnerHeldSeats",2));
     }
     @Test void delayedLedgerIsDurableAndMaintenanceRecordsAndProcessesOnce(){
         UUID id=ga(2);var result=record(id,"DELAY_TIMEOUT");assertTrue(result.scheduled());assertEquals(0,count("PaymentResultRecorded",id));assertFalse(simulator.recordDue(id,result.paymentId()));
+        snap("scheduled-payment","scheduled");
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM ticketing.payments p JOIN ticketing.bookings b ON b.id=p.booking_id WHERE p.id=? AND p.recorded_at IS NULL AND p.result_due_at=b.expires_at+interval '1s'",Integer.class,result.paymentId()));
         due(id);expiry.expire(id);jdbc.update("UPDATE ticketing.payments SET result_due_at=clock_timestamp()-interval '1ms' WHERE id=?",result.paymentId());
         assertEquals(1,maintenance.runOnce().processed());assertEquals(0,maintenance.runOnce().processed());assertEquals("REFUND_REQUIRED",state(id));assertEquals(1,count("PaymentResultRecorded",id));assertEquals(1,rows("payment_compensations",id));assertEquals(0,rows("tickets",id));
+        snap("scheduled-payment","processed-once");
     }
     @Test void successAfterCancelledOrFailedCreatesObligationWithoutChangingTerminalState(){
         UUID cancelled=ga(1);cancel.cancel(owner,cancelled,UUID.randomUUID());pay(cancelled,"SUCCESS");assertEquals("CANCELLED",state(cancelled));assertEquals(1,rows("payment_compensations",cancelled));assertEquals(0,count("BookingRefundRequired",cancelled));

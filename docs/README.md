@@ -1,10 +1,10 @@
 # Tài liệu đồ án đặt vé sự kiện
 
-Bản v0.4 được cập nhật đến hết Phần6 (T5.5). Đã có V1–V8,13bảng,11API,booking GA/ghế,expiry,thanh toán mô phỏng,cancel,vé và nghĩa vụ bù trừ PENDING. Chưa có Kafka/inbox/refund worker. Đọc PROGRESS trước khi mở task; README gốc có lệnh chạy/thử API.
+Bản v0.4 đã triển khai đến T8.4 và kiểm chứng tích hợp T9.1–T9.3. Có V1–V9, 18 bảng, 18 operation OpenAPI; booking GA/ghế, expiry, thanh toán/vé/bù trừ mô phỏng, Kafka/outbox/inbox/retry/DLQ, replay có audit, dashboard, log/health/metrics. T9.4 đang rà soát; đọc PROGRESS để phân biệt kết quả đã chạy với giới hạn. README gốc có lệnh chạy/thử API.
 
 ## Thứ tự đọc
 
-Hợp đồng: [OpenAPI3.1](contracts/openapi.json), [event JSON Schema](contracts/events.schema.json), [state transitions](contracts/booking-transitions.json), ADR0002 và TRACEABILITY. Kiểm tra bằng npm ci/test --prefix tools/contracts. x-implemented phân biệt11operation đã chạy với3operation tương lai. [ADR0006](adr/0006-payment-results-and-tickets.md) chốt durable result/processor/expiry/ticket/compensation; [bằng chứng Phần6](evidence/part6-2026-11-12.json) lưu kết quả thật.
+Hợp đồng: [OpenAPI3.1](contracts/openapi.json), [event JSON Schema](contracts/events.schema.json), [state transitions](contracts/booking-transitions.json), ADR0002 và TRACEABILITY. Kiểm tra bằng npm ci/test --prefix tools/contracts; 18 operation hiện có đã được triển khai. [ADR0006](adr/0006-payment-results-and-tickets.md) chốt payment/expiry/ticket; [ADR0007](adr/0007-kafka-and-recovery.md) chốt messaging/recovery. Kết quả từng giai đoạn nằm tại PROGRESS và evidence; không dùng số test lịch sử thay cho lượt chạy mới.
 
 1. [PRD](PRD.md): phạm vi, nghiệp vụ, acceptance.
 2. [ARCHITECTURE](ARCHITECTURE.md): ranh giới module, transaction, outbox/recovery.

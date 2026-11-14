@@ -1,0 +1,1911 @@
+﻿{
+    "task":  "T9.4",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "taskStatus":  "IN_PROGRESS_AWAITING_CANDIDATE_CI",
+    "localGate":  "PASS",
+    "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -WorkingTree",
+    "exitCode":  0,
+    "started":  "2026-11-14T11:49:25.8719758+07:00",
+    "finished":  "2026-11-14T11:54:21.0198252+07:00",
+    "sourceHead":  "502d34e1092076d3f4a91d1f6892d6febca939cc",
+    "project":  "ticketing-audit-e28927563c4c",
+    "source":  {
+                   "runtimeFilesRechecked":  185,
+                   "manifest":  [
+                                    {
+                                        "path":  ".env.example",
+                                        "sha256":  "6069F63E9703B99C619E22B4BE1EC064DFA8604A11152FC1967DC3F9DFCD8209"
+                                    },
+                                    {
+                                        "path":  ".gitattributes",
+                                        "sha256":  "5D767CD0A5AA6473C56B24C24C33147C86061A335A62161D956EAF2F03CD8FEE"
+                                    },
+                                    {
+                                        "path":  ".github/dependabot.yml",
+                                        "sha256":  "1E38002B82E9C633AE7C62620BECC3EA233DB5EC4E9A1E16ED3677D0C03079C0"
+                                    },
+                                    {
+                                        "path":  ".github/workflows/ci.yml",
+                                        "sha256":  "33C5D4A0576266F8AD0E8F215947D1D4D848EECAA0717B66CD1246411E231336"
+                                    },
+                                    {
+                                        "path":  ".gitignore",
+                                        "sha256":  "9530AEA8FD4F50F8BA09323B95B1FF5D6F49D4E48824F8A4C2F50A2F87DB5357"
+                                    },
+                                    {
+                                        "path":  ".gitleaks.toml",
+                                        "sha256":  "8A866CD8BC239E0ED77CB83DF508B212AF8D6A0CE98DD0F0A6FC8E7C6BCB8B55"
+                                    },
+                                    {
+                                        "path":  "backend/.mvn/wrapper/maven-wrapper.properties",
+                                        "sha256":  "51B221EDE4E074D19BB44D6D485BB7B298E77874572A09697ABA0A9E234E0745"
+                                    },
+                                    {
+                                        "path":  "backend/mvnw",
+                                        "sha256":  "CAE96CEF89EBEA3531221F4AE17C23CF8EDF67D00EAE8306D4186AE1BBED4D02"
+                                    },
+                                    {
+                                        "path":  "backend/mvnw.cmd",
+                                        "sha256":  "46EEDB8419BD14FE70D5BB2916D7B6F51806E51B39D5B76A42610384CA929C1C"
+                                    },
+                                    {
+                                        "path":  "backend/pom.xml",
+                                        "sha256":  "8BA457AEC0F2A64532E8CA327909998945CCA3D3054312F3713DD84B1F4E33B6"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/AdminBookingController.java",
+                                        "sha256":  "1EE526ADC58DE717C6EBF5C5EB286006B23D33C11E018CE5FEF1E8DDF17C4E11"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingCancelService.java",
+                                        "sha256":  "427491D0EAF8C80D6B04E104F3DFCE93F3EDAA0C4C715BB27AC3162073E6098D"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingCommandService.java",
+                                        "sha256":  "2FF382CEBFACE4295FB079EE55211C883926F9A355A43E448285A008C2A28C58"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingController.java",
+                                        "sha256":  "1C41E935F72FBDA8ECA5605CC670E7EB5B4AF136187CE90F96C9679C5BA7D7EC"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingLifecycle.java",
+                                        "sha256":  "0A7E5D962CB440D785157F2008CB026E01CDC8389806C7B805310B515DA40F66"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingPolicy.java",
+                                        "sha256":  "6C110CCE804741AE3D8096DFA3E44AFFC7AABF7FA54AC2B9798DC603189068F4"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingQueryService.java",
+                                        "sha256":  "91D0126F79D10E757C362802A53A999710FB16DDD0D40C99B27741F53032D3E5"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingRequest.java",
+                                        "sha256":  "52CCF315928F6A06A3765B08FFF67612063D8933A426CB8033826BC5D3F2E8FA"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/BookingTransactions.java",
+                                        "sha256":  "C124911F4677F9357ED571BCFCB24B1789B4C71A31C8329A22D65FA163987188"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/GaBookingRequest.java",
+                                        "sha256":  "715A5816AB351F027809BFA9FF8FF1C5376A13ECACBA77572188FE4E6524800A"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/package-info.java",
+                                        "sha256":  "73AF7B73EFD312C9DC27CE61D7317DE591914F1FE27B2C0A5C87EF771DA1C9A7"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/bookings/SeatBookingRequest.java",
+                                        "sha256":  "3031DB3749A5F5D464348D3537C8F0C65C848C439E0910C482B373F7D7303B22"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/AdminCatalogController.java",
+                                        "sha256":  "42177711CEA736B291C8925B42885B3D068F069B6ECF88ECB58FB8BA4888C0DD"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/AdminCatalogQuery.java",
+                                        "sha256":  "8C139C501D3916A283F9DA8229613F161585F22BB581F006BFA00388D106EA9D"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/AdminCatalogService.java",
+                                        "sha256":  "ADCF2EF9304E560238AC34C495B7683F3EF03BC9E08922791C8718B3DE28B148"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogBookingAccess.java",
+                                        "sha256":  "0D367BC8C16D8C7A9850CD3C74A9061E74A4AEAE3D70074215D01EAADA79C39E"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogController.java",
+                                        "sha256":  "23C4684E74BACF594CE58CE31F952C5E4242BD4456AF23E83EB1CA7E71C56B49"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogInput.java",
+                                        "sha256":  "B1262189CAD6248AC288FD469D742ABED7E6271974E5C9F34EF46B59CCFBADE0"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogRepository.java",
+                                        "sha256":  "3C0ED903D7B2F670448B09C004764376A15CDAF8173AC69F0FFC2F0C92791A29"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogService.java",
+                                        "sha256":  "E0AB721698D2BB8BEF27D3F1C5AAB983B4471BB02339DF9DE8F7183647B1D7FA"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/CatalogViews.java",
+                                        "sha256":  "9EDBE3F12D521B688B648FE49B8900DB4FEB132CCE10C36BBC85FD6220F308C7"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/events/package-info.java",
+                                        "sha256":  "D20312BFF7FA05F26BC642EC504BABB1462D196C1D1EBC5EAEE9A348F1135BC6"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/expiry/ExpiryScheduler.java",
+                                        "sha256":  "F5446C391409F9410E717FDE57637DA942175D318E9D11C58093E2D0ADA5C1D4"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/expiry/ExpiryService.java",
+                                        "sha256":  "E3509B51B35B960E31FE8722B0DDD9EDD95B0D61C6520A38B2256B7BF600C6B0"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/expiry/package-info.java",
+                                        "sha256":  "AAFA1BE65C3DBE4E84419BFC45AD25A3E81BEBABA9B88D7C060C32AA6090D902"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/DemoPrincipal.java",
+                                        "sha256":  "E96E965B12B3F629D372198B71130F7F54099948BE648740EDBEF985653A2876"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/DemoSeedRunner.java",
+                                        "sha256":  "022FACE5F610FEAEF60DFD371B8F2FC376415039DA8E60B2EC9C6D6EA643D1BB"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/DemoSeedService.java",
+                                        "sha256":  "9B23A6BB10E843E62F527CC42CA0321AACBDE9FD75662BDEB38EC48DBEA7BEF5"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/DemoSettings.java",
+                                        "sha256":  "3C1269022FB225C2083310E043883856B428A7BA055E1FAAAC64B2AB37CE30B8"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/MockBearerFilter.java",
+                                        "sha256":  "2755DA854987369F95C1EBE3313297D518C5458F67AD28AA78209AEA657EF0DB"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/package-info.java",
+                                        "sha256":  "E2BBE6DFCDA2FAF78A0F2E0B95B7AFB105696CBF752821C468838D9C028EC49C"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/identity/SecurityConfiguration.java",
+                                        "sha256":  "F7D78583613742D17F6A4A25F5D34769FAB45988578E815F7809F81953EF82CB"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/inventory/GaInventory.java",
+                                        "sha256":  "BAFB391D93E9A4ECDEB9433A7B0AE5F5FA84B71BF8CB71A77E43A836F5E401CC"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/inventory/InventoryConfirmation.java",
+                                        "sha256":  "4CC17E042C923A4A5449B3596A7910EA2530E1BF433ED56752C70E227A4B8DB9"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/inventory/InventoryRelease.java",
+                                        "sha256":  "8D2EB86FE2D471EB653912B2823D910849D4795CCB5FABD3E2D6E0FCD869AA12"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/inventory/package-info.java",
+                                        "sha256":  "10AE97A38B3198D2889640163B4BCF39833EFC520B8AA4C1936D246026F6A861"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/inventory/SeatInventory.java",
+                                        "sha256":  "93E50023DE872BBF01868E4C5D44F60473366307EAE25EF238316C4E14541676"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/EventCodec.java",
+                                        "sha256":  "FDD4DF53738E5DE7E0DB68777CF0418613EBA711948B89F093F8EFD145B14C09"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/EventConsumer.java",
+                                        "sha256":  "3689AA98E5AA70CAB2CBD734E1785099A8A4D8D8063FF9520808CDC34CCAC156"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/FailureStore.java",
+                                        "sha256":  "5801E497D14EE789489C0D7C392076CA009B9948D237E1D161CBEED15F178421"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/KafkaConfiguration.java",
+                                        "sha256":  "C87397E12D990D9A4BCE711D8138D175016986E8459C346F626E78999DBEE908"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/MessagingScheduler.java",
+                                        "sha256":  "1E4307963AE3F2B413561027DFA4601D319B5C2D7442ABC91A3E98E2B7765511"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/OutboxPublisher.java",
+                                        "sha256":  "82635E78299FCC42CF297A6C5F8DFC9918AF5C70BC0EA91C7A6602BA805FD62F"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/OutboxWriter.java",
+                                        "sha256":  "9C6C5D4B67EFD48E4BC299C05D1756CFE9E5AF77DC0A1564DFB0EB56F693EB84"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/messaging/package-info.java",
+                                        "sha256":  "2B836628EC0448F1376FA109BAC6663DA81A2C6BE99B102C0DFBDE1FE9411CE3"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/DatabaseHealthIndicator.java",
+                                        "sha256":  "DC8184C526B8484DEF51A0FF634B30447981214B17BE68EFA805B7F66C9CAB0F"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/MessagingHealthIndicator.java",
+                                        "sha256":  "75FFBD6C7F7CEAC94915831245D5B9E53FD7B952B6C2D42A4BFBE9674FC1C603"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/MessagingMetrics.java",
+                                        "sha256":  "F83844CD5FB0DE7DBD5092A82582EB67D7676F5D75528F28AE036965D7DFA469"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/OperationsController.java",
+                                        "sha256":  "66CFA57077772ECC4146A9A5C049A705FFD8895470DCC7FE754EEB3CE8393975"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/OperationsMetrics.java",
+                                        "sha256":  "B58DF90678436352D7C9B329D24C4E6CA2456954B86DFB79E52D12FCE5081D3F"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/package-info.java",
+                                        "sha256":  "7B6A2313AFCA1245B09FD1544092898E950061F818D16A214E52D65FD1E7E87B"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/RecoveryQuery.java",
+                                        "sha256":  "71BB200BF20758F0D7C6955D0C2B111CBE29B0AC38D2A7FA1D0CCB4DE876EDAC"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/ReplayService.java",
+                                        "sha256":  "4DC21F0A5FA31C385ED54D4EE366FE93BB4CAAD68551FA6FE30FA5C61CD0AC51"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/TraceContext.java",
+                                        "sha256":  "F21A792BF42A2DAEFF074458DE3ECBC6501819D8B6EC8F4C1042F475A62824D6"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/operations/TraceLog.java",
+                                        "sha256":  "838A30515B88FB5B5A526F5A7B81977260D27AECEABA5C41D25DF6EFD2863280"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/package-info.java",
+                                        "sha256":  "638CEBE1CD4760E6BA07C3779E1F9F88BEF24EB72D4FD0E3AE814D5580AED312"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/PaymentController.java",
+                                        "sha256":  "3BAF1012A9B4E8E01EDE6FF8828FBD0ADA25A82AA501B61A1C5090F09A9E3AF7"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/PaymentMaintenance.java",
+                                        "sha256":  "0BDC259020ABD6FAFD5B7BDC36EDAD123D6402BBAE1E1749939EEE46AA016496"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/PaymentResultProcessor.java",
+                                        "sha256":  "1FE13EFD31A73225A96A6B33FA81C82A907F25AADE00DCC3F4F5F6C666323469"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/PaymentSimulatorService.java",
+                                        "sha256":  "3F49B53F5CB6851A48669CB740F24FDDF991148B032451942FF9773787553BDB"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/RefundRecoveryService.java",
+                                        "sha256":  "B80F5D1B773CFE8A51FDDE14196B4410CC10D53A7934C96E560653CE4F38ACAD"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/payments/SimulationInput.java",
+                                        "sha256":  "A9D5F9038C50848CAFD7A96A6E900C5D2AE8DCED02F0F2035EF8BF6B7B766E2D"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/ApiErrors.java",
+                                        "sha256":  "B69AF564E52D2B71F9349F2F0F124FEF9EAF3DFCA1CF13E5E7473E1FBF90C0C4"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/ApiException.java",
+                                        "sha256":  "7F7F73E875ED4119FA93C37F1A6CBB37BD4EAEDBA035279EA6C5AD2F5EF2015B"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/ApiExceptionHandler.java",
+                                        "sha256":  "A973A67A75ACD81753BD0023B02B33C9E129541DA6FDF9D673BB3BE929FF0932"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/CorrelationFilter.java",
+                                        "sha256":  "59896A8F21AE3AE7B9BBBE1A390089485DFEA9CB903EA4DCD0555CBD469C2BFE"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/package-info.java",
+                                        "sha256":  "BD772AA81A26B45F52A7F8AB5BB3FF1D976856EA637915E218CEFE64A2418B52"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/shared/RequestPolicyFilter.java",
+                                        "sha256":  "90C5B1C200D3C7AD1CFE9C39BB0996B7B56A4C792E2A531C9878975D32829854"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/TicketingApplication.java",
+                                        "sha256":  "29F828926100F7763DEF2D828B90D9470F2B3AF15709A568E89F9061BD7467C6"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/tickets/package-info.java",
+                                        "sha256":  "775358F734D6BC414CA8D8D2BED48B6F2D45636EB7A31D7DA42143977718DBF3"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/java/com/haolo/ticketing/tickets/TicketService.java",
+                                        "sha256":  "16A1A267D7DCB33888DA73DBBDE90825B8A9475116D3B12B5AE7C0C7A635D091"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/application.yml",
+                                        "sha256":  "CE3017C62282EB1B54B4540231C1822CFB9E479EEC9210BDE8FA6D94F5382E15"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/application-local.yml",
+                                        "sha256":  "FAAFA91B097F6AF95A917D6281EE9942D579B6FD5F097F79CC70528999BAF9C3"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/application-test.yml",
+                                        "sha256":  "36520D9C580C2EAACD2E6475E12A00C4DE53C9757CFDA2C1690D11F88ED04F9E"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/demo/seed.sql",
+                                        "sha256":  "FFB359D82660BE0BD43B95F35F280C2E690A19BA9A2D5FABBC77E3ED5865CD4C"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/.gitkeep",
+                                        "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V1__create_application_schema.sql",
+                                        "sha256":  "9E382C4153FA7A8817DDBDBA74616CBA7983A1ACB4A78CF5719C062AB50D6F66"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V2__catalog_and_booking_foundation.sql",
+                                        "sha256":  "224FC9843C53A79D7778587DA8132AAFD716B30F23AE3813EB4C27D46A17A32A"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V3__payments_and_outbox.sql",
+                                        "sha256":  "C5E03F063F261BA27312990A0F0B59347214F33433A9969E818B6380743DE425"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V4__require_outbox_booking_id.sql",
+                                        "sha256":  "8A873F2D268800ACBC18FB979AD8803CDA0FB7C0F3D87976171530CF98D3B3AE"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V5__booking_idempotency_and_history.sql",
+                                        "sha256":  "7EA6FE18D940FC85991DC4E2AFD0F6BB824F4651832B54E420B4FD4A0648AE41"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V6__initial_history_transition.sql",
+                                        "sha256":  "57B0C650C6B152A30E0CF84E4A8996527EF79AF3214995A60FF9BCFAD9ED21E6"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V7__seat_owner_event_type.sql",
+                                        "sha256":  "9322017AFD7D45534CAA5CDD06EC2D99AA366ECC5B9E5D33920E92228D45C257"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V8__tickets_and_payment_compensations.sql",
+                                        "sha256":  "F0E05A1DD6D5B06AA640BD1BCDADAE3B68AB0C1EA9F4E0B708789DD4D8B925D4"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/db/migration/V9__inbox_and_recovery.sql",
+                                        "sha256":  "7FCBC279AA06360C07521544BA61FA740BDC822A90DD1B26683D1DBF91D91A8A"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/logback.xml",
+                                        "sha256":  "45129D34AADCF0FD4DAE11470B18E35329F2A97E20E76CC3FA4B2C70A5D25DB8"
+                                    },
+                                    {
+                                        "path":  "backend/src/main/resources/logback-spring.xml",
+                                        "sha256":  "B7BB58F23461594E0DCF7ED573059E71423EF21DC3914A8019C96BE2A031FD4A"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/DemoAuthConfigurationTest.java",
+                                        "sha256":  "E8356928B2D46D1C528599D428D9DE10DFE22A49C52B864E98F7623822EC121E"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/HealthEndpointTest.java",
+                                        "sha256":  "BD4AC0EBC3537B83A11594DC7D2BB45B013F1B1272CC0369F38F573E9655F54C"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/KafkaRecoveryTest.java",
+                                        "sha256":  "3CDAD74AB43CD722E3093DB7A0AC8CEF03A7E4266896BBD8B0BBAE8DB723736B"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/operations/OperationsMetricsTest.java",
+                                        "sha256":  "7569CEB300E2701B665A7E16B1FA32AA9ECD3FE8CEC5928AA3F415A162021AF4"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresAdminTest.java",
+                                        "sha256":  "FC71D107BAB5F40EDE71FDD7B9E732EA4F93BAF8ED656759E619855BCD1A7856"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresBookingTest.java",
+                                        "sha256":  "00F606EB2D287C3FA3A8C5A0139DB075729E10F36BACEF6E9EEBC761AE994D3E"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresCatalogTest.java",
+                                        "sha256":  "95DD5AFB13BB46E0AF941213809ED019641A145DD06A5538D9C97FC5FA4E7DAD"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresDashboardSecurityTest.java",
+                                        "sha256":  "81672CBEF1AC50D9E6980D9C0D8D1C4BABC6759999C658507700333EEC65C586"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresMetricsTest.java",
+                                        "sha256":  "CB03F2841356323C9FC46349F3554BEF1752627316667890897FB06B4F0E7A01"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresOutboxTest.java",
+                                        "sha256":  "A18BDCF260E4180534B703AF5376AEA08582E8123495D33D7B86B3303310DB9F"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresPaymentTest.java",
+                                        "sha256":  "F91C807F03E58C7AFDCC09F1A6A6AED428A87805C6E8362E4845131800541C30"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresProductionProfileTest.java",
+                                        "sha256":  "6B8D0CA4C51D6E7013AFFE1ADD872069AD961F212DD60234D1EEE8057F418554"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSchemaTest.java",
+                                        "sha256":  "E0CE0B531EFF0D386FDEF0E7A3B05B5D1C46BA914600756BE911A63C3398157E"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSeatExpiryTest.java",
+                                        "sha256":  "7C8D541FB03246AC15FA55B2155A9AEF66FF6FADAB9196196F846BE8A6F57DBC"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSeedTest.java",
+                                        "sha256":  "9EE695E5F8610EACE973B9CE629A6F5D3B0C8C9D1B3CC0686B7EC4A4C61875B1"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/RecoveryEvidence.java",
+                                        "sha256":  "BBB59B90C483591883788E05FD420BDA7F1E2E5A5059F151E75881C1583331A1"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/TicketingApplicationTest.java",
+                                        "sha256":  "A56D874B3A531DDD5E40DF4A4024BE56E8A555E4EC98B6EF3EDB67BA884C2CEB"
+                                    },
+                                    {
+                                        "path":  "backend/src/test/java/com/haolo/ticketing/TraceContextTest.java",
+                                        "sha256":  "848E193454534F1285BD03A09A2DF88F927227F30734576646DE5215FD87F066"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0001-stack-and-local-environment.md",
+                                        "sha256":  "F738F5F65051F1BCCA1EE14703EFE09D477F2B3EF9DB6792877A1A46C34B3C62"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0002-api-domain-contract.md",
+                                        "sha256":  "8D8382BDDAAA0CE2F75DC0F29F81D84FE21BDBF1A74F55FFB3BFB0614AEE55F2"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0003-catalog-implementation.md",
+                                        "sha256":  "D6A11E126A9DF67AB1F98D45683D61FFCF3FF1C7DA3BE645D6421505E5E4118E"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0004-ga-booking.md",
+                                        "sha256":  "288261A41748905DE38A48B4E90FBD2E674EEF65DD4DED103C5CA2AAE2414BDA"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0005-seats-and-expiry.md",
+                                        "sha256":  "576B7B23EACFDB84B3F94CE1F3BC321E26E286958112800B5717819421FB3BE0"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0006-payment-results-and-tickets.md",
+                                        "sha256":  "4AB8C09910EE186911FA3F9F65DE6AD112F4EA5C409CCB5882929BA92199EBD4"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0007-kafka-and-recovery.md",
+                                        "sha256":  "7DA0441ABF85E09B0E57BFEF660BE5990B11641800EA25EC53221FBAD1DD8F5A"
+                                    },
+                                    {
+                                        "path":  "docs/adr/0008-demo-ui-and-security-review.md",
+                                        "sha256":  "01377200600EEC1BB8104B1BD79583ED9493AB359D3A842CEE4D51424A03400E"
+                                    },
+                                    {
+                                        "path":  "docs/API_CONTRACT.md",
+                                        "sha256":  "8AFF0DFEE8CA37E2D8ECA93B6C8A0A0FCF1F11BBB785C85E46D3D34B10954F1B"
+                                    },
+                                    {
+                                        "path":  "docs/ARCHITECTURE.md",
+                                        "sha256":  "304C709A9159ACCADB6DA491C11258232592540D6C8E1BB5F57F8E1531A3E81A"
+                                    },
+                                    {
+                                        "path":  "docs/contracts/booking-transitions.json",
+                                        "sha256":  "8C83C50C9C11C8E978E742FBC33D1EED83A266B49F677AFE4E9A00D2E55A5FB4"
+                                    },
+                                    {
+                                        "path":  "docs/contracts/events.schema.json",
+                                        "sha256":  "418F0E3EAB645BEB8464E21038E99522A16C01B37B77A118EC7B07E3C43B026A"
+                                    },
+                                    {
+                                        "path":  "docs/contracts/examples.json",
+                                        "sha256":  "C2D21A4A27DE188F7265FA9080ACEF162608EB741BED47252878FF6CA982EFC6"
+                                    },
+                                    {
+                                        "path":  "docs/contracts/openapi.json",
+                                        "sha256":  "22DF5DB7C8B7D298E207D544709B8DDA894E09494D2C88E3FA8DDCCFDF8D3B3A"
+                                    },
+                                    {
+                                        "path":  "docs/DATA_MODEL.md",
+                                        "sha256":  "B1C14C3AD0B9583D52181904B5005EF6BFB31D8D071E265318468BD2CBB72A9B"
+                                    },
+                                    {
+                                        "path":  "docs/DEMO_AND_RECOVERY.md",
+                                        "sha256":  "B9C62A6DC1CE56F72F1154AA4CE05FB101D4A945D2E6B4D9D63E8CB586BA52AB"
+                                    },
+                                    {
+                                        "path":  "docs/DESIGN.md",
+                                        "sha256":  "0B659009A2BA7A7ECB59B4CCAF8AB29E5588C0518421510F4AE90DA0F0925282"
+                                    },
+                                    {
+                                        "path":  "docs/EVENT_CATALOG.md",
+                                        "sha256":  "73FB17F128BFC2E262571051249AFA7A90D38ACC5BA3CCF290A5DF3D672E2507"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/ci31-pagination-fix-2026-11-13.json",
+                                        "sha256":  "98DF48654CED1210E428B59DCB6BA3939FF3FA0686AEA3918F913C130F5E518B"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/part4-2026-11-12.json",
+                                        "sha256":  "0376EAFCE2D6DE8F32CAF885D13700A6BC2B0CEE22B7BE0FD193E7CE8ACF2B55"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/part5-2026-11-12.json",
+                                        "sha256":  "A0109B0D291D11D2EFCC5FC6D5F2643AFF80F00B9D93BE68C4A200264A97D949"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/part6-2026-11-12.json",
+                                        "sha256":  "0F4757227B4D4A04F4C245BD8FD1FCB182BEA247EF22B84BE034C74E4CF73660"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/part7-2026-11-13.json",
+                                        "sha256":  "2E153F9635BD7057434A9914767C6366B993705EBC770D27724CD9755CC87A16"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/part8-2026-11-13.json",
+                                        "sha256":  "FF4D0DE8B14030677DE7E5E1C4A58FFB3AF63F8031962AD2027EC34F5F87BC8B"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t8-1-observability-2026-11-13.json",
+                                        "sha256":  "F4B426DEA6FAC1F3587BBD8CAFFB833CB2D583627A6444319D0CA903FB430A95"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t8-2-metrics-2026-11-13.json",
+                                        "sha256":  "63916318025C9256BDFEC24F2FFCD9E45577EF5FC84CFE6A1C1CF829B31A948F"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t8-3-recovery-2026-11-13.json",
+                                        "sha256":  "12BB6F295B8EE968885B59875DFF7DD58D4FA784F5C4FD0C0706EDAA0A8D0D89"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t8-4-readme-2026-11-14.json",
+                                        "sha256":  "1132B88C6DC7EE603E2BCA0249B453969F1D1389ABD98B6BFF4BEC28F3978E79"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-1-invariants-2026-11-14.json",
+                                        "sha256":  "E89DA98A74552F2454C614BEA5848850AD0FF75D3BBDB8585F51BD27135390BC"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-2-audits-2026-11-14.sql",
+                                        "sha256":  "E0DD40381F50819A5CD4CFFC3EFFF87D8231031E659F8E4F0AE44EAD0ED73FBB"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-2-load-2026-11-14.json",
+                                        "sha256":  "175839763173FFC2B3F9213E966DEDB1C1CBC7817853687AF429FB707B4EED88"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-2-samples-2026-11-14.csv",
+                                        "sha256":  "D77B46D3D058917ED539CB2E89017119659FC7A169B95C2D166798B49FC28CE0"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-3-queries-2026-11-14.sql",
+                                        "sha256":  "8864058CCEA0F05D7631481FA678FBBAA1BF95E9A1BA5FF8EFE61E248275841D"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-3-recovery-2026-11-14.json",
+                                        "sha256":  "D0C7CFB1834C158C210823FBBFE737318C1D83DF5F197C71867BE1AD809A8C5B"
+                                    },
+                                    {
+                                        "path":  "docs/evidence/t9-3-snapshots-2026-11-14.json",
+                                        "sha256":  "12713F0289293199D72F2C1C01369B7BB052496A5427F38F99AA4427918C2E2C"
+                                    },
+                                    {
+                                        "path":  "docs/PRD.md",
+                                        "sha256":  "5846CEB51A1005790C0721E750C93DB7A26797D593E385D0EC8CD657A9FEE118"
+                                    },
+                                    {
+                                        "path":  "docs/PROGRESS.md",
+                                        "sha256":  "55F57EA96DEA7D503F174BB084E9EEA8D56BEEABCF43E1CC0E4A25907326DABB"
+                                    },
+                                    {
+                                        "path":  "docs/README.md",
+                                        "sha256":  "232BDADEB56EA481E4A8F4E7BC8D618BD6C669DAAEB42FDA1DDE9098455F121D"
+                                    },
+                                    {
+                                        "path":  "docs/RULES.md",
+                                        "sha256":  "E8733EA52D62FB012B05E84269E7518C5444B674ED2312E786FEFB14C2560791"
+                                    },
+                                    {
+                                        "path":  "docs/TASKS.md",
+                                        "sha256":  "C492024A11983F1F1E2CE25930C261EA56DCA05AC14E820D29505EAFC26A1DB3"
+                                    },
+                                    {
+                                        "path":  "docs/TEST_PLAN.md",
+                                        "sha256":  "78B1E572A4356292315512A57A37D2D79A9A13FBC37E1D8E104C602A6F8D627C"
+                                    },
+                                    {
+                                        "path":  "docs/TRACEABILITY.md",
+                                        "sha256":  "B150EBD72A33B12F9858BD4A77E140872D40C557EAF30B34845C83F8C9BED7AF"
+                                    },
+                                    {
+                                        "path":  "docs/UPGRADE_REPORT.md",
+                                        "sha256":  "3BE492BDE3CA48E314F5C35C43F804957A23E74216F792B3A4DD33D1D153CE1F"
+                                    },
+                                    {
+                                        "path":  "frontend/.node-version",
+                                        "sha256":  "6E775BEAE185BB3F5837D2F6D3FBE910E6F60E18FA507E661E312E84D707A92F"
+                                    },
+                                    {
+                                        "path":  "frontend/.npmrc",
+                                        "sha256":  "7151CF397DEF0C2CB0AB65643701D27D335A72C90F775675B5F826BC7005818A"
+                                    },
+                                    {
+                                        "path":  "frontend/index.html",
+                                        "sha256":  "4612E61601A6EFFCC43113599269B67A3FF48552674919962B07F73C2BAE4A38"
+                                    },
+                                    {
+                                        "path":  "frontend/package.json",
+                                        "sha256":  "9626B3D2C12D76D7E857CCD6BE0B21045A6408489539D22A0E60BAC24EB7DF8D"
+                                    },
+                                    {
+                                        "path":  "frontend/package-lock.json",
+                                        "sha256":  "49C516663BD241A97A16129E80F035E2109E765A36AD27074D17999046D631A3"
+                                    },
+                                    {
+                                        "path":  "frontend/src/api/.gitkeep",
+                                        "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                    },
+                                    {
+                                        "path":  "frontend/src/api/admin.test.ts",
+                                        "sha256":  "CAF099E5CD3859CD4B1A062FBE34FA5EFB798920BC7E09E96109ABFD4A21AC8E"
+                                    },
+                                    {
+                                        "path":  "frontend/src/api/admin.ts",
+                                        "sha256":  "52067E4B0979BBF17F7051BD39D1456FB3252E3F9D53E26E52D29FA2305FF37F"
+                                    },
+                                    {
+                                        "path":  "frontend/src/api/client.test.ts",
+                                        "sha256":  "7E570111D9D3D06D8A3538F6385CD19982D880EC2152863C649DD666DAA8D7EA"
+                                    },
+                                    {
+                                        "path":  "frontend/src/api/client.ts",
+                                        "sha256":  "BDF7F53645FCDB6015B21ADCEA3931FD81364AE8B04FFAC3EE93554A9D61DBB8"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/AdminDashboard.test.ts",
+                                        "sha256":  "EFA64F161F553916151EE2F760918F14C46D62F316F65CFC6C2AB541295854E9"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/AdminDashboard.ts",
+                                        "sha256":  "7B42CB6B61AC7F21BFCC7F72C886DD973C136305C13E8E1401B5608982426F84"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/App.test.ts",
+                                        "sha256":  "3FDE4C4E67970E590F32E05C53AE92FC6B36B5FF7228A0B34D361CD68CF08EB9"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/App.ts",
+                                        "sha256":  "02B8E79464617319087C0E9468D3EA86B41AA2EF6E50D65883996F82CB49F0C5"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/Checkout.test.ts",
+                                        "sha256":  "A57B178FA1659A2FC64ABEB6C9B7F927A7EBFFC7667A1C6C0825DFA23339AD99"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/Checkout.ts",
+                                        "sha256":  "520E6D9B6665CE5AC596E31A57D27271D0A49D6FF5F91B6E9608BCF043F0247C"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/DemoShell.ts",
+                                        "sha256":  "5B8267FDD3B737DF3AFD7A920E1B8B6F3F92953DF29D48124B87D94263251612"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/EventEditor.ts",
+                                        "sha256":  "664559FFB1BF1153605D4FC677879FF04255A5C5AF4173AB017C17EDC73524B1"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/RecoveryView.test.ts",
+                                        "sha256":  "BC7E8EB93FCFCA55EF99839E55D1957124A06BA71B994CE31EF29950E1AC92C8"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/RecoveryView.ts",
+                                        "sha256":  "E54D7BA05E68C201CEACF0FFF5BE96B8BB4CB0A237BD029522218B4392A446B0"
+                                    },
+                                    {
+                                        "path":  "frontend/src/app/replayAttempt.ts",
+                                        "sha256":  "75FEFBE065786B1EE712BEAA8BD99F3CCBDF0C2BA8EB7052F4E173E034B92195"
+                                    },
+                                    {
+                                        "path":  "frontend/src/components/.gitkeep",
+                                        "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                    },
+                                    {
+                                        "path":  "frontend/src/env.d.ts",
+                                        "sha256":  "AE881229DCD5698CD8D28E5A3BC27E1E989B5ED4922D1713F354EF9376218900"
+                                    },
+                                    {
+                                        "path":  "frontend/src/features/.gitkeep",
+                                        "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                    },
+                                    {
+                                        "path":  "frontend/src/main.ts",
+                                        "sha256":  "A27F5A5491C1D26A63E7825EF8CA03EA4DECAC0FB330B9E6E88089253AF05AB9"
+                                    },
+                                    {
+                                        "path":  "frontend/src/styles.css",
+                                        "sha256":  "C9D4FC4197CF7C33D450BF7C29F0AA4D3ACFC592A41260DFD6DF450BE2AB5572"
+                                    },
+                                    {
+                                        "path":  "frontend/tests/live-admin.ts",
+                                        "sha256":  "C9392A017348A6968AE246AC3D7A146B95A1F2A5157613F330846A84F671DA79"
+                                    },
+                                    {
+                                        "path":  "frontend/tests/live-payments.ts",
+                                        "sha256":  "82319C6BBEFC8053FCE80BDBA126A8A8E60FB7C89F7A73B3131FAF852AFA255F"
+                                    },
+                                    {
+                                        "path":  "frontend/tests/live-recovery.ts",
+                                        "sha256":  "C0C1ADDC5EC99F76958856DD1463BEC1A027CA7A251CE1B0B2AF47DEBEF21CD6"
+                                    },
+                                    {
+                                        "path":  "frontend/tests/live-seats.ts",
+                                        "sha256":  "02AD423F9AF18782C5E2641DF40DE5D28D2381BF43DF1CD2C5F38146C5004800"
+                                    },
+                                    {
+                                        "path":  "frontend/tests/live-ui.ts",
+                                        "sha256":  "B5FE1F1E4A0738A083EE49F5D9AACF2D26C1DBC1E05F816269A9ACE0A51DAF72"
+                                    },
+                                    {
+                                        "path":  "frontend/tsconfig.json",
+                                        "sha256":  "1E732FF7A3F2CB6D5FD1858C61B7CEAD0D41A7791C78A9516539179034002504"
+                                    },
+                                    {
+                                        "path":  "infra/docker-compose.yml",
+                                        "sha256":  "3B6D2D0CC50499750EFEE1250080A6A93EC0EA597F755CE302CF9168B3967960"
+                                    },
+                                    {
+                                        "path":  "infra/local-env.ps1",
+                                        "sha256":  "3051655D944F1B17B4F3B13C1DA41C54FA53D3FD070C65289CDB0C10730D1A03"
+                                    },
+                                    {
+                                        "path":  "infra/README.md",
+                                        "sha256":  "1B6817C52F7B10A245567979D5D19DE3D86649771167803A86DDA989586E8569"
+                                    },
+                                    {
+                                        "path":  "infra/start-frontend.ps1",
+                                        "sha256":  "8CE1B4584B315430B5C58163C36F292F22A27372CCE8DC8C3E8CB44B668EF57C"
+                                    },
+                                    {
+                                        "path":  "infra/start-local.ps1",
+                                        "sha256":  "F7EAA936EF707898F2D50911349A23AD103E44698F21F3835821DE110B6C28E2"
+                                    },
+                                    {
+                                        "path":  "infra/stop-local.ps1",
+                                        "sha256":  "12DE0977D4349403AD4E5B3F15A500B2520AEB58A3C10B4DA7B86F57A6FBB795"
+                                    },
+                                    {
+                                        "path":  "infra/test-invariants.ps1",
+                                        "sha256":  "6E26112F1CDB086DBED7411ACE9DEC37E096A9F7C72BF1B6AE86493CC7F577B2"
+                                    },
+                                    {
+                                        "path":  "infra/test-load.ps1",
+                                        "sha256":  "8D8961DDF7C85D7F67CA111A08C20D82CD50BCE36F71CDF4F1A457F9B4B7C1B9"
+                                    },
+                                    {
+                                        "path":  "infra/test-metrics.ps1",
+                                        "sha256":  "D004F74C0F34572447A6E8AF5443A88C895DE674BAB2B9E64282D3E1AC92EFBA"
+                                    },
+                                    {
+                                        "path":  "infra/test-part3.ps1",
+                                        "sha256":  "CD013DA523D2876C3EE012142AB362CC6F08D569DA17B5F41871DB3AA68AF146"
+                                    },
+                                    {
+                                        "path":  "infra/test-part4.ps1",
+                                        "sha256":  "818FE767189CC570F2568041E247A62D0067087AD7EC111B791989AC6631AA2D"
+                                    },
+                                    {
+                                        "path":  "infra/test-part4-ui.ps1",
+                                        "sha256":  "152E1695BD5DC65B2AB177C75442325D7E2FB856442D720B1444AA2B4F7A9734"
+                                    },
+                                    {
+                                        "path":  "infra/test-part5.ps1",
+                                        "sha256":  "1A72AD4D336ACE809C9ACEA5F82A2DACF8E48EF26AF2B664A34457B4B79347B3"
+                                    },
+                                    {
+                                        "path":  "infra/test-part5-ui.ps1",
+                                        "sha256":  "2270A39DAF2B440F132E2A9F899BDC3A2254185A6F0D751403D9632AEC3B377C"
+                                    },
+                                    {
+                                        "path":  "infra/test-part6.ps1",
+                                        "sha256":  "36E80D662C6368CF6E103932E52262347B4647734396CAF47D5AAA1CF58A1DF8"
+                                    },
+                                    {
+                                        "path":  "infra/test-part6-ui.ps1",
+                                        "sha256":  "3CE4DDCD074F2A4A5192EBE1031A444208FF8318967C6B74F37DB9C587E958F8"
+                                    },
+                                    {
+                                        "path":  "infra/test-part7.ps1",
+                                        "sha256":  "FA89E3C6202F82255820E6D48B1B7EB14C105A22E161B452F61E4A3064E36361"
+                                    },
+                                    {
+                                        "path":  "infra/test-part8.ps1",
+                                        "sha256":  "2AD9FA9B1D4385E81862D33510C0214191F23AB0DCA2914148A56478FD767D59"
+                                    },
+                                    {
+                                        "path":  "infra/test-part8-ui.ps1",
+                                        "sha256":  "4A6D19A3959E165C490DD814CEBE43FBC22943B01DC790C57B1EB98CB61C8D02"
+                                    },
+                                    {
+                                        "path":  "infra/test-recovery.ps1",
+                                        "sha256":  "FD661350F9ED6B0837888FE66A83FC22340BDAC235A563A1CAAA484AFBFEF893"
+                                    },
+                                    {
+                                        "path":  "infra/test-release-checks.ps1",
+                                        "sha256":  "72CD34E5C3EE8DA48A778E634EC7D815D16EFE79D2446D1AAE180C7BC224D749"
+                                    },
+                                    {
+                                        "path":  "infra/test-release-security.ps1",
+                                        "sha256":  "67682E74D6BF9251C54B6F1BF68A9B4DC8543A8F7F9FBB596C8CFC74AD1696C0"
+                                    },
+                                    {
+                                        "path":  "infra/verify-local.ps1",
+                                        "sha256":  "B3483F17D5AD3763A2920CC08905BBC3C2E61AA90B48776DE6F3B2757A143C2D"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part3.ps1",
+                                        "sha256":  "433EBE2BA8C26D31542878FBE19A78ED911186CEA28F9B0FE7FA6987FDE33237"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part4.ps1",
+                                        "sha256":  "1EFF0147516DC38BFB338BA4DF2C266E84A23D71223CB0486A9501A8D709153B"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part5.ps1",
+                                        "sha256":  "459159E941116DF8810E467E4F59F56C32C61F5634AB80F7C823DDE3D07EA077"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part6.ps1",
+                                        "sha256":  "6389ABEFE328C5DB5FDA5F08DB8027BCE13C4F2938DFA1003A830CDD9F8A5A85"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part7.ps1",
+                                        "sha256":  "59F075D3B264B27C80788BBC0BAEB40B3921A59A710A34ED27E9B06A194A7E42"
+                                    },
+                                    {
+                                        "path":  "infra/verify-part8.ps1",
+                                        "sha256":  "B3CC95ED75C4AFD84881EF6C04CD39681795903E01D7589C73136F4DF5E5CCEA"
+                                    },
+                                    {
+                                        "path":  "README.md",
+                                        "sha256":  "F50AE92F89E609A906A89563DFB471A32C23BC6527FE8B48FCF4D8BF1B63E1C3"
+                                    },
+                                    {
+                                        "path":  "tools/contracts/measure-lock.ps1",
+                                        "sha256":  "07F9A6EEF6FA4DC827955FD569FDC2DFB7B1328B8CB37887DC0A79EA135B58D2"
+                                    },
+                                    {
+                                        "path":  "tools/contracts/package.json",
+                                        "sha256":  "44111A1609EAC6A7964EEB2031CA52D3309CBE9C97CF44302C152174D12916FC"
+                                    },
+                                    {
+                                        "path":  "tools/contracts/package-lock.json",
+                                        "sha256":  "D7E0A85CC692BBE4E1E538477CC1D84A03110E729C4DBD8476BBF79A5A4C1646"
+                                    },
+                                    {
+                                        "path":  "tools/contracts/verify.mjs",
+                                        "sha256":  "4ADD9CFFDAFAB8CA71863664AE1DBAB955E4EB64077046C287C1C32FDF004F49"
+                                    },
+                                    {
+                                        "path":  "tools/contracts/verify-live.mjs",
+                                        "sha256":  "0CD118082463CBCC0DE85A94548050DE9724F0BC38FD4D70FDCF79B69BA7D80F"
+                                    },
+                                    {
+                                        "path":  "tools/load/booking-load.mjs",
+                                        "sha256":  "12D2D785F72F601C56B0BCD4132000DA4CE1AEFA9D778403A991D3E7FD37D2DD"
+                                    },
+                                    {
+                                        "path":  "tools/load/HttpBurst.java",
+                                        "sha256":  "6B4062EC55414A97CEA0A73A9A6B9E55F1C7E663DC882EBE11286AF586EF4603"
+                                    },
+                                    {
+                                        "path":  "tools/load/statistics.mjs",
+                                        "sha256":  "A2D4F9D64C6A54F5E290212FA2E387ABB6D60455D9BF2B8A9222DC3D0C1CC06C"
+                                    },
+                                    {
+                                        "path":  "tools/load/statistics.test.mjs",
+                                        "sha256":  "C007605972B06BED4597B06FCDD805E0A837EC6C430BDFF7B6ADC5808F1CD160"
+                                    }
+                                ],
+                   "files":  229,
+                   "note":  "Final progress/task documentation and this evidence are written after the gate; they receive a separate final candidate secret/diff scan. No runtime/test/config changes after gate.",
+                   "method":  "Full current working-tree snapshot (tracked + nonignored untracked, deletions reflected), SHA256 verified before/after; no workspace .env or artifacts. Own project/ports/DB/topics; all volumes retained.",
+                   "allRuntimeFilesStillMatch":  true
+               },
+    "acceptance":  [
+                       {
+                           "evidence":  "Fixed HEAD-only certification gap and missing CI coverage for new load tooling; no open production P0/P1 identified in reviewed scope",
+                           "localResult":  "PASS",
+                           "criterion":  "High-priority defects/config review"
+                       },
+                       {
+                           "evidence":  "Gitleaks history/candidate, private candidate path rejection, closed gate/JUnit/live JVM log scan",
+                           "localResult":  "PASS",
+                           "criterion":  "No secret"
+                       },
+                       {
+                           "evidence":  "Fresh 0-table DB; boot applies V1-V9, reboot unchanged checksums/installedOn/seed; 18 tables",
+                           "localResult":  "PASS",
+                           "criterion":  "Clean migration"
+                       },
+                       {
+                           "evidence":  "HEAD run #37 success is historical; no commit/push authorized for current candidate",
+                           "localResult":  "PASS local equivalent",
+                           "criterion":  "CI green",
+                           "candidateGithubResult":  "NOT_RUN"
+                       }
+                   ],
+    "results":  {
+                    "sqlAndLiveChecks":  [
+                                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                                             "PASS pagination: {\"total\":25,\"firstPageCount\":20,\"secondPageCount\":5,\"overlap\":0,\"domMatchesApi\":true}",
+                                             "PASS SQL:2tickets/sold2/payment inbox1,0oversell,0tickets on invalid states,9unchanged migrations.",
+                                             "PASS recovery SQL:2tickets/sold2/history2/businessEvents3/audit1/paymentInbox1 after two identical HTTP replays.",
+                                             "PASS SQL: held=3, sold=0, capacity=3 after UI success, replay and conflict.",
+                                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                                             "PASS Kafka scheduler: payment through event path, durable restart and simulated compensation COMPLETED.",
+                                             "PASS restart: durable scheduled payment recovered, REFUND_REQUIRED,0tickets, same intent on replay, no migration necessary.",
+                                             "PASS SQL:0tickets on invalid states,0wrong ordinals/booking,0oversell,0wrong SOLD owner,0duplicate compensation;V1-V9.",
+                                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                                             "PASS SQL: no orphan holds, no expired seat owner, no GA oversell, no duplicate BookingExpired; migrations V1-V7.",
+                                             "PASS restart: same isolated DB, health UP, no migration necessary."
+                                         ],
+                    "backend":  {
+                                    "skipped":  0,
+                                    "errors":  0,
+                                    "tests":  130,
+                                    "failures":  0
+                                },
+                    "contracts":  {
+                                      "liveResponses":  222,
+                                      "note":  "74 schema responses in each of 3 isolated environments, not 222 distinct scenarios",
+                                      "tests":  69,
+                                      "operations":  18
+                                  },
+                    "subprocesses":  11,
+                    "snapshots":  37,
+                    "liveGroups":  5,
+                    "sumViolations":  {
+                                          "duplicateBusinessEvents":  0,
+                                          "duplicateRefundCompletion":  0,
+                                          "invalidTickets":  0,
+                                          "duplicateSeatTickets":  0,
+                                          "oversell":  0,
+                                          "duplicateActiveSeats":  0,
+                                          "seatOwnerMismatch":  0,
+                                          "duplicateHistory":  0,
+                                          "duplicateCompensation":  0,
+                                          "gaQuantityMismatch":  0,
+                                          "orphanHold":  0
+                                      },
+                    "frontend":  {
+                                     "skipped":  0,
+                                     "tests":  54,
+                                     "build":  "PASS",
+                                     "failures":  0
+                                 },
+                    "invariantChecks":  407,
+                    "loadToolTests":  {
+                                          "compile":  "PASS",
+                                          "tests":  7,
+                                          "failures":  0
+                                      }
+                },
+    "commands":  [
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-release-security.ps1",
+                         "name":  "security-static"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 npm.cmd ci --prefix frontend",
+                         "name":  "install-frontend"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 npm.cmd ci --prefix tools/contracts",
+                         "name":  "install-contracts"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 npm.cmd test --prefix frontend",
+                         "name":  "frontend-tests"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 npm.cmd run build --prefix frontend",
+                         "name":  "frontend-build"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 npm.cmd test --prefix tools/contracts",
+                         "name":  "contracts"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live",
+                         "name":  "backend-recovery-live"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1",
+                         "name":  "ga-live"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1",
+                         "name":  "seats-expiry-restart-live"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka",
+                         "name":  "payments-kafka-restart-live"
+                     },
+                     {
+                         "exitCode":  0,
+                         "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-release-checks.ps1",
+                         "name":  "release-checks"
+                     }
+                 ],
+    "security":  {
+                     "status":  "PASS",
+                     "tools":  [
+                                   {
+                                       "sha256":  "D29144DEFF3A68AA93CED33DDDF84B7FDC26070ADD4AA0F4513094C8332AFC4E",
+                                       "archive":  "gitleaks_8.30.1_windows_x64.zip",
+                                       "release":  "gitleaks/gitleaks/v8.30.1"
+                                   },
+                                   {
+                                       "sha256":  "7121DCF420AEFBBF89A7F0050C4D3094E079FF93AFD334DFC96F16B02EC85800",
+                                       "archive":  "osv-scanner_windows_amd64.exe",
+                                       "release":  "google/osv-scanner/v2.7.1"
+                                   },
+                                   {
+                                       "sha256":  "6E7241B51E6817EA6A047693D8E6FED13B31819C9A0DD6C5A726E1592D22F6E9",
+                                       "archive":  "actionlint_1.7.12_windows_amd64.zip",
+                                       "release":  "rhysd/actionlint/v1.7.12"
+                                   }
+                               ],
+                     "checks":  [
+                                    {
+                                        "name":  "secrets-history",
+                                        "exitCode":  0
+                                    },
+                                    {
+                                        "name":  "secrets-candidate",
+                                        "exitCode":  0
+                                    },
+                                    {
+                                        "name":  "workflow-lint",
+                                        "exitCode":  0
+                                    }
+                                ],
+                     "limitations":  [
+                                         "actionlint on Windows: shellcheck and pyflakes disabled; this is not a GitHub-hosted Linux run"
+                                     ],
+                     "powershellFiles":  27
+                 },
+    "dependencies":  {
+                         "contracts":  {
+                                           "info":  0,
+                                           "low":  0,
+                                           "moderate":  0,
+                                           "high":  0,
+                                           "critical":  0,
+                                           "total":  0
+                                       },
+                         "backend":  {
+                                         "exitCode":  0,
+                                         "findings":  0,
+                                         "sbomPackages":  77,
+                                         "scanner":  "OSV 2.7.1"
+                                     },
+                         "frontend":  {
+                                          "info":  0,
+                                          "low":  0,
+                                          "moderate":  0,
+                                          "high":  0,
+                                          "critical":  0,
+                                          "total":  0
+                                      }
+                     },
+    "releaseChecks":  [
+                          {
+                              "name":  "audit-frontend-deps",
+                              "exitCode":  0
+                          },
+                          {
+                              "name":  "audit-contract-deps",
+                              "exitCode":  0
+                          },
+                          {
+                              "name":  "load-tool-tests",
+                              "exitCode":  0
+                          },
+                          {
+                              "name":  "load-client-compile",
+                              "exitCode":  0
+                          },
+                          {
+                              "name":  "audit-backend-deps",
+                              "exitCode":  0
+                          }
+                      ],
+    "migration":  {
+                      "sources":  [
+                                      {
+                                          "sha256":  "9E382C4153FA7A8817DDBDBA74616CBA7983A1ACB4A78CF5719C062AB50D6F66",
+                                          "file":  "V1__create_application_schema.sql"
+                                      },
+                                      {
+                                          "sha256":  "224FC9843C53A79D7778587DA8132AAFD716B30F23AE3813EB4C27D46A17A32A",
+                                          "file":  "V2__catalog_and_booking_foundation.sql"
+                                      },
+                                      {
+                                          "sha256":  "C5E03F063F261BA27312990A0F0B59347214F33433A9969E818B6380743DE425",
+                                          "file":  "V3__payments_and_outbox.sql"
+                                      },
+                                      {
+                                          "sha256":  "8A873F2D268800ACBC18FB979AD8803CDA0FB7C0F3D87976171530CF98D3B3AE",
+                                          "file":  "V4__require_outbox_booking_id.sql"
+                                      },
+                                      {
+                                          "sha256":  "7EA6FE18D940FC85991DC4E2AFD0F6BB824F4651832B54E420B4FD4A0648AE41",
+                                          "file":  "V5__booking_idempotency_and_history.sql"
+                                      },
+                                      {
+                                          "sha256":  "57B0C650C6B152A30E0CF84E4A8996527EF79AF3214995A60FF9BCFAD9ED21E6",
+                                          "file":  "V6__initial_history_transition.sql"
+                                      },
+                                      {
+                                          "sha256":  "9322017AFD7D45534CAA5CDD06EC2D99AA366ECC5B9E5D33920E92228D45C257",
+                                          "file":  "V7__seat_owner_event_type.sql"
+                                      },
+                                      {
+                                          "sha256":  "F0E05A1DD6D5B06AA640BD1BCDADAE3B68AB0C1EA9F4E0B708789DD4D8B925D4",
+                                          "file":  "V8__tickets_and_payment_compensations.sql"
+                                      },
+                                      {
+                                          "sha256":  "7FCBC279AA06360C07521544BA61FA740BDC822A90DD1B26683D1DBF91D91A8A",
+                                          "file":  "V9__inbox_and_recovery.sql"
+                                      }
+                                  ],
+                      "beforeTables":  0,
+                      "database":  "ticketing_invariants",
+                      "boots":  [
+                                    {
+                                        "catalogEvents":  2,
+                                        "boot":  1,
+                                        "readiness":  "UP",
+                                        "state":  {
+                                                      "seats":  4,
+                                                      "users":  2,
+                                                      "events":  2,
+                                                      "tables":  18,
+                                                      "bookings":  0,
+                                                      "gaCapacity":  100,
+                                                      "migrations":  [
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "1",
+                                                                             "checksum":  534994926,
+                                                                             "installedOn":  "2026-11-14T04:54:09.896983"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "2",
+                                                                             "checksum":  2037578376,
+                                                                             "installedOn":  "2026-11-14T04:54:09.939309"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "3",
+                                                                             "checksum":  -475844455,
+                                                                             "installedOn":  "2026-11-14T04:54:10.010981"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "4",
+                                                                             "checksum":  -727577109,
+                                                                             "installedOn":  "2026-11-14T04:54:10.042212"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "5",
+                                                                             "checksum":  -704638016,
+                                                                             "installedOn":  "2026-11-14T04:54:10.063293"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "6",
+                                                                             "checksum":  -2081481639,
+                                                                             "installedOn":  "2026-11-14T04:54:10.09889"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "7",
+                                                                             "checksum":  -1625388130,
+                                                                             "installedOn":  "2026-11-14T04:54:10.118993"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "8",
+                                                                             "checksum":  2046874239,
+                                                                             "installedOn":  "2026-11-14T04:54:10.138122"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "9",
+                                                                             "checksum":  -1407983870,
+                                                                             "installedOn":  "2026-11-14T04:54:10.170094"
+                                                                         }
+                                                                     ]
+                                                  }
+                                    },
+                                    {
+                                        "catalogEvents":  2,
+                                        "boot":  2,
+                                        "readiness":  "UP",
+                                        "state":  {
+                                                      "seats":  4,
+                                                      "users":  2,
+                                                      "events":  2,
+                                                      "tables":  18,
+                                                      "bookings":  0,
+                                                      "gaCapacity":  100,
+                                                      "migrations":  [
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "1",
+                                                                             "checksum":  534994926,
+                                                                             "installedOn":  "2026-11-14T04:54:09.896983"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "2",
+                                                                             "checksum":  2037578376,
+                                                                             "installedOn":  "2026-11-14T04:54:09.939309"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "3",
+                                                                             "checksum":  -475844455,
+                                                                             "installedOn":  "2026-11-14T04:54:10.010981"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "4",
+                                                                             "checksum":  -727577109,
+                                                                             "installedOn":  "2026-11-14T04:54:10.042212"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "5",
+                                                                             "checksum":  -704638016,
+                                                                             "installedOn":  "2026-11-14T04:54:10.063293"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "6",
+                                                                             "checksum":  -2081481639,
+                                                                             "installedOn":  "2026-11-14T04:54:10.09889"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "7",
+                                                                             "checksum":  -1625388130,
+                                                                             "installedOn":  "2026-11-14T04:54:10.118993"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "8",
+                                                                             "checksum":  2046874239,
+                                                                             "installedOn":  "2026-11-14T04:54:10.138122"
+                                                                         },
+                                                                         {
+                                                                             "success":  true,
+                                                                             "version":  "9",
+                                                                             "checksum":  -1407983870,
+                                                                             "installedOn":  "2026-11-14T04:54:10.170094"
+                                                                         }
+                                                                     ]
+                                                  }
+                                    }
+                                ]
+                  },
+    "logScan":  {
+                    "scope":  "All closed gate stdout/stderr, JUnit and 14 UUID live JVM logs from this gate time window; no raw log text published",
+                    "status":  "PASS",
+                    "filesRead":  90,
+                    "files":  [
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "78C31C1D0F9BC6BE762901DDDAF306442CC4821546B1A6804263366AF911920B",
+                                      "file":  "audit-backend-deps.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "54345D5194D238B6017D0F3181F392109CE35023CC6B4BDFA8C134943DCB578E",
+                                      "file":  "audit-backend-deps.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "audit-contract-deps.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "1F31F9E7DB146D32F5FF279AD5FEE41A5A72AEFF8ED049910C1BFB9EAEA09760",
+                                      "file":  "audit-contract-deps.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "audit-frontend-deps.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "B417E2A2E3D2EEEF13A5ADA6D895A841123D1022F3F227860EBCA8A3CECD3A20",
+                                      "file":  "audit-frontend-deps.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "EF61B5F243C2CC7F45FE6CB99DAC3512A0CD1FC736E908DC22FFBD86F07780C8",
+                                      "file":  "backend-recovery-live.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "4ECDEFEC0BD1464B5B2F9825241281667C49D017BA7F22F906241DF930CDC1A1",
+                                      "file":  "backend-recovery-live.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "contracts.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "EDBC978A1D0AA6FE0432E125556FAF9251AAD616A761E3797A80BF6073693E94",
+                                      "file":  "contracts.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "frontend-build.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "01706A85CF827ABC5F305FE602327EC82C87A2804A57BDDF0B5D7EA9ADC241F2",
+                                      "file":  "frontend-build.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "frontend-tests.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "5DC9F853B5A19D18186C398AEDF4532C6271B12120A174A2BF5759079B9F7994",
+                                      "file":  "frontend-tests.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "B3B8A48499B67C67DF987A09A2E8BE41475270029B2F1E1ADDC69366C8A19455",
+                                      "file":  "ga-live.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "354C3D279E28562378D80149A7367CFE913CB8BF6AF2D1BAE0809DFA060CCBDA",
+                                      "file":  "ga-live.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "install-contracts.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "2594B1B4F4E51E6ACEE5872BE2F3A0CD7A468B7A99F86273103461EB49C71C4A",
+                                      "file":  "install-contracts.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "install-frontend.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "36BA3D58BCDC55327178E3C568D3A1ACD824E2FB0ADC02D7550B41C988A61A08",
+                                      "file":  "install-frontend.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "load-client-compile.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "load-client-compile.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "load-tool-tests.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "37B2C8ABDA7B5A1FD593189C66799C928313781C5C8F9B38493C44BC662A26C1",
+                                      "file":  "load-tool-tests.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "migration-boot-1.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "4E696C42B51C246FB09DE00F0B295A1F4129625B028397EBFDBC02466183D086",
+                                      "file":  "migration-boot-1.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "migration-boot-2.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "882630B28DD599ACF415FDB2CD3DA17A40BC8D8DDA885513D9973DAD0D1E6FCE",
+                                      "file":  "migration-boot-2.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "1FA3DB59093121FE8364664BC14A09AE42B849C2FD276BD5ECB0EC3348617C74",
+                                      "file":  "payments-kafka-restart-live.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "EBD6BD8758E8CA3DE0F8DCC6A9B09D96B06FFFF5DF9E5A80DE0BC13602654D72",
+                                      "file":  "payments-kafka-restart-live.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "1FC997DBF958F5EA257B8018B532CC17C00C6AC5AFF159BC25B897AECE05DFB8",
+                                      "file":  "release-checks.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "2DA61AFABC69AAD7346E1EE04F43E7349868006988B1F102C1BB447DD5629C6C",
+                                      "file":  "release-checks.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "B3B8A48499B67C67DF987A09A2E8BE41475270029B2F1E1ADDC69366C8A19455",
+                                      "file":  "seats-expiry-restart-live.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "650E0F96ACC0A7C19F6199C8FF102284C4262FBC4FC00D6C7B7798E5C3EA9E30",
+                                      "file":  "seats-expiry-restart-live.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "F7D0D9AB7534D66F41D4A2742A04740B73092E8116DA5C4945F2F35D8279CA0E",
+                                      "file":  "secrets-candidate.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "secrets-candidate.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "6CAE587BAB9DECED63E1CA5342839335C47D1065ED23357C1AD2F8126534FE77",
+                                      "file":  "secrets-history.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "secrets-history.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "D9D8679301A9A141EA842A9B218B26F2466F27070144C1BB87701118174DBA33",
+                                      "file":  "security-static.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "25F1122157E47755296CE9B92F518BF764AA8513CFE3977A92CFC137D45565DE",
+                                      "file":  "security-static.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "workflow-lint.stderr.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "workflow-lint.stdout.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "C216479442888009103BDA1EB61FD8C5FA0A41258D2F85A66684C248D47F874D",
+                                      "file":  "com.haolo.ticketing.DemoAuthConfigurationTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "EEE4661CFC91F5C40BED2200DF58C2C05E6886D4A96FBBC84E2129D3B2B6ADEC",
+                                      "file":  "com.haolo.ticketing.HealthEndpointTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "EE20138EC4DAD826770D0F13D7234136F03F9C2BD39406BDC1EA9B44215D2137",
+                                      "file":  "com.haolo.ticketing.KafkaRecoveryTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "D32B9A03DE636D8410F03988466FF5605DFC77751A670A0DD968DAC49C27B46B",
+                                      "file":  "com.haolo.ticketing.operations.OperationsMetricsTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "D626E8DD4A0825371D2EA3E33D8C6C7D970CE0FDC70DCEA35158774DD264B191",
+                                      "file":  "com.haolo.ticketing.PostgresAdminTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "3AEF978B0E46379E5460FDB62CDA0478D839F5992F9C65A03D686D1210D8026F",
+                                      "file":  "com.haolo.ticketing.PostgresBookingTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "BD74563E06A4979410FD91F43E52ECEFD09AD46C7877585C4FF9BD65DCD5D5E2",
+                                      "file":  "com.haolo.ticketing.PostgresCatalogTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "6278FBB16D30116881F78FA835C55E5F704865EFB18D798BE3B473A970175B34",
+                                      "file":  "com.haolo.ticketing.PostgresDashboardSecurityTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "4B43F72E7A4C8348D230611F7AD6FB12B7C4369177DCDCE4156577CE7C1B2A2B",
+                                      "file":  "com.haolo.ticketing.PostgresMetricsTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "88B7153B6D854AFD5E806D71A514D2BD6EE4C92A558A55525A93B4B6A1C6EB96",
+                                      "file":  "com.haolo.ticketing.PostgresOutboxTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "69B92787AFB4DB8538A57276F0AE1386B0D9789F417E734D2AA9A6F963E9F451",
+                                      "file":  "com.haolo.ticketing.PostgresPaymentTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "87BD46CE530C4E34BA034C2BAAED505E48576424CC1FF6CDA1626FA59B6F9E1E",
+                                      "file":  "com.haolo.ticketing.PostgresProductionProfileTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "D8F0D1CCEE62054FDABAE1F71E1901D086FD60D42FA921E4576FB932C0AD3D0F",
+                                      "file":  "com.haolo.ticketing.PostgresSchemaTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "47E434AA8B70A4C11C75DC23E14A072B03F5E67C489EDB5B7B5A7374EB5DEFB8",
+                                      "file":  "com.haolo.ticketing.PostgresSeatExpiryTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "8BFD20E1A07845E7E148189152164AD0D298FB5EEA540FE1576F349E89207D32",
+                                      "file":  "com.haolo.ticketing.PostgresSeedTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "6C1131786A79A06CD9008057CB35C69EA71C96002D1CBD79B8AA9F46431F6CC2",
+                                      "file":  "com.haolo.ticketing.TicketingApplicationTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "33DA89F01F8E3DF87028B435B2120667FADB5369F00981B05A7B0BD5060D491E",
+                                      "file":  "com.haolo.ticketing.TraceContextTest.txt"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "7B756E0B95D2F23E8B0D53C2B58D6165C9D3C6A59336BA82E7D5794498E8E2A6",
+                                      "file":  "TEST-com.haolo.ticketing.DemoAuthConfigurationTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "D95BD77278663D69B67B0AC352F0E1F1DDF1224AAB41BD56FCFB0784CBBE95B2",
+                                      "file":  "TEST-com.haolo.ticketing.HealthEndpointTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "9F87564D7900BCD4E376FEB32A4A8B41290D5505F2F79254B5CB5681E198F88E",
+                                      "file":  "TEST-com.haolo.ticketing.KafkaRecoveryTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "6F9629BD9933C71C42EF230D0F86EBFB9337A86FCCD0EAD45A88031D580FA2D1",
+                                      "file":  "TEST-com.haolo.ticketing.operations.OperationsMetricsTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "DB05A622F8954717FFD8248BEBE458EC9493BA01FDCB9535B5465514D7364407",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresAdminTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "CCDE893D34DB6C328C5460E7A8E7D1A54F55747290E19BE0CDBFC6A1BD43AC94",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresBookingTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "88541FDB3450B58952F059966FF02DAF9CA3F99C60BCE1B5C5FA0B0377C45148",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresCatalogTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "78FC1115ED1E4B7A6AB5DD2E3106BB9F6D344F1D73DCAA46C7936B0A972914CA",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresDashboardSecurityTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "606EF8EFFD05F7E02C95C3852A844A34B38FDF048661A8F209D12F59E6108679",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresMetricsTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "10241C304DCB301EDF5E38C65D4313B160087DDD826E5DC23B3F61E677942189",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresOutboxTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "62E75E347087CEBEB310F98EFE02A328FF22B4E0C9C41789F14AA0993CF4A49C",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresPaymentTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "6C1CD2084BBE34FBC582F6BE80DFC71BA7AD5C1CAFD9A0664232CD0F0C779524",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresProductionProfileTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "22D7A5E3AD43E0CC1A2BA069113FBD941E1C35F1A6B636D936698FD62B789411",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresSchemaTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "974C728DFF9E316CB4E53A0D43B14F10DB6E64D7A644E5E58690CBC200E908B7",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresSeatExpiryTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "C020189F23A69A27F0DBEA1D64B36B9080D71B8EF8ED83850FB85DFDB1824C77",
+                                      "file":  "TEST-com.haolo.ticketing.PostgresSeedTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "3DA50521F56FFC108302F646B0B163546F48C148D6BEF9114E84B5F7D5CCA96D",
+                                      "file":  "TEST-com.haolo.ticketing.TicketingApplicationTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "B484D8EE62C0FC61899ECB8F0007B9D6ACD970DBFAD206085923F5B9F55E0C74",
+                                      "file":  "TEST-com.haolo.ticketing.TraceContextTest.xml"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_payment_ui_ff9c894d170644768d7fc9d295103529-restart.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "12BD64683B83CADF27AB5D4F09DFBF0D6848E0096CA89DA4E3CE2BFDF63D3E67",
+                                      "file":  "ticketing_payment_ui_ff9c894d170644768d7fc9d295103529-restart.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_payment_ui_ff9c894d170644768d7fc9d295103529.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "5B920A909213D5CC269DD1639B0CBD2C9168894E2E9065535585A76F1B2D6587",
+                                      "file":  "ticketing_payment_ui_ff9c894d170644768d7fc9d295103529.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_seat_ui_5d467415e179423b8abd34004f15897e-restart.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "ABB4543BDB8FE8958D0717768610038E20A3F28ECF610D60F418221F3A0F1F71",
+                                      "file":  "ticketing_seat_ui_5d467415e179423b8abd34004f15897e-restart.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_seat_ui_5d467415e179423b8abd34004f15897e.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "59C5F469D94E7C4FD27D977EB573C208E0C04B41ED475FC2F90822B2935CD734",
+                                      "file":  "ticketing_seat_ui_5d467415e179423b8abd34004f15897e.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_t8ui_9fe5334c1b9c43c29f3030cd2d4af5c4-prod.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "CB089AD0391FCFE8103E1C3A4DF651613C6CFF0E595BEECBF99112570A8B6CE8",
+                                      "file":  "ticketing_t8ui_9fe5334c1b9c43c29f3030cd2d4af5c4-prod.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_t8ui_9fe5334c1b9c43c29f3030cd2d4af5c4.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "A70131217A9AEA7E76955B3B77552D01D226DBCBC6D4470AE9991692D625D874",
+                                      "file":  "ticketing_t8ui_9fe5334c1b9c43c29f3030cd2d4af5c4.log"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                                      "file":  "ticketing_ui_b8f087fcf1794ff5a8755a4563980708.err"
+                                  },
+                                  {
+                                      "violation":  false,
+                                      "sha256":  "0571760DBA0ACDF1E9E20A91A3E3EEBD16F947E28AB9B53C73ECC9113D301D51",
+                                      "file":  "ticketing_ui_b8f087fcf1794ff5a8755a4563980708.log"
+                                  }
+                              ],
+                    "violations":  0
+                },
+    "preservation":  {
+                         "preexistingVolumesRetained":  true,
+                         "demoDatabaseNotOpened":  true,
+                         "initialFilesUnchanged":  [
+                                                       {
+                                                           "sha256":  "3CDAD74AB43CD722E3093DB7A0AC8CEF03A7E4266896BBD8B0BBAE8DB723736B",
+                                                           "path":  "backend/src/test/java/com/haolo/ticketing/KafkaRecoveryTest.java"
+                                                       },
+                                                       {
+                                                           "sha256":  "F91C807F03E58C7AFDCC09F1A6A6AED428A87805C6E8362E4845131800541C30",
+                                                           "path":  "backend/src/test/java/com/haolo/ticketing/PostgresPaymentTest.java"
+                                                       },
+                                                       {
+                                                           "sha256":  "BBB59B90C483591883788E05FD420BDA7F1E2E5A5059F151E75881C1583331A1",
+                                                           "path":  "backend/src/test/java/com/haolo/ticketing/RecoveryEvidence.java"
+                                                       },
+                                                       {
+                                                           "sha256":  "E0DD40381F50819A5CD4CFFC3EFFF87D8231031E659F8E4F0AE44EAD0ED73FBB",
+                                                           "path":  "docs/evidence/t9-2-audits-2026-11-14.sql"
+                                                       },
+                                                       {
+                                                           "sha256":  "175839763173FFC2B3F9213E966DEDB1C1CBC7817853687AF429FB707B4EED88",
+                                                           "path":  "docs/evidence/t9-2-load-2026-11-14.json"
+                                                       },
+                                                       {
+                                                           "sha256":  "D77B46D3D058917ED539CB2E89017119659FC7A169B95C2D166798B49FC28CE0",
+                                                           "path":  "docs/evidence/t9-2-samples-2026-11-14.csv"
+                                                       },
+                                                       {
+                                                           "sha256":  "8864058CCEA0F05D7631481FA678FBBAA1BF95E9A1BA5FF8EFE61E248275841D",
+                                                           "path":  "docs/evidence/t9-3-queries-2026-11-14.sql"
+                                                       },
+                                                       {
+                                                           "sha256":  "D0C7CFB1834C158C210823FBBFE737318C1D83DF5F197C71867BE1AD809A8C5B",
+                                                           "path":  "docs/evidence/t9-3-recovery-2026-11-14.json"
+                                                       },
+                                                       {
+                                                           "sha256":  "12713F0289293199D72F2C1C01369B7BB052496A5427F38F99AA4427918C2E2C",
+                                                           "path":  "docs/evidence/t9-3-snapshots-2026-11-14.json"
+                                                       },
+                                                       {
+                                                           "sha256":  "8D8961DDF7C85D7F67CA111A08C20D82CD50BCE36F71CDF4F1A457F9B4B7C1B9",
+                                                           "path":  "infra/test-load.ps1"
+                                                       },
+                                                       {
+                                                           "sha256":  "12D2D785F72F601C56B0BCD4132000DA4CE1AEFA9D778403A991D3E7FD37D2DD",
+                                                           "path":  "tools/load/booking-load.mjs"
+                                                       },
+                                                       {
+                                                           "sha256":  "6B4062EC55414A97CEA0A73A9A6B9E55F1C7E663DC882EBE11286AF586EF4603",
+                                                           "path":  "tools/load/HttpBurst.java"
+                                                       },
+                                                       {
+                                                           "sha256":  "A2D4F9D64C6A54F5E290212FA2E387ABB6D60455D9BF2B8A9222DC3D0C1CC06C",
+                                                           "path":  "tools/load/statistics.mjs"
+                                                       },
+                                                       {
+                                                           "sha256":  "C007605972B06BED4597B06FCDD805E0A837EC6C430BDFF7B6ADC5808F1CD160",
+                                                           "path":  "tools/load/statistics.test.mjs"
+                                                       }
+                                                   ],
+                         "preexistingContainerStatesUnchanged":  true,
+                         "workspaceEnvUnchanged":  true,
+                         "allTestContainersStopped":  true,
+                         "noVolumeDeleted":  true,
+                         "existingDocumentationAndHarnessExtended":  [
+                                                                         "docs/PROGRESS.md",
+                                                                         "docs/TASKS.md",
+                                                                         "docs/TEST_PLAN.md",
+                                                                         "infra/README.md",
+                                                                         "infra/test-invariants.ps1"
+                                                                     ]
+                     },
+    "github":  {
+                   "reason":  "Current working tree uncommitted; user forbids commit/push",
+                   "runNumber":  37,
+                   "url":  "https://github.com/Haolo333z/event-ticketing-platform/actions/runs/43540974191",
+                   "candidateRun":  "NOT_RUN",
+                   "conclusion":  "success",
+                   "runId":  43540974191,
+                   "verifiedHead":  "502d34e1092076d3f4a91d1f6892d6febca939cc",
+                   "jobs":  [
+                                "backend",
+                                "frontend",
+                                "contracts",
+                                "secrets"
+                            ]
+               },
+    "artifacts":  {
+                      "raw":  "reports/t9-4/ticketing-audit-e28927563c4c/",
+                      "retainedDatabase":  "ticketing_invariants in owned audit project; never demo",
+                      "sql":  "docs/evidence/t9-4-migration-2026-11-14.sql",
+                      "snapshotSql":  "reports/t9-4/ticketing-audit-e28927563c4c/postgres-snapshots/"
+                  },
+    "limitations":  [
+                        "No GitHub-hosted Linux run for current candidate; T9.4 remains unchecked",
+                        "actionlint shellcheck/pyflakes disabled on Windows",
+                        "Existing Docker/npm/Maven caches, not a fresh machine; one PG/Kafka node",
+                        "No new load benchmark; preserves T9.2 measurements and reruns concurrency regression cases",
+                        "Secret/dependency scanners and 90 observed log files do not prove absence under every runtime configuration",
+                        "Live UI is jsdom plus real HTTP, not Chrome visual QA",
+                        "UI temporary databases cleaned by existing harness; backend UUID databases/volumes retained, but per-test fixtures may have been reset between cases",
+                        "No disk loss/multi-broker HA, independent pool exhaustion/statement cancellation or network cut exactly at COMMIT"
+                    ],
+    "finalSourceScan":  {
+                            "note":  "Final candidate includes post-gate documentation/evidence; fresh source-only snapshot excludes .env/build/dependencies",
+                            "details":  "reports/t9-4/ticketing-audit-e28927563c4c/final-source-scan.json",
+                            "diffCheckExit":  0,
+                            "candidateFiles":  231,
+                            "runtimeFilesStillMatching":  185,
+                            "status":  "PASS",
+                            "secretFindings":  0
+                        }
+}

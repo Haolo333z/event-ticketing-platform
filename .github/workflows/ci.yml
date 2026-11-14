@@ -24,6 +24,8 @@ jobs:
           cache-dependency-path: tools/contracts/package-lock.json
       - run: npm ci --prefix tools/contracts
       - run: npm test --prefix tools/contracts
+      - name: Load measurement tool regression
+        run: node --test tools/load/statistics.test.mjs
       - run: npm audit --prefix tools/contracts --audit-level=high
 
   backend:
@@ -66,6 +68,8 @@ jobs:
       - name: Build, test and generate dependency SBOM
         working-directory: backend
         run: sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom
+      - name: Compile load measurement client
+        run: javac -d "$RUNNER_TEMP/ticketing-load-client" tools/load/HttpBurst.java
       - uses: actions/upload-artifact@v4
         if: always()
         with:

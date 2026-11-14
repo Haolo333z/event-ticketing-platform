@@ -1,0 +1,1386 @@
+﻿{
+    "task":  "T9.3",
+    "status":  "PASS",
+    "date":  "2026-11-14",
+    "timezone":  "Asia/Saigon",
+    "sourceHead":  "502d34e1092076d3f4a91d1f6892d6febca939cc",
+    "initialState":  "HEAD502d34e + existing uncommitted T9.2 files",
+    "started":  "2026-11-14T11:24:03.1032373+07:00",
+    "finished":  "2026-11-14T11:28:25.7742301+07:00",
+    "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -RecoveryEvidence",
+    "exitCode":  0,
+    "harnessSha256":  "503952B1757F45E086DD8447906EB5DF6BD6CB7DA75E1FC4CF10D0AAB29B2F16",
+    "applicationFromHead":  true,
+    "executedCurrentTestSources":  true,
+    "testOverlay":  [
+                        {
+                            "sha256":  "E8356928B2D46D1C528599D428D9DE10DFE22A49C52B864E98F7623822EC121E",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/DemoAuthConfigurationTest.java"
+                        },
+                        {
+                            "sha256":  "BD4AC0EBC3537B83A11594DC7D2BB45B013F1B1272CC0369F38F573E9655F54C",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/HealthEndpointTest.java"
+                        },
+                        {
+                            "sha256":  "3CDAD74AB43CD722E3093DB7A0AC8CEF03A7E4266896BBD8B0BBAE8DB723736B",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/KafkaRecoveryTest.java"
+                        },
+                        {
+                            "sha256":  "FC71D107BAB5F40EDE71FDD7B9E732EA4F93BAF8ED656759E619855BCD1A7856",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresAdminTest.java"
+                        },
+                        {
+                            "sha256":  "00F606EB2D287C3FA3A8C5A0139DB075729E10F36BACEF6E9EEBC761AE994D3E",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresBookingTest.java"
+                        },
+                        {
+                            "sha256":  "95DD5AFB13BB46E0AF941213809ED019641A145DD06A5538D9C97FC5FA4E7DAD",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresCatalogTest.java"
+                        },
+                        {
+                            "sha256":  "81672CBEF1AC50D9E6980D9C0D8D1C4BABC6759999C658507700333EEC65C586",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresDashboardSecurityTest.java"
+                        },
+                        {
+                            "sha256":  "CB03F2841356323C9FC46349F3554BEF1752627316667890897FB06B4F0E7A01",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresMetricsTest.java"
+                        },
+                        {
+                            "sha256":  "A18BDCF260E4180534B703AF5376AEA08582E8123495D33D7B86B3303310DB9F",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresOutboxTest.java"
+                        },
+                        {
+                            "sha256":  "F91C807F03E58C7AFDCC09F1A6A6AED428A87805C6E8362E4845131800541C30",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresPaymentTest.java"
+                        },
+                        {
+                            "sha256":  "6B8D0CA4C51D6E7013AFFE1ADD872069AD961F212DD60234D1EEE8057F418554",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresProductionProfileTest.java"
+                        },
+                        {
+                            "sha256":  "E0CE0B531EFF0D386FDEF0E7A3B05B5D1C46BA914600756BE911A63C3398157E",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSchemaTest.java"
+                        },
+                        {
+                            "sha256":  "7C8D541FB03246AC15FA55B2155A9AEF66FF6FADAB9196196F846BE8A6F57DBC",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSeatExpiryTest.java"
+                        },
+                        {
+                            "sha256":  "9EE695E5F8610EACE973B9CE629A6F5D3B0C8C9D1B3CC0686B7EC4A4C61875B1",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/PostgresSeedTest.java"
+                        },
+                        {
+                            "sha256":  "BBB59B90C483591883788E05FD420BDA7F1E2E5A5059F151E75881C1583331A1",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/RecoveryEvidence.java"
+                        },
+                        {
+                            "sha256":  "A56D874B3A531DDD5E40DF4A4024BE56E8A555E4EC98B6EF3EDB67BA884C2CEB",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/TicketingApplicationTest.java"
+                        },
+                        {
+                            "sha256":  "848E193454534F1285BD03A09A2DF88F927227F30734576646DE5215FD87F066",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/TraceContextTest.java"
+                        },
+                        {
+                            "sha256":  "7569CEB300E2701B665A7E16B1FA32AA9ECD3FE8CEC5928AA3F415A162021AF4",
+                            "path":  "backend/src/test/java/com/haolo/ticketing/operations/OperationsMetricsTest.java"
+                        }
+                    ],
+    "newTestCases":  0,
+    "modifiedCoverage":  "Existing timely-payment test now stops real broker before ledger commit; test-only SQL snapshot collector and opt-in harness; no production/schema/contract changes",
+    "project":  "ticketing-recovery-69f1f536ba81",
+    "checkout":  "C:\\Users\\tinht\\AppData\\Local\\Temp\\ticketing-recovery-69f1f536ba81",
+    "ports":  {
+                  "postgres":  65450,
+                  "kafka":  65451,
+                  "http":  "random per harness"
+              },
+    "backend":  {
+                    "skipped":  0,
+                    "errors":  0,
+                    "tests":  130,
+                    "failures":  0
+                },
+    "frontend":  {
+                     "skipped":  0,
+                     "tests":  54,
+                     "failures":  0
+                 },
+    "frontendBuild":  "PASS",
+    "contract":  {
+                     "status":  "PASS",
+                     "cases":  69,
+                     "operations":  18
+                 },
+    "liveHttp":  {
+                     "checksPerRun":  74,
+                     "totalResponseChecks":  222,
+                     "runs":  3,
+                     "note":  "74same schema checks repeated3times, not222distinct scenarios"
+                 },
+    "liveGroups":  [
+                       "admin/customer",
+                       "recovery",
+                       "GA",
+                       "seats/expiry",
+                       "payment/Kafka/JVMrestart"
+                   ],
+    "steps":  [
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\install-frontend.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 npm.cmd ci --prefix frontend",
+                      "name":  "install-frontend",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\install-frontend.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\install-contracts.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 npm.cmd ci --prefix tools/contracts",
+                      "name":  "install-contracts",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\install-contracts.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\frontend-tests.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 npm.cmd test --prefix frontend",
+                      "name":  "frontend-tests",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\frontend-tests.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\frontend-build.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 npm.cmd run build --prefix frontend",
+                      "name":  "frontend-build",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\frontend-build.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\contracts.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 npm.cmd test --prefix tools/contracts",
+                      "name":  "contracts",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\contracts.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\backend-recovery-live.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-recovery.ps1 -Live",
+                      "name":  "backend-recovery-live",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\backend-recovery-live.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\ga-live.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part4-ui.ps1",
+                      "name":  "ga-live",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\ga-live.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\seats-expiry-restart-live.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part5-ui.ps1",
+                      "name":  "seats-expiry-restart-live",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\seats-expiry-restart-live.stderr.log"
+                  },
+                  {
+                      "stdout":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\payments-kafka-restart-live.stdout.log",
+                      "exitCode":  0,
+                      "command":  "\u0026 powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-part6-ui.ps1 -Kafka",
+                      "name":  "payments-kafka-restart-live",
+                      "stderr":  "D:\\event-ticketing-platform\\reports\\t9-3\\ticketing-recovery-69f1f536ba81\\payments-kafka-restart-live.stderr.log"
+                  }
+              ],
+    "classes":  [
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.DemoAuthConfigurationTest",
+                        "tests":  3,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.HealthEndpointTest",
+                        "tests":  2,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.KafkaRecoveryTest",
+                        "tests":  19,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.operations.OperationsMetricsTest",
+                        "tests":  1,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresAdminTest",
+                        "tests":  9,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresBookingTest",
+                        "tests":  16,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresCatalogTest",
+                        "tests":  2,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresDashboardSecurityTest",
+                        "tests":  10,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresMetricsTest",
+                        "tests":  5,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresOutboxTest",
+                        "tests":  4,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresPaymentTest",
+                        "tests":  30,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresProductionProfileTest",
+                        "tests":  1,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresSchemaTest",
+                        "tests":  1,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresSeatExpiryTest",
+                        "tests":  23,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.PostgresSeedTest",
+                        "tests":  1,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.TicketingApplicationTest",
+                        "tests":  1,
+                        "errors":  0,
+                        "failures":  0
+                    },
+                    {
+                        "skipped":  0,
+                        "name":  "com.haolo.ticketing.TraceContextTest",
+                        "tests":  2,
+                        "errors":  0,
+                        "failures":  0
+                    }
+                ],
+    "testCases":  [
+                      {
+                          "status":  "PASS",
+                          "name":  "absentProductionOrMixedProfilesFailContextStartup",
+                          "class":  "com.haolo.ticketing.DemoAuthConfigurationTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "productionDefaultKeepsMockAuthDisabled",
+                          "class":  "com.haolo.ticketing.DemoAuthConfigurationTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "localTestAndTheirCombinationCanStartWithMockAuth",
+                          "class":  "com.haolo.ticketing.DemoAuthConfigurationTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "databaseFailureChangesReadinessButNotLivenessAndRecoversWithoutBroker(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.HealthEndpointTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failedValidationAlsoReportsDownWithoutLeakingDetails",
+                          "class":  "com.haolo.ticketing.HealthEndpointTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "schemaV1StrictAndInboxUniquePerConsumer",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "asynchronousPaymentVersionTwoDuplicateAndConsumerRestart",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "brokerOffOnRetainsOutboxAndOrdersVersions(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "acknowledgedSendThenDatabaseFailureResendsSameId",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "realGapIsParkedThenOrderedReplayRecoversWithoutIssuingTickets",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "malformedEventRetriesThenDurableRecoveryAndKafkaDlq",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "replayRoleProfileAuditValidationAndBoundedBudget",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "timelyDurablePaymentWinsExpiryEvenWhileKafkaHasNotDelivered",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "expiredLateSuccessRefundRetryHistoryAndConcurrentDuplicateAreIdempotent",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "cancelledLateSuccessWithoutRefundEventStillRecoveredAndHistoryRollback",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "exhaustedPublisherBudgetRetainsEventAndBlocksLaterVersions",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "exhaustedRefundBudgetParksSameObligationWithThreeHistoryRows",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "duplicateFailureAndExpiredNotificationsNeverReleaseAnotherHold",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "publisherSessionLeaderPreventsSecondPublisherFromSending",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "httpOutboxAndRealKafkaCarrySameIdsAndSafeJson(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "realDlqOutageThenRetryUpdatesCountersAndDurableGauges",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "recoveryHttpReplaysProcessedEventsWithoutAnySecondBusinessEffect(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "recoveryReadViewIsAuthorizedPaginatedAndNeverLeaksRawFailureData",
+                          "class":  "com.haolo.ticketing.KafkaRecoveryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "boundedCacheFailsVisiblyAndRecoversWithoutReturningStaleOrFalseZero",
+                          "class":  "com.haolo.ticketing.operations.OperationsMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "catalogHasBothModesAndAvailability",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "invalidAndMissingReturnContractErrors",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "authAndStartupGuard",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "corsBodyLimitsAndMediaTypes",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "capacityPriceAndSeatsAreProtected",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "adminCreatesSeatedCatalogAndDuplicateLabelsRollback",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "capacityUpdateRechecksAfterContendedLock",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "adminCreatesAndValidatesCatalog",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "lockTimeoutRollsBackBefore503",
+                          "class":  "com.haolo.ticketing.PostgresAdminTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failureAfterOutboxRollsBackEveryWrite",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "replayAfterExpiredKeepsOriginal202",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "foreignCustomerCannotReadBookingButAdminCan",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "validationAndRoles",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "fiftyRequestsAcrossFiveCustomersCannotOversell",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "twentyConcurrentDuplicatesCreateExactlyOneBooking",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "saleWindowInactiveAndSeatModeAreRejected",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "fiftyConcurrentHttpRequestsAlsoCannotOversell",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "concurrentDifferentPayloadsWithSameKeyConflict",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "uniqueKeyTimeoutIsNotMisclassifiedAndRetryIsSafe",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "successLocationPollingOwnerAndHistory",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "serializationRetriesAreBoundedAndDoNotDoubleHold",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "inventoryConflictRollsBackAndSameKeyCanRetry",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "sequentialReplayAndChangedPayloadConflict",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "cannotCommitIncompleteReservation",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "inventoryLockTimeoutRollsBackAllThenRetrySucceeds",
+                          "class":  "com.haolo.ticketing.PostgresBookingTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "catalogHasBothModesAndAvailability",
+                          "class":  "com.haolo.ticketing.PostgresCatalogTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "invalidAndMissingReturnContractErrors",
+                          "class":  "com.haolo.ticketing.PostgresCatalogTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "unicodeReplayReasonUsesCodePointsNotUtf16",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "forgedCommandFieldsAndInvalidNumbersCannotWrite",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "privateCatalogAndInactiveInventoryStayAdminOnly",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "inventoryReadMatchesHeldAndCapacityConflictKeepsSnapshot",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "invalidInputAndDatabaseFaultNeverLeakSecretMarkersToResponseOrLogs(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "corsAndCorrelationRejectUntrustedInput",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "roleAndIdentityAreNeverTakenFromClient",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "adminBookingFilterPaginationAndQueryValidation",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "utf8BodySizeContentTypeDepthDuplicateAndTrailingJsonAreEnforced",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "filterDatabaseErrorsStillUseSafeApiContract",
+                          "class":  "com.haolo.ticketing.PostgresDashboardSecurityTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "stateGaugesSeeCommittedStateAndDoNotPublishUncommittedOrRolledBackChanges",
+                          "class":  "com.haolo.ticketing.PostgresMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "outboxAgeIncludesFailedRowsAndChangesAfterPublication",
+                          "class":  "com.haolo.ticketing.PostgresMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "adminOnlyMetricsAndApiLatencyUseTemplatesWithoutPrivateLabels",
+                          "class":  "com.haolo.ticketing.PostgresMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "durableRecoveryAndDlqStatesHaveFiniteLabelsAndRefresh",
+                          "class":  "com.haolo.ticketing.PostgresMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "stoppedWorkerShowsOverdueGrowthAndScheduledResumeClearsReleasedHolds",
+                          "class":  "com.haolo.ticketing.PostgresMetricsTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "paymentLedgerConstraintsAreReal",
+                          "class":  "com.haolo.ticketing.PostgresOutboxTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "businessAndOutboxCommitTogether",
+                          "class":  "com.haolo.ticketing.PostgresOutboxTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "duplicateVersionsAndInvalidEnvelopesAreRejected",
+                          "class":  "com.haolo.ticketing.PostgresOutboxTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failuresAfterOutboxRollBackBusinessAndEvent(CapturedOutput)",
+                          "class":  "com.haolo.ticketing.PostgresOutboxTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "changedScenarioWithTheSameRequestIdConflicts",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "cancelIsBodylessOwnerOnlyAndRepeatedCancellationIsSafe",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "durableTimelyResultWithProcessingLagIsConfirmedByExpiry",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "delayedLedgerIsDurableAndMaintenanceRecordsAndProcessesOnce",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failureReleasesAllSeatsOnce",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "expiredSeatBookingNeverTakesInventoryFromTheNewOwner",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "httpAuthValidationOwnerAndTicketAccess",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "pendingTimelySuccessDominatesAnOlderUnprocessedFailure",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "compensationFailureRollsBackLateExpiryReleaseAndBothTransitions",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "cancelCannotUndoADurableTimelySuccessEvenBeforeAdapterRuns",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failureAfterExpiredOrConfirmedDoesNotReleaseInventoryAgain",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "gaSuccessIssuesExactlyTheQuantityAndMovesHeldToSold",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "cancellationAndSuccessRaceNeverMixSoldAndReleasedEffects",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "ticketFailureRollsBackConfirmationButKeepsDurableResultForRetry",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "recordingAndProcessingShareOneDeadlineAndRetryTheDurableResult",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "seatedSuccessSellsOnlyOwnedSeatsAndTicketReferencesAreCorrect",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "paymentAndExpiryRacingNearDeadlineUseStoredDatabaseTime",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "invalidInternalCallbacksCannotProcessForeignUnknownOrScheduledResults",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "ticketConstraintsRejectDuplicateOrdinalAndWrongBookingItem",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "lateSuccessBeforeExpiryWorkerCommitsBothExpiryAndRefundHistory",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "adminCapacityAndPriceRacesPreserveTheSnapshotAndInventory",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failureHistoryFaultRollsBackReleaseAndCanBeProcessedAgain",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "successAfterCancelledOrFailedCreatesObligationWithoutChangingTerminalState",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "exactDeadlineIsTimelyButOneMicrosecondLateIsNot",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "duplicateHttpRequestsAndCallbacksDoNotIssueMoreTickets",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "concurrentAdminPriceAndAvailabilityChangeCannotInvalidatePaidSeatHold",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "failureReleasesGaOnceAndRepeatedResultsDoNotSubtractAgain",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "recordingFailureRollsBackLedgerVersionAndResultOutbox",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "processingSeatLockTimeoutLeavesNoPartialSaleOrTickets",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "twoLatePaymentsHaveTwoObligationsButEachPaymentOnlyOne",
+                          "class":  "com.haolo.ticketing.PostgresPaymentTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "productionHasNoSeedRunnerOrWorkingMockTokens",
+                          "class":  "com.haolo.ticketing.PostgresProductionProfileTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "migrateAndCheckConstraintsOnPostgres",
+                          "class":  "com.haolo.ticketing.PostgresSchemaTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "fiftyCompetingCommandsAcrossTwoCustomersHoldOnePair",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "scheduledPaymentHasNoDurableResultAndDoesNotBlockExpiry",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "newBookingWaitsForWorkerCommitAndOldWorkerCannotReleaseNewOwner",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "expiryLockTimeoutRollsBackThenRetriesSafely",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "concurrentWorkersExpireSeatsExactlyOnce",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "repeatedDeadlockSqlstateStopsAfterThreeAttemptsAndRollsBackSeats",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "twentySameKeyReversedSeatListsReplayOneBooking",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "invalidSeatInputsRejectWithoutWrites",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "fiftyHttpRequestsForOneSeatHaveOneWinner",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "partiallyOverlappingSelectionsRaceWithoutLeavingTheLoserSeatHeld",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "realPostgresDeadlockIsRetriedWithinThreeAttempts",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "seatedHttpSuccessHasLocationPriceItemsAndOwner",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "notDueTerminalAndLockedBookingsAreNotReleased",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "durableTimelyPaymentConfirmsInsteadOfReleasing",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "timeoutOnSecondSeatLeavesNoPartialHoldAndCanRetry",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "mapAndOwnerConstraintsAreEnforced",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "laterUnavailableSeatRollsBackEarlierSeatAndKey",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "overdueSeatIsNotTakenInlineAndReplayAfterRebookCannotStealIt",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "batchIsLimitedToFiftyAndRepeatedPassFinishesTheRest",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "gaExpiryReleasesOnceAndAllowsNewBooking",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "expiryFailureAfterOutboxRollsBackAndNextPassContinues",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "seatBookingFailureAfterOutboxRollsBackAll",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "oneFailedBookingDoesNotRollBackAnotherBookingInThePass",
+                          "class":  "com.haolo.ticketing.PostgresSeatExpiryTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "seedIsIdempotentAndLocalOnly",
+                          "class":  "com.haolo.ticketing.PostgresSeedTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "contextLoadsWithoutExternalServices",
+                          "class":  "com.haolo.ticketing.TicketingApplicationTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "httpLogsOnlySafeMetadataAndDoesNotLeakIdsToNextRequest",
+                          "class":  "com.haolo.ticketing.TraceContextTest"
+                      },
+                      {
+                          "status":  "PASS",
+                          "name":  "nestedScopesRestoreContextEvenOnFailureAndThreadReuse",
+                          "class":  "com.haolo.ticketing.TraceContextTest"
+                      }
+                  ],
+    "comparisonProofs":  [
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "ledgerUnchanged":  true,
+                                                  "ticketsAfter":  2,
+                                                  "offlineOutbox":  2,
+                                                  "recoveredPublished":  3
+                                              },
+                                 "criterion":  "MSG-01 broker stop/start retains committed ledger/outbox"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "confirmedHistory":  1,
+                                                  "ticketsAfter":  3,
+                                                  "ticketsBefore":  3,
+                                                  "sold":  3,
+                                                  "inbox":  1
+                                              },
+                                 "criterion":  "MSG-01 consumer restart,10duplicates+1afterrestart,5confirmed replays"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "inboxAfterResend":  1,
+                                                  "sameEventId":  true,
+                                                  "inboxAfterAck":  1
+                                              },
+                                 "criterion":  "ACK then DB marking rollback/resend"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "recoveredTickets":  2,
+                                                  "resolvedFailures":  1,
+                                                  "deliveries":  3,
+                                                  "failedInbox":  0,
+                                                  "failedTickets":  0,
+                                                  "recoveredInbox":  1,
+                                                  "automaticRetries":  2,
+                                                  "retainedHeld":  2
+                                              },
+                                 "criterion":  "Consumer3failed deliveries,rollback inbox/business,controlled replay"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "dlqPublished":  2,
+                                                  "attemptsPerConsumer":  3,
+                                                  "newFailureRows":  2,
+                                                  "consumers":  2,
+                                                  "rawDataExcluded":  true
+                                              },
+                                 "criterion":  "Poison retained before ACK and actual Kafka DLQ consumed by existing test"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "unauthenticatedHttp":  401,
+                                                  "auditRows":  3,
+                                                  "source":  "Existing JUnit auth/budget assertions passed",
+                                                  "fourthNewRequestHttp":  409,
+                                                  "customerHttp":  403,
+                                                  "prodService":  403
+                                              },
+                                 "criterion":  "ADMIN/profile/audit/bounded replay"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "historyRows":  2,
+                                                  "beforeHash":  "6832727cf9721b6f9f7641b55b59ab8c",
+                                                  "afterHash":  "6832727cf9721b6f9f7641b55b59ab8c",
+                                                  "tickets":  2,
+                                                  "businessEvents":  3
+                                              },
+                                 "criterion":  "Payment/BookingConfirmed HTTP replay is business no-op"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "workerMode":  "Production expiry service called directly; deterministic scheduler disabled in Kafka tests",
+                                                  "offlinePaymentInbox":  0,
+                                                  "timely":  true,
+                                                  "confirmedTransitions":  1,
+                                                  "expiredTransitions":  0,
+                                                  "recoveredPaymentInbox":  1,
+                                                  "offlineWorkerTickets":  2
+                                              },
+                                 "criterion":  "Durable timely result handled by expiry while broker physically stopped"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "heldPlusSold":  0,
+                                                  "tickets":  0,
+                                                  "completions":  1,
+                                                  "obligations":  1,
+                                                  "state":  "REFUND_REQUIRED",
+                                                  "attempts":  2
+                                              },
+                                 "criterion":  "PAY-02 late success,refund failure,retry,12concurrent attempts"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "seatSnapshotUnchanged":  true,
+                                                  "oldBooking":  "REFUND_REQUIRED",
+                                                  "oldTickets":  0,
+                                                  "newOwnerHeld":  2
+                                              },
+                                 "criterion":  "Late success cannot steal reallocated seats"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "historyAndInventoryUnchanged":  true,
+                                                  "tickets":  0,
+                                                  "state":  "PAYMENT_FAILED"
+                                              },
+                                 "criterion":  "ga payment failure repeated release/history no-op"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "historyAndInventoryUnchanged":  true,
+                                                  "tickets":  0,
+                                                  "state":  "PAYMENT_FAILED"
+                                              },
+                                 "criterion":  "seat payment failure repeated release/history no-op"
+                             },
+                             {
+                                 "status":  "PASS",
+                                 "measured":  {
+                                                  "before":  "SCHEDULED",
+                                                  "resultEvents":  1,
+                                                  "tickets":  0,
+                                                  "compensations":  1,
+                                                  "after":  "REFUND_REQUIRED"
+                                              },
+                                 "criterion":  "Delayed durable result processed once"
+                             }
+                         ],
+    "snapshots":  {
+                      "sha256":  "12713F0289293199D72F2C1C01369B7BB052496A5427F38F99AA4427918C2E2C",
+                      "allViolationCountersZero":  true,
+                      "scenarioGroups":  13,
+                      "path":  "docs/evidence/t9-3-snapshots-2026-11-14.json",
+                      "count":  37,
+                      "violationCountersPerSnapshot":  11
+                  },
+    "queries":  {
+                    "sha256":  "8864058CCEA0F05D7631481FA678FBBAA1BF95E9A1BA5FF8EFE61E248275841D",
+                    "path":  "docs/evidence/t9-3-queries-2026-11-14.sql",
+                    "executedSnapshotQueries":  37,
+                    "replay":  "Run within the owning test DB while harness is active, or rerun gate to create new UUID fixtures. UUID DBs cleaned afterward; files preserve historical snapshots.",
+                    "mode":  "Single SELECT snapshot per phase; metadata current_database read separately",
+                    "uniqueQueries":  13
+                },
+    "sqlAndLiveChecks":  [
+                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                             "PASS pagination: {\"total\":25,\"firstPageCount\":20,\"secondPageCount\":5,\"overlap\":0,\"domMatchesApi\":true}",
+                             "PASS SQL:2tickets/sold2/payment inbox1,0oversell,0tickets on invalid states,9unchanged migrations.",
+                             "PASS recovery SQL:2tickets/sold2/history2/businessEvents3/audit1/paymentInbox1 after two identical HTTP replays.",
+                             "PASS SQL: held=3, sold=0, capacity=3 after UI success, replay and conflict.",
+                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                             "PASS Kafka scheduler: payment through event path, durable restart and simulated compensation COMPLETED.",
+                             "PASS restart: durable scheduled payment recovered, REFUND_REQUIRED,0tickets, same intent on replay, no migration necessary.",
+                             "PASS SQL:0tickets on invalid states,0wrong ordinals/booking,0oversell,0wrong SOLD owner,0duplicate compensation;V1-V9.",
+                             "PASS: 74 live HTTP responses match OpenAPI schemas (GA, seats, payment, cancel, tickets).",
+                             "PASS SQL: no orphan holds, no expired seat owner, no GA oversell, no duplicate BookingExpired; migrations V1-V7.",
+                             "PASS restart: same isolated DB, health UP, no migration necessary."
+                         ],
+    "liveRecovery":  {
+                         "result":  "PASS",
+                         "eventId":  "b5a27974-9aab-43b7-b80b-7e13ee1d3b7c",
+                         "bookingId":  "41c97fca-696f-45dd-9d69-55ddd0ca7f09",
+                         "ticketTypeId":  "c3bebb45-c3de-4126-90e5-d0da310ec9ef",
+                         "paymentEventId":  "4c5af737-7c2f-40e6-8379-3dfca238a195",
+                         "requestId":  "c4a01dc5-65db-4d75-91a5-003bf42a323d",
+                         "httpReplayCalls":  2,
+                         "distinctRequestIds":  1,
+                         "auditRows":  1,
+                         "ticketsBefore":  2,
+                         "ticketsAfter":  2,
+                         "historyBefore":  2,
+                         "historyAfter":  2,
+                         "remainingReplays":  2,
+                         "consumerReceiptsUnchanged":  true
+                     },
+    "measuredKafkaArtifacts":  [
+                                   {
+                                       "result":  "PASS",
+                                       "case":  "T6.1 schema/inbox"
+                                   },
+                                   {
+                                       "case":  "Kafka payment v2, 10 duplicates, consumer restart, 5 confirmed replays",
+                                       "confirmTransitions":  1,
+                                       "tickets":  3
+                                   },
+                                   {
+                                       "retained":  true,
+                                       "versions":  [
+                                                        1,
+                                                        2,
+                                                        3
+                                                    ],
+                                       "case":  "real broker stop/start",
+                                       "tickets":  2
+                                   },
+                                   {
+                                       "case":  "consumer rollback + 3 deliveries + admin replay",
+                                       "result":  "PASS",
+                                       "tickets":  2
+                                   },
+                                   {
+                                       "case":  "version 3 before 1/2, gap parked and replayed",
+                                       "ticketsBefore":  2,
+                                       "ticketsAfter":  2
+                                   },
+                                   {
+                                       "expiredTransitions":  0,
+                                       "paymentInboxAfterRecovery":  1,
+                                       "case":  "T9.3 real broker stopped: durable timely payment processed by expiry",
+                                       "confirmTransitions":  1,
+                                       "tickets":  2
+                                   },
+                                   {
+                                       "obligations":  1,
+                                       "case":  "COMP-01: late payment, failure/retry, 12 concurrent refund calls",
+                                       "attempts":  2,
+                                       "heldPlusSold":  0,
+                                       "tickets":  0,
+                                       "completions":  1
+                                   },
+                                   {
+                                       "attempts":  3,
+                                       "obligations":  1,
+                                       "case":  "bounded refund failure",
+                                       "result":  "FAILED retained for investigation"
+                                   },
+                                   {
+                                       "result":  "PASS",
+                                       "correlationId":  "ea713bd2-373e-4044-a9bd-ae23c6992d4a",
+                                       "paymentCorrelationId":  "4ddc91aa-3a8e-4058-91e3-3c730881b7e9",
+                                       "stages":  [
+                                                      "consumer_processed",
+                                                      "outbox_committed",
+                                                      "outbox_published",
+                                                      "http_request"
+                                                  ],
+                                       "eventId":  "5616301e-d453-4a2c-b74c-0b724fb0a0ca",
+                                       "bookingId":  "fca0729d-c8ab-4bf3-b6b4-a0af1452fbd9",
+                                       "case":  "T8.1 HTTP/outbox/Kafka JSON trace and poison redaction",
+                                       "paymentEventId":  "48ac076c-975e-4d83-886a-498c8e860b2a"
+                                   },
+                                   {
+                                       "retryDeliveries":  2.0,
+                                       "result":  "PASS",
+                                       "acknowledgedDeliveries":  2.0,
+                                       "case":  "T8.2 real DLQ failure then retry",
+                                       "failedDeliveries":  2.0
+                                   },
+                                   {
+                                       "case":  "T8.3 HTTP replay no-op via real Kafka, audit and budget",
+                                       "tickets":  2,
+                                       "beforeBusinessHash":  "6832727cf9721b6f9f7641b55b59ab8c",
+                                       "businessEvents":  3,
+                                       "result":  "PASS",
+                                       "remainingReplays":  0,
+                                       "afterBusinessHash":  "6832727cf9721b6f9f7641b55b59ab8c",
+                                       "paymentReplayAuditRows":  3,
+                                       "historyRows":  2
+                                   },
+                                   {
+                                       "duplicates":  0,
+                                       "totalRowsObserved":  39,
+                                       "pageSize":  1,
+                                       "case":  "T8.3 recovery list/details authorization, pagination, safe diagnostics",
+                                       "result":  "PASS",
+                                       "ownRows":  23
+                                   }
+                               ],
+    "preservation":  {
+                         "preexistingVolumesRetained":  true,
+                         "preexistingStatesUnchanged":  true,
+                         "retainedOwnedVolumes":  [
+                                                      "ticketing-recovery-69f1f536ba81_kafka_demo",
+                                                      "ticketing-recovery-69f1f536ba81_postgres_demo"
+                                                  ],
+                         "ownedServicesStopped":  true,
+                         "workspaceEnvUnchanged":  true,
+                         "demoNeverStartedOrConnected":  true,
+                         "t92Files":  [
+                                          {
+                                              "path":  "infra/test-load.ps1",
+                                              "sha256":  "8D8961DDF7C85D7F67CA111A08C20D82CD50BCE36F71CDF4F1A457F9B4B7C1B9"
+                                          },
+                                          {
+                                              "path":  "tools/load/HttpBurst.java",
+                                              "sha256":  "6B4062EC55414A97CEA0A73A9A6B9E55F1C7E663DC882EBE11286AF586EF4603"
+                                          },
+                                          {
+                                              "path":  "tools/load/booking-load.mjs",
+                                              "sha256":  "12D2D785F72F601C56B0BCD4132000DA4CE1AEFA9D778403A991D3E7FD37D2DD"
+                                          },
+                                          {
+                                              "path":  "tools/load/statistics.mjs",
+                                              "sha256":  "A2D4F9D64C6A54F5E290212FA2E387ABB6D60455D9BF2B8A9222DC3D0C1CC06C"
+                                          },
+                                          {
+                                              "path":  "tools/load/statistics.test.mjs",
+                                              "sha256":  "C007605972B06BED4597B06FCDD805E0A837EC6C430BDFF7B6ADC5808F1CD160"
+                                          },
+                                          {
+                                              "path":  "docs/evidence/t9-2-load-2026-11-14.json",
+                                              "sha256":  "175839763173FFC2B3F9213E966DEDB1C1CBC7817853687AF429FB707B4EED88"
+                                          },
+                                          {
+                                              "path":  "docs/evidence/t9-2-samples-2026-11-14.csv",
+                                              "sha256":  "D77B46D3D058917ED539CB2E89017119659FC7A169B95C2D166798B49FC28CE0"
+                                          },
+                                          {
+                                              "path":  "docs/evidence/t9-2-audits-2026-11-14.sql",
+                                              "sha256":  "E0DD40381F50819A5CD4CFFC3EFFF87D8231031E659F8E4F0AE44EAD0ED73FBB"
+                                          }
+                                      ],
+                         "allT92ProtectedHashesUnchanged":  true
+                     },
+    "rawLogHashes":  [
+                         {
+                             "sha256":  "F2EDB708CC72480DEC9FCCA7921CADDE9592E3EF3309511C73A45CC7C0FAECCE",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/backend-recovery-live.stderr.log"
+                         },
+                         {
+                             "sha256":  "75D02A34D307924AA2AFD0D08BE22C2A6CB293AF468BD06B69E872E9112B2F6D",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/backend-recovery-live.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/contracts.stderr.log"
+                         },
+                         {
+                             "sha256":  "EDBC978A1D0AA6FE0432E125556FAF9251AAD616A761E3797A80BF6073693E94",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/contracts.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/frontend-build.stderr.log"
+                         },
+                         {
+                             "sha256":  "4B7743C5572F7F4F2BF9C003DF9C2D555C91D7555A7A482373033C8B242108F1",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/frontend-build.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/frontend-tests.stderr.log"
+                         },
+                         {
+                             "sha256":  "D4A66A8E4E0D278C0427F1E733314AC08C309D2EA34F747D4099464769EA41DB",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/frontend-tests.stdout.log"
+                         },
+                         {
+                             "sha256":  "B0A25847EB2A305FA88BC1007501796799685D2AD8C7C835AF6E0983BDEDC770",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/ga-live.stderr.log"
+                         },
+                         {
+                             "sha256":  "354C3D279E28562378D80149A7367CFE913CB8BF6AF2D1BAE0809DFA060CCBDA",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/ga-live.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/install-contracts.stderr.log"
+                         },
+                         {
+                             "sha256":  "E9BF82E10D94D4D231C73A0851BE288C519066E2C2BAED53566DF45DD976BFC3",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/install-contracts.stdout.log"
+                         },
+                         {
+                             "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/install-frontend.stderr.log"
+                         },
+                         {
+                             "sha256":  "36BA3D58BCDC55327178E3C568D3A1ACD824E2FB0ADC02D7550B41C988A61A08",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/install-frontend.stdout.log"
+                         },
+                         {
+                             "sha256":  "CA39F601ED03B63582CBC6EF4D51E513B4800B772CB984DF49DCAA7281A465DB",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/payments-kafka-restart-live.stderr.log"
+                         },
+                         {
+                             "sha256":  "EBD6BD8758E8CA3DE0F8DCC6A9B09D96B06FFFF5DF9E5A80DE0BC13602654D72",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/payments-kafka-restart-live.stdout.log"
+                         },
+                         {
+                             "sha256":  "B0A25847EB2A305FA88BC1007501796799685D2AD8C7C835AF6E0983BDEDC770",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/seats-expiry-restart-live.stderr.log"
+                         },
+                         {
+                             "sha256":  "650E0F96ACC0A7C19F6199C8FF102284C4262FBC4FC00D6C7B7798E5C3EA9E30",
+                             "path":  "reports/t9-3/ticketing-recovery-69f1f536ba81/seats-expiry-restart-live.stdout.log"
+                         }
+                     ],
+    "exploratoryRun":  {
+                           "reason":  "A one-element PowerShell path array was unrolled to string; Git untracked-path check printed fatal128 that old runner did not check. Cast arrays, verify native exit, inventory test files and re-run final gate. Current result uses corrected runner and verified current hashes.",
+                           "project":  "ticketing-recovery-9053db2a2357",
+                           "acceptedAsT93":  false,
+                           "reportedStatus":  "PASS"
+                       },
+    "limits":  [
+                   "Controlled production expiry service called directly under real broker outage; real scheduling and JVM restart separately verified in live scripts, not every scheduling/starvation window.",
+                   "Trigger injects ACK/DB-marker and consumer transaction failures; no process kill precisely at every COMMIT/offset window.",
+                   "Single Windows host/single Kafka node per test project, no disk-loss/HA/network partition endurance.",
+                   "No real money/refund, GitHub Actions/Linux or visual Chrome rerun in this task.",
+                   "DEAD/FAILED records in bounded-failure fixtures are intentional expected outcomes; no force/reset/inbox deletion used.",
+                   "Failure snapshots with eventIdNULL include existing orphan failures in the same isolated Kafka test DB; compare IDs/baselines, not fixed total2.",
+                   "Original UUID databases cleaned by existing harness; snapshot files retain before/after states, SQL rerun requires live fixture or full gate rerun.",
+                   "Warm caches; no new load benchmark; T9.2evidence preserved, no T9.4orPart10 work."
+               ]
+}

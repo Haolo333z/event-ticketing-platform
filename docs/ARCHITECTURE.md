@@ -1,6 +1,6 @@
 # ARCHITECTURE — Kiến trúc hệ thống
 
-> Phiên bản: 0.4 · Trạng thái: kiến trúc đề xuất đã qua phản biện
+> Phiên bản: 0.4 · Trạng thái: baseline đã triển khai đến T8.4; bằng chứng kiểm chứng tại PROGRESS
 
 ## 1. Quyết định kiến trúc
 
@@ -12,7 +12,7 @@ Dùng modular monolith hướng sự kiện: một codebase backend chia module 
 | Database | PostgreSQL | booking, inventory, payment demo, outbox/inbox |
 | Migration | Flyway | Schema có phiên bản |
 | Broker | Apache Kafka | Event bất đồng bộ, key theo booking ID |
-| Cache/tiện ích | Redis | Chỉ cho use case phụ rõ như rate limit/cache; không giữ quyền sở hữu vé |
+| Cache/tiện ích | Không dùng Redis | PostgreSQL giữ quyền sở hữu vé; chỉ cân nhắc cache qua ADR riêng nếu có yêu cầu mới |
 | Frontend | React + TypeScript | UI customer/admin tối giản |
 | Đóng gói | Docker Compose | Local tái lập |
 | API docs | OpenAPI | Khám phá/thử API |
@@ -21,7 +21,7 @@ Version đã chốt tại T1.1 trong [ADR 0001](adr/0001-stack-and-local-environ
 
 ## 2. Module
 
-T7 UI/security review theo [ADR0008](adr/0008-demo-ui-and-security-review.md): admin query service đọc snapshot REPEATABLE_READ, frontend persona chỉ chọn token fixture; server giữ quyền. Không đổi transaction ghi inventory/payment/messaging, không thêm migration. TASKS không có T7.5; chỉ triển khai T7.1–T7.4, observability T8 chưa bắt đầu.
+T7 UI/security review theo [ADR0008](adr/0008-demo-ui-and-security-review.md): admin query service đọc snapshot REPEATABLE_READ, frontend persona chỉ chọn token fixture; server giữ quyền. Không đổi transaction ghi inventory/payment/messaging, không thêm migration. TASKS không có T7.5; phạm vi giai đoạn 8 là T7.1–T7.4. T8.1–T8.3 đã bổ sung log JSON/correlation ID, health DB/Kafka, metrics không gắn ID cá nhân và giao diện recovery dùng API replay/audit hiện có; T8.4 có hướng dẫn chạy Windows. Bằng chứng và giới hạn tại PROGRESS.
 
 Đến Phần6 có catalog/admin/auth demo,bookingGA/SEATED,expiry,payment simulator/shared processor,cancel,ticket/compensation vàUI thật. T6 bổ sung V9:18bảng/13API; Kafka/inbox/audit/recovery/refund worker theo ADR0007. Triển khai/test tại ADR0003–0006 và PROGRESS.
 

@@ -28,10 +28,15 @@ try {
         if($LASTEXITCODE -ne 0){throw 'Stage 7 tests failed; inspect backend/target/surefire-reports'}
     } finally { Pop-Location }
 } finally {
-    # Remove only the UUID project and database created by this invocation.
-    & docker @testCompose down --volumes
-    & docker @composeArgs exec -T postgres dropdb -U $env:POSTGRES_USER --if-exists --force $testDatabase
-    & docker @composeArgs exec -T postgres dropdb -U $env:POSTGRES_USER --if-exists --force $kafkaDatabase
+    if($env:TICKETING_RETAIN_TEST_RESOURCES -eq 'true'){
+        # Audit gate keeps its isolated databases and volumes for inspection; never touches demo.
+        & docker @testCompose stop kafka
+    }else{
+        # Remove only the UUID project and database created by this invocation.
+        & docker @testCompose down --volumes
+        & docker @composeArgs exec -T postgres dropdb -U $env:POSTGRES_USER --if-exists --force $testDatabase
+        & docker @composeArgs exec -T postgres dropdb -U $env:POSTGRES_USER --if-exists --force $kafkaDatabase
+    }
     foreach($name in @('PG_IT_URL','KAFKA_IT_PG_URL','KAFKA_IT_BOOTSTRAP','KAFKA_IT_CONTAINER','KAFKA_IT_TOPIC')){Remove-Item "Env:$name" -ErrorAction SilentlyContinue}
     $env:KAFKA_PORT=$oldKafkaPort
 }

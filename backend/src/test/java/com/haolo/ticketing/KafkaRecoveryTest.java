@@ -61,6 +61,7 @@ class KafkaRecoveryTest {
     UUID booking(int n){return bookings.create(owner,"kafka-"+UUID.randomUUID(),new GaBookingRequest(event,type,n),UUID.randomUUID()).bookingId();}
     PaymentSimulatorService.Receipt record(UUID b,String scenario){return simulator.record(owner,b,new SimulationInput(scenario,UUID.randomUUID()),UUID.randomUUID());}
     int count(String sql,Object... args){return jdbc.queryForObject(sql,Integer.class,args);}
+    void snap(String scenario,String phase){RecoveryEvidence.capture(jdbc,scenario,phase,event);}
     String state(UUID b){return jdbc.queryForObject("SELECT status FROM ticketing.bookings WHERE id=?",String.class,b);}
     UUID eventId(UUID b,String type){return jdbc.queryForObject("SELECT id FROM ticketing.outbox_events WHERE aggregate_id=? AND type=? ORDER BY aggregate_version DESC LIMIT 1",UUID.class,b,type);}
     void await(BooleanSupplier check){long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(25);while(System.nanoTime()<end){if(check.getAsBoolean())return;try{Thread.sleep(100);}catch(InterruptedException ex){throw new AssertionError(ex);}}assertTrue(check.getAsBoolean(),"Condition timed out");}
@@ -92,6 +93,7 @@ class KafkaRecoveryTest {
         UUID payment=eventId(booking,"PaymentResultRecorded"),confirmed=eventId(booking,"BookingConfirmed");
         await(()->inbox(EventConsumer.AUDIT,confirmed)==1&&inbox(EventConsumer.PAYMENT,payment)==1);
         String before=businessSnapshot(booking),path="/api/admin/operations/events/"+payment;
+        snap("replay-noop","before");
         var first=json.readTree(http("GET",path,null,"demo-admin-token").body());assertEquals(3,first.path("remainingReplays").intValue());assertEquals(2,first.path("consumers").size());assertEquals("PUBLISHED",first.path("status").asString());
         UUID request=UUID.randomUUID();String reason="Đối soát event đã xử lý";String body=json.writeValueAsString(Map.of("requestId",request,"reason",reason));
         for(int i=0;i<2;i++)assertEquals(202,http("POST",path+"/replay",body,"demo-admin-token").statusCode());
@@ -113,6 +115,7 @@ class KafkaRecoveryTest {
         assertEquals(202,http("POST","/api/admin/operations/events/"+confirmed+"/replay",notification,"demo-admin-token").statusCode());flush(booking);
         await(()->traceLines(output,confirmed).stream().anyMatch(n->n.path("outcome").asString().equals("DUPLICATE")&&n.path("consumer").asString().equals(EventConsumer.AUDIT)));
         String after=businessSnapshot(booking);assertEquals(before,after);assertEquals(2,tickets(booking));assertEquals(2,count("SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
+        snap("replay-noop","after");
         assertEquals(3,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=?",booking));assertEquals(2,count("SELECT count(*) FROM ticketing.booking_status_history WHERE booking_id=?",booking));
         evidence.add(Map.of("case","T8.3 HTTP replay no-op via real Kafka, audit and budget","beforeBusinessHash",before,"afterBusinessHash",after,"tickets",2,"historyRows",2,"businessEvents",3,"paymentReplayAuditRows",3,"remainingReplays",0,"result","PASS"));
     }
@@ -163,6 +166,7 @@ class KafkaRecoveryTest {
         assertEquals("PENDING_PAYMENT",state(b));assertEquals(0,tickets(b));
         UUID paymentEvent=eventId(b,"PaymentResultRecorded");assertEquals(2,publisher.event(paymentEvent).aggregateVersion());
         flush(b);await(()->state(b).equals("CONFIRMED"));flush(b);await(()->inbox(EventConsumer.PAYMENT,paymentEvent)==1);
+        snap("consumer-restart-duplicates","before");
         var e=publisher.event(paymentEvent);for(int i=0;i<10;i++)send(e);
         registry.getListenerContainers().forEach(c->c.stop());registry.getListenerContainers().forEach(c->c.start());send(e);
         UUID confirmed=eventId(b,"BookingConfirmed");for(int i=0;i<5;i++)send(publisher.event(confirmed));
@@ -170,11 +174,13 @@ class KafkaRecoveryTest {
         assertEquals(3,tickets(b));assertEquals(1,inbox(EventConsumer.PAYMENT,paymentEvent));
         assertEquals(1,count("SELECT count(*) FROM ticketing.booking_status_history WHERE booking_id=? AND to_status='CONFIRMED'",b));
         assertEquals(3,count("SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
+        snap("consumer-restart-duplicates","after");
         evidence.add(Map.of("case","Kafka payment v2, 10 duplicates, consumer restart, 5 confirmed replays","tickets",tickets(b),"confirmTransitions",1));
     }
     @Test @Order(3) void brokerOffOnRetainsOutboxAndOrdersVersions(CapturedOutput output) throws Exception {
         String container=System.getenv("KAFKA_IT_CONTAINER");assertTrue(container!=null&&container.startsWith("ticketing-kafka-it-"));
         UUID b=booking(2);record(b,"SUCCESS");
+        snap("broker-outage","before");
         double retriesBefore=retries("outbox","none");
         health("",200,"UP");health("/readiness",200,"UP");health("/liveness",200,"UP");
         docker("stop",container);
@@ -184,6 +190,7 @@ class KafkaRecoveryTest {
             assertEquals(1,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"BookingHeld")));
             assertEquals(0,count("SELECT attempts FROM ticketing.outbox_events WHERE id=?",eventId(b,"PaymentResultRecorded")));
             assertEquals("PENDING_PAYMENT",state(b));assertEquals(0,tickets(b));
+            snap("broker-outage","offline");
             assertEquals(retriesBefore,retries("outbox","none"),"Initial failed send is not a retry");
             var failed=traceLines(output,eventId(b,"BookingHeld")).stream().filter(n->n.path("stage").asString().equals("outbox_publish_failed")).findFirst().orElseThrow();
             assertEquals(b.toString(),failed.path("bookingId").asString());assertEquals(publisher.event(eventId(b,"BookingHeld")).correlationId().toString(),failed.path("correlationId").asString());
@@ -194,19 +201,23 @@ class KafkaRecoveryTest {
         await(()->count("SELECT count(*) FROM ticketing.projection_events WHERE aggregate_id=?",b)==3);
         assertEquals(List.of(1L,2L,3L),jdbc.queryForList("SELECT aggregate_version FROM ticketing.projection_events WHERE aggregate_id=? ORDER BY applied_at,aggregate_version",Long.class,b));
         assertEquals(2,tickets(b));evidence.add(Map.of("case","real broker stop/start","versions",List.of(1,2,3),"tickets",2,"retained",true));
+        snap("broker-outage","recovered");
     }
     static void docker(String command,String container) throws Exception {var p=new ProcessBuilder("docker",command,container).redirectErrorStream(true).start();assertTrue(p.waitFor(40,TimeUnit.SECONDS));assertEquals(0,p.exitValue(),new String(p.getInputStream().readAllBytes()));}
     static void waitBroker(String container) throws Exception {for(int i=0;i<40;i++){var p=new ProcessBuilder("docker","exec",container,"/opt/kafka/bin/kafka-topics.sh","--bootstrap-server","kafka:29092","--list").redirectErrorStream(true).start();p.getInputStream().readAllBytes();if(p.waitFor()==0)return;Thread.sleep(500);}fail("Kafka did not recover");}
     @Test @Order(4) void acknowledgedSendThenDatabaseFailureResendsSameId(){
         UUID b=booking(1);UUID id=eventId(b,"BookingHeld");
+        snap("ack-db-window","before");
         jdbc.execute("CREATE FUNCTION ticketing.test_ack_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id='"+id+"'::uuid AND NEW.status='PUBLISHED' THEN RAISE EXCEPTION 'test ack DB crash'; END IF; RETURN NEW; END $$");
         jdbc.execute("CREATE TRIGGER test_ack_failure BEFORE UPDATE ON ticketing.outbox_events FOR EACH ROW EXECUTE FUNCTION ticketing.test_ack_failure()");
-        try{assertThrows(RuntimeException.class,()->publisher.publishOnce());await(()->inbox(EventConsumer.AUDIT,id)==1);assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM ticketing.outbox_events WHERE id=?",String.class,id));}
+        try{assertThrows(RuntimeException.class,()->publisher.publishOnce());await(()->inbox(EventConsumer.AUDIT,id)==1);assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM ticketing.outbox_events WHERE id=?",String.class,id));snap("ack-db-window","acked-db-rollback");}
         finally{jdbc.execute("DROP TRIGGER test_ack_failure ON ticketing.outbox_events");jdbc.execute("DROP FUNCTION ticketing.test_ack_failure()");}
         flush(b);assertEquals(1,inbox(EventConsumer.AUDIT,id));assertEquals(1,count("SELECT count(*) FROM ticketing.projection_events WHERE aggregate_id=?",b));
+        snap("ack-db-window","resent");
     }
     @Test @Order(5) void paymentTransactionFailureRollsBackInboxTicketsAndRetriesViaKafka(CapturedOutput output){
         UUID b=booking(2);record(b,"SUCCESS");UUID id=eventId(b,"PaymentResultRecorded");
+        snap("consumer-rollback-replay","before");
         double retriesBefore=retries("consumer",EventConsumer.PAYMENT);
         String marker="private-sql-"+UUID.randomUUID();
         jdbc.execute("CREATE SEQUENCE ticketing.test_delivery_attempts");
@@ -218,6 +229,7 @@ class KafkaRecoveryTest {
             assertEquals(0,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=? AND type='BookingConfirmed'",b));
             assertEquals(3,count("SELECT attempts FROM ticketing.message_failures WHERE consumer=? AND event_id=?",EventConsumer.PAYMENT,id));
             assertEquals(3,count("SELECT last_value FROM ticketing.test_delivery_attempts"));
+            snap("consumer-rollback-replay","dead-after-three-deliveries");
             assertEquals(retriesBefore+2,retries("consumer",EventConsumer.PAYMENT));
             await(()->gauge("ticketing.messaging.failures","consumer",EventConsumer.PAYMENT,"status","DEAD")==count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND status='DEAD'",EventConsumer.PAYMENT));
             var logs=traceLines(output,id).stream().filter(n->n.path("consumer").asString().equals(EventConsumer.PAYMENT)).toList();
@@ -228,6 +240,7 @@ class KafkaRecoveryTest {
         replay.replay(admin,id,UUID.randomUUID(),"Remove injected database failure");flush(b);await(()->state(b).equals("CONFIRMED"));
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND event_id=? AND status='RESOLVED'",EventConsumer.PAYMENT,id)==1);
         assertEquals(2,tickets(b));assertEquals(1,inbox(EventConsumer.PAYMENT,id));evidence.add(Map.of("case","consumer rollback + 3 deliveries + admin replay","tickets",2,"result","PASS"));
+        snap("consumer-rollback-replay","recovered");
         assertFalse(output.getAll().contains(marker),"SQL error details must not reach logs");
         assertEquals(retriesBefore+2,retries("consumer",EventConsumer.PAYMENT),"Replay at a new offset is an initial delivery");
         await(()->gauge("ticketing.messaging.failures","consumer",EventConsumer.PAYMENT,"status","RESOLVED")==count("SELECT count(*) FROM ticketing.message_failures WHERE consumer=? AND status='RESOLVED'",EventConsumer.PAYMENT));
@@ -246,13 +259,16 @@ class KafkaRecoveryTest {
     @Test @Order(7) void malformedEventRetriesThenDurableRecoveryAndKafkaDlq() throws Exception {
         double paymentRetries=retries("consumer",EventConsumer.PAYMENT),auditRetries=retries("consumer",EventConsumer.AUDIT),ackBefore=dlqDeliveries("ACKNOWLEDGED");
         int publishedBefore=count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NOT NULL");
+        snap("poison-dlq","before");
         String key=UUID.randomUUID().toString();kafka.send(topic,key,"{\"schemaVersion\":999}").get(8,TimeUnit.SECONDS);
         await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=?",key)==2);
+        snap("poison-dlq","dead");
         assertEquals(paymentRetries+2,retries("consumer",EventConsumer.PAYMENT));assertEquals(auditRetries+2,retries("consumer",EventConsumer.AUDIT));
         await(()->gauge("ticketing.messaging.dlq.messages","state","PENDING")==count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NULL AND dlq_attempts<3"));
         publisher.publishOnce();await(()->count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND dlq_published_at IS NOT NULL",key)==2);
         assertEquals(count("SELECT count(*) FROM ticketing.message_failures WHERE dlq_published_at IS NOT NULL")-publishedBefore,dlqDeliveries("ACKNOWLEDGED")-ackBefore);
         assertEquals(2,count("SELECT count(*) FROM ticketing.message_failures WHERE record_key=? AND attempts=3 AND raw_event=? AND event_id IS NULL",key,"{\"schemaVersion\":999}"));
+        snap("poison-dlq","published");
         // Read the actual DLQ, not just its database delivery marker.
         try(var dlq=new org.apache.kafka.clients.consumer.KafkaConsumer<String,String>(Map.of("bootstrap.servers",System.getenv("KAFKA_IT_BOOTSTRAP"),"group.id","dlq-proof-"+UUID.randomUUID(),"auto.offset.reset","earliest","key.deserializer","org.apache.kafka.common.serialization.StringDeserializer","value.deserializer","org.apache.kafka.common.serialization.StringDeserializer"))){
             dlq.subscribe(List.of(topic+".dlq"));Set<String> found=new HashSet<>();await(()->{for(var r:dlq.poll(java.time.Duration.ofMillis(300)))if(r.value().contains(key))found.add(r.key());return found.size()==2;});
@@ -278,6 +294,7 @@ class KafkaRecoveryTest {
     }
     @Test @Order(8) void replayRoleProfileAuditValidationAndBoundedBudget() throws Exception {
         UUID b=booking(1),id=eventId(b,"BookingHeld"),request=UUID.randomUUID();String path="/api/admin/operations/events/"+id+"/replay";
+        snap("replay-security-budget","before");
         String body=json.writeValueAsString(Map.of("requestId",request,"reason","Broker restored"));
         assertEquals(401,http("POST",path,body,null).statusCode());assertEquals(403,http("POST",path,body,"demo-customer-token").statusCode());
         assertEquals(202,http("POST",path,body,"demo-admin-token").statusCode());assertEquals(202,http("POST",path,body,"demo-admin-token").statusCode());
@@ -288,6 +305,7 @@ class KafkaRecoveryTest {
         assertEquals(202,http("POST",path,body.replace(request.toString(),UUID.randomUUID().toString()),"demo-admin-token").statusCode());
         var limit=http("POST",path,body.replace(request.toString(),UUID.randomUUID().toString()),"demo-admin-token");assertEquals(409,limit.statusCode());assertTrue(limit.body().contains("REPLAY_LIMIT_REACHED"));
         assertEquals(3,count("SELECT jsonb_array_length(replay_requests) FROM ticketing.outbox_events WHERE id=?",id));
+        snap("replay-security-budget","budget-exhausted");
         assertTrue(jdbc.queryForObject("SELECT replay_requests::text FROM ticketing.outbox_events WHERE id=?",String.class,id).contains(admin.accountId().toString()));
         assertEquals(200,http("GET","/api/admin/operations/outbox?page=0&size=10",null,"demo-admin-token").statusCode());assertEquals(400,http("GET","/api/admin/operations/outbox?size=101",null,"demo-admin-token").statusCode());
         var prod=new org.springframework.mock.env.MockEnvironment();prod.setActiveProfiles("prod");
@@ -299,18 +317,34 @@ class KafkaRecoveryTest {
         if(body!=null)builder.header("Content-Type","application/json");
         return http.send(builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
     }
-    @Test @Order(9) void timelyDurablePaymentWinsExpiryEvenWhileKafkaHasNotDelivered(){
-        UUID b=booking(2);var result=record(b,"SUCCESS");
-        // Move deadline after the result but before now, preserving a timely durable ledger.
-        jdbc.update("UPDATE ticketing.bookings SET expires_at=(SELECT recorded_at+interval '1ms' FROM ticketing.payments WHERE id=?) WHERE id=?",result.paymentId(),b);
-        await(()->jdbc.queryForObject("SELECT expires_at<clock_timestamp() FROM ticketing.bookings WHERE id=?",Boolean.class,b));
-        expiry.runOnce();assertEquals("CONFIRMED",state(b));flush(b);await(()->inbox(EventConsumer.PAYMENT,eventId(b,"PaymentResultRecorded"))==1);
+    @Test @Order(9) void timelyDurablePaymentWinsExpiryEvenWhileKafkaHasNotDelivered() throws Exception {
+        String container=System.getenv("KAFKA_IT_CONTAINER");assertTrue(container!=null&&container.startsWith("ticketing-kafka-it-"));
+        UUID b=booking(2);snap("timely-payment-broker-down","before");
+        UUID paymentEvent;
+        docker("stop",container);
+        try {
+            health("/readiness",503,"DOWN");health("/liveness",200,"UP");
+            // The ledger really commits while the broker is stopped, rather than merely delaying publish.
+            var result=record(b,"SUCCESS");paymentEvent=eventId(b,"PaymentResultRecorded");
+            jdbc.update("UPDATE ticketing.bookings SET expires_at=(SELECT recorded_at+interval '1ms' FROM ticketing.payments WHERE id=?) WHERE id=?",result.paymentId(),b);
+            await(()->jdbc.queryForObject("SELECT expires_at<clock_timestamp() FROM ticketing.bookings WHERE id=?",Boolean.class,b));
+            assertEquals(0,inbox(EventConsumer.PAYMENT,paymentEvent));snap("timely-payment-broker-down","durable-offline");
+            expiry.runOnce();assertEquals("CONFIRMED",state(b));assertEquals(2,tickets(b));
+            assertEquals(0,inbox(EventConsumer.PAYMENT,paymentEvent));
+            assertEquals(0,count("SELECT count(*) FROM ticketing.outbox_events WHERE aggregate_id=? AND type='BookingExpired'",b));
+            snap("timely-payment-broker-down","worker-confirmed-offline");
+        } finally {docker("start",container);}
+        waitBroker(container);health("/readiness",200,"UP");flush(b);await(()->inbox(EventConsumer.PAYMENT,paymentEvent)==1);
         assertEquals(2,tickets(b));assertEquals(2,count("SELECT sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
+        assertEquals(1,count("SELECT count(*) FROM ticketing.booking_status_history WHERE booking_id=? AND to_status='CONFIRMED'",b));
+        snap("timely-payment-broker-down","recovered");
+        evidence.add(Map.of("case","T9.3 real broker stopped: durable timely payment processed by expiry","tickets",2,"expiredTransitions",0,"confirmTransitions",1,"paymentInboxAfterRecovery",1));
     }
     @Test @Order(10) void expiredLateSuccessRefundRetryHistoryAndConcurrentDuplicateAreIdempotent() throws Exception {
-        UUID b=booking(2);due(b);expiry.runOnce();assertEquals("EXPIRED",state(b));var result=record(b,"SUCCESS");flush(b);await(()->state(b).equals("REFUND_REQUIRED"));
+        UUID b=booking(2);snap("late-payment-refund","before");due(b);expiry.runOnce();assertEquals("EXPIRED",state(b));snap("late-payment-refund","expired");var result=record(b,"SUCCESS");flush(b);await(()->state(b).equals("REFUND_REQUIRED"));
         UUID comp=jdbc.queryForObject("SELECT id FROM ticketing.payment_compensations WHERE payment_id=?",UUID.class,result.paymentId());
         assertFalse(refunds.attempt(comp));assertEquals("FAILED",jdbc.queryForObject("SELECT status FROM ticketing.payment_compensations WHERE id=?",String.class,comp));
+        snap("late-payment-refund","first-refund-failed");
         jdbc.update("UPDATE ticketing.payment_compensations SET next_attempt_at=clock_timestamp() WHERE id=?",comp);
         try(var pool=Executors.newFixedThreadPool(6)){var jobs=new ArrayList<Callable<Boolean>>();for(int i=0;i<12;i++)jobs.add(()->refunds.attempt(comp));int success=0;for(var f:pool.invokeAll(jobs))if(f.get())success++;assertEquals(1,success);}
         for(int i=0;i<5;i++)send(publisher.event(eventId(b,"PaymentResultRecorded")));refunds.runOnce();
@@ -318,6 +352,7 @@ class KafkaRecoveryTest {
         assertEquals(2,count("SELECT count(*) FROM ticketing.compensation_attempts WHERE compensation_id=?",comp));
         assertEquals(1,count("SELECT count(*) FROM ticketing.compensation_attempts WHERE compensation_id=? AND outcome='COMPLETED'",comp));
         assertEquals("REFUND_REQUIRED",state(b));assertEquals(0,tickets(b));assertEquals(0,count("SELECT held_count+sold_count FROM ticketing.inventory_ga WHERE ticket_type_id=?",type));
+        snap("late-payment-refund","retried-completed");
         evidence.add(Map.of("case","COMP-01: late payment, failure/retry, 12 concurrent refund calls","obligations",1,"attempts",2,"completions",1,"tickets",0,"heldPlusSold",0));
     }
     @Test @Order(11) void cancelledLateSuccessWithoutRefundEventStillRecoveredAndHistoryRollback(){

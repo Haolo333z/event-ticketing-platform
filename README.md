@@ -160,6 +160,14 @@ Gate cuối chạy toàn backend PostgreSQL/Kafka thật rồi HTTP contract và
 
 `verify-part4`…`verify-part8` là smoke lịch sử **ghi fixture/booking**, một số cố định 8080. Không dùng làm kiểm tra chỉ đọc trên demo cần giữ. `verify-local.ps1` chỉ đọc. Xem [infra/README](infra/README.md).
 
+Rà soát T9.4 trên **toàn bộ thay đổi chưa commit**, tách biệt demo:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File infra/test-invariants.ps1 -WorkingTree
+```
+
+Gate tạo snapshot tracked/untracked không ignore và kiểm SHA256; không copy `.env`, dependency hay dữ liệu demo. Chạy full backend/frontend/contract/live, migration sạch rồi restart, secret/dependency scan và lint CI. Tải scanner pin version và kiểm checksum; cần Internet. Giữ volume test để kiểm tra; kết quả ở `reports/t9-4/<runId>/summary.json`. Đây là kiểm tra local, không thay kết luận GitHub Actions trên commit mới. Không sửa file nguồn trong khi gate chạy; xem giới hạn tại PROGRESS.
+
 ## Kiểm chứng môi trường sạch, song song demo
 
 Clone vào thư mục mới, không copy `.env`, target, node_modules hoặc dữ liệu demo. Sau khối chuẩn bị ở trên, cấu hình **chỉ .env của clone** như sau; các cổng 15432/19092/18080 và IPv6 ::1:5173 phải trống:

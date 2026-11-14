@@ -231,17 +231,17 @@
   - **Phụ thuộc:** T8.4. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** chạy lại suite TEST_PLAN; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T9.2 — Tối thiểu 50 request đồng thời** trên ghế/GA; ghi máy, latency, success/conflict và oversell.
+- [x] **T9.2 — Tối thiểu 50 request đồng thời (Done, 2026-11-14):**3lượt×50HTTP cho mỗiGA/ghế,peak50,300request đo:33success/267conflict dự kiến/0lỗi khác; oversell/partial hold/ghế hoặc vé trùng=0. Máy/pool10/2,throughput vàp50/p95/p99 từnglượt +320sample/SQL đã lưu. [Bằng chứng](evidence/t9-2-load-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Tối thiểu 50 request đồng thời trên ghế/GA; ghi máy, latency, success/conflict và oversell.
   - **Phụ thuộc:** T9.1. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** LOAD-01 >=50, lưu máy/pool/latency/count; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T9.3 — Kịch bản lỗi:** Kafka gián đoạn, consumer restart, payment fail/delay, retry/replay, late success.
+- [x] **T9.3 — Kịch bản lỗi (Done, 2026-11-14):** Kafka outage/restart/duplicate/retry/DLQ/replay, payment fail/delay/late, rollback và JVM restart đạt trên PG/Kafka riêng.130backend/54frontend/69contract/3×74HTTP;37snapshot/13nhóm,11counter bất biến đều0. Timely payment được worker confirm ngay khi broker thật đangdừng/inbox0; hồi phục không phátvé lại. [Bằng chứng](evidence/t9-3-recovery-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Kịch bản lỗi: Kafka gián đoạn, consumer restart, payment fail/delay, retry/replay, late success.
   - **Phụ thuộc:** T9.2. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** MSG-01, PAY-02 và recovery; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo.**
+- [ ] **T9.4 — Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo (In Progress, 2026-11-14):** gate local trên full working tree PASS (130 backend/54 frontend/69 contract/7 load-tool, V1–V9 sạch/restart, secret/dependency scan). Chờ GitHub Actions cho candidate sau khi chủ dự án tự commit/push; run #37 chỉ chứng minh HEAD502d34e. [Bằng chứng](evidence/t9-4-audit-2026-11-14.json).
   - **Mục tiêu/phạm vi:** Sửa lỗi ưu tiên cao; rà migration/config và loại secret khỏi repo. 
   - **Phụ thuộc:** T9.3. **Module/file:** integration-tests/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
