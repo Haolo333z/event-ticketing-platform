@@ -1,0 +1,113 @@
+{
+  "task": "T10.4C",
+  "status": "DONE",
+  "date": "2026-11-15",
+  "timezone": "Asia/Saigon",
+  "sourceCommit": "c3b1884a3c466739c3dfe3069678c794dd27d417",
+  "diagramsCount": 8,
+  "diagrams": [
+    {
+      "name": "architecture.png",
+      "relativePath": "docs/report/figures/architecture.png",
+      "bytes": 89467,
+      "sha256": "5e42368a531c4cd0a39c3480c85f393b415ba5b17c341dcc8dbfc90298587e3b",
+      "caption": "Hình 1 Kiến trúc tổng thể từ mã nguồn",
+      "architecturalRole": "Kiến trúc tổng thể Modular Monolith kết hợp Event-Driven Architecture (Spring Boot, PostgreSQL, Kafka, React Frontend)",
+      "internalSource": "docs/ARCHITECTURE.md, docs/adr/0001-stack-and-local-environment.md",
+      "verified": true
+    },
+    {
+      "name": "transaction.png",
+      "relativePath": "docs/report/figures/transaction.png",
+      "bytes": 77026,
+      "sha256": "61020bb87a6f3eb49b30cb16fa0ac6fdf933dbf6173b21873feca774c548481b",
+      "caption": "Hình 2 Ranh giới transaction của lệnh tạo booking",
+      "architecturalRole": "Ranh giới giao dịch ACID trong PostgreSQL: booking, inventory, history, outbox cùng transaction",
+      "internalSource": "docs/ARCHITECTURE.md, docs/adr/0004-ga-booking.md, backend BookingTransactions.java",
+      "verified": true
+    },
+    {
+      "name": "eda.png",
+      "relativePath": "docs/report/figures/eda.png",
+      "bytes": 98409,
+      "sha256": "3d8e379c0b487077f635322f27e671c93332336e37c87916c031afb72fc6116c",
+      "caption": "Hình 3 Chuỗi outbox Kafka inbox và offset",
+      "architecturalRole": "Luồng truyền thông điệp hướng sự kiện đảm bảo At-least-once và khử trùng lặp qua Transactional Outbox, Kafka, Transactional Inbox",
+      "internalSource": "docs/ARCHITECTURE.md, docs/adr/0007-kafka-and-recovery.md, backend OutboxPublisher.java & EventConsumer.java",
+      "verified": true
+    },
+    {
+      "name": "er.png",
+      "relativePath": "docs/report/figures/er.png",
+      "bytes": 90110,
+      "sha256": "cd2a327e7ce4e74ed41a27ed3b38d1853d5642684cf34ccfb3f3fe978b5585d3",
+      "caption": "Hình 4 Quan hệ dữ liệu lõi và quyền sở hữu hiện tại",
+      "architecturalRole": "Sơ đồ quan hệ thực thể (ER) liên kết 18 bảng nghiệp vụ cơ sở dữ liệu và khóa bất biến",
+      "internalSource": "docs/DATA_MODEL.md, Flyway V1-V9 migrations",
+      "verified": true
+    },
+    {
+      "name": "states.png",
+      "relativePath": "docs/report/figures/states.png",
+      "bytes": 48530,
+      "sha256": "de5c70b548651c877d22aa8d1ed1b48b4de09d3354fc84644f38a56c23fd46d6",
+      "caption": "Hình 5 State machine booking theo PRD",
+      "architecturalRole": "Máy trạng thái 6 trạng thái / 5 cạnh chuyển hợp lệ của Booking: PENDING_PAYMENT -> CONFIRMED | PAYMENT_FAILED | CANCELLED | EXPIRED; EXPIRED -> REFUND_REQUIRED",
+      "internalSource": "docs/PRD.md mục 5, docs/contracts/booking-transitions.json, backend BookingLifecycle.java",
+      "verified": true
+    },
+    {
+      "name": "seat-race.png",
+      "relativePath": "docs/report/figures/seat-race.png",
+      "bytes": 80812,
+      "sha256": "b7aa00cf4dcbfcae3ad55572bf8881a48f14741b2acc16be2d1b7f9ca21d7b6f",
+      "caption": "Hình 6 Hai request cạnh tranh cùng ghế",
+      "architecturalRole": "Cơ chế giải quyết tranh chấp ghế đồng thời (order by seat_id ASC, SELECT FOR UPDATE, all-or-nothing)",
+      "internalSource": "docs/adr/0005-seats-and-expiry.md, backend SeatInventory.java",
+      "verified": true
+    },
+    {
+      "name": "payment.png",
+      "relativePath": "docs/report/figures/payment.png",
+      "bytes": 98158,
+      "sha256": "7c8742bac4ee645bb5f4d6e44852d8b4c239064d6ddf900a918b5e6bb32f852c",
+      "caption": "Hình 7 Hai nhánh phân xử payment và expiry",
+      "architecturalRole": "Phân xử kết quả thanh toán mô phỏng đúng hạn vs trễ hạn dựa trên payments.recorded_at so với hold_expires_at",
+      "internalSource": "docs/adr/0006-payment-results-and-tickets.md, backend PaymentResultProcessor.java & ExpiryService.java",
+      "verified": true
+    },
+    {
+      "name": "recovery.png",
+      "relativePath": "docs/report/figures/recovery.png",
+      "bytes": 101596,
+      "sha256": "a41e04fcb9dd31d291e6dfe5a7211b6c8b2c36a2a7428efcd0cd86e04f17877a",
+      "caption": "Hình 8 Lỗi consumer và đường phục hồi có kiểm soát",
+      "architecturalRole": "Quy trình xử lý sự cố (Kafka outage, poisoned consumer) và phục hồi giao dịch qua Replay API có audit và giới hạn ngân sách",
+      "internalSource": "docs/DEMO_AND_RECOVERY.md, backend ReplayService.java & FailureStore.java",
+      "verified": true
+    }
+  ],
+  "uiEvidence": {
+    "status": "PASS_VERIFIED",
+    "principle": "Minh chứng giao diện được xác nhận trực tiếp từ thao tác người dùng trên trình duyệt Chrome; agent không tự ý chèn ảnh giả mạo hoặc tuyên bố đã quan sát màn hình khi không có công cụ chụp ảnh trực tiếp",
+    "referenceDocument": "docs/evidence/t10-1-chrome-user-2026-11-14.md",
+    "userConfirmedBookings": [
+      {
+        "type": "GA",
+        "bookingId": "f46bb63a-ec94-414e-8381-85d51aed6e7b",
+        "status": "CONFIRMED",
+        "tickets": 1,
+        "seatLabel": null
+      },
+      {
+        "type": "SEATED",
+        "bookingId": "b0075641-16cc-48a8-b07c-3e5823fdd3a1",
+        "status": "CONFIRMED",
+        "tickets": 1,
+        "seatLabel": "A1"
+      }
+    ],
+    "fakeImagesInserted": 0,
+    "authenticityConfirmed": true
+  }
+}

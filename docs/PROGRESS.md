@@ -4,13 +4,39 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4B hoàn thành ngày 2026-11-15
-- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A, T10.4B Done)
-- **Task vừa hoàn tất:** T10.4B: Đóng gói mã nguồn ZIP sạch và Kiểm chứng tái lập từ môi trường độc lập
-- **Task tiếp theo:** T10.4C (Kiểm chứng hình ảnh minh họa & sơ đồ kỹ thuật)
+- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4C hoàn thành ngày 2026-11-15
+- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A, T10.4B, T10.4C Done)
+- **Task vừa hoàn tất:** T10.4C: Kiểm chứng Hình ảnh minh họa & Sơ đồ kỹ thuật
+- **Task tiếp theo:** T10.4D (Đóng mốc nghiệm thu, phát hành Release Tag và hoàn tất đồ án)
 - **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy; chưa commit/push.
 
 - **Task trong TASKS:** 44/45 Done (T10.4 đang mở). 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operation (16 cũ + 2 GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+
+## T10.4C — Kiểm chứng Hình ảnh minh họa & Sơ đồ kỹ thuật (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Pha 3 của T10.4: commit T10.4B, đo đạc và đối soát mã băm SHA-256, kích thước và nguồn gốc thiết kế của 8 sơ đồ kiến trúc tại `docs/report/figures/`. Rà soát nguyên tắc minh chứng hình ảnh Chrome bám sát biên bản `docs/evidence/t10-1-chrome-user-2026-11-14.md`. Xuất biên bản bằng chứng vào `docs/evidence/t10-4-diagrams-images-2026-11-15.json`. Không sửa mã nguồn backend/frontend/migration, không commit/push, chưa đánh dấu hoàn thành T10.4 trong TASKS.md.
+
+**Kết quả đối soát 8 sơ đồ kiến trúc:**
+- `architecture.png` (89.467 bytes, SHA-256: `5e42368a531c4cd0a39c3480c85f393b415ba5b17c341dcc8dbfc90298587e3b`): Hình 1 Kiến trúc tổng thể từ mã nguồn.
+- `transaction.png` (77.026 bytes, SHA-256: `61020bb87a6f3eb49b30cb16fa0ac6fdf933dbf6173b21873feca774c548481b`): Hình 2 Ranh giới transaction của lệnh tạo booking.
+- `eda.png` (98.409 bytes, SHA-256: `3d8e379c0b487077f635322f27e671c93332336e37c87916c031afb72fc6116c`): Hình 3 Chuỗi outbox Kafka inbox và offset.
+- `er.png` (90.110 bytes, SHA-256: `cd2a327e7ce4e74ed41a27ed3b38d1853d5642684cf34ccfb3f3fe978b5585d3`): Hình 4 Quan hệ dữ liệu lõi và quyền sở hữu hiện tại (18 bảng).
+- `states.png` (48.530 bytes, SHA-256: `de5c70b548651c877d22aa8d1ed1b48b4de09d3354fc84644f38a56c23fd46d6`): Hình 5 State machine booking theo PRD.
+- `seat-race.png` (80.812 bytes, SHA-256: `b7aa00cf4dcbfcae3ad55572bf8881a48f14741b2acc16be2d1b7f9ca21d7b6f`): Hình 6 Hai request cạnh tranh cùng ghế.
+- `payment.png` (98.158 bytes, SHA-256: `7c8742bac4ee645bb5f4d6e44852d8b4c239064d6ddf900a918b5e6bb32f852c`): Hình 7 Hai nhánh phân xử payment và expiry.
+- `recovery.png` (101.596 bytes, SHA-256: `a41e04fcb9dd31d291e6dfe5a7211b6c8b2c36a2a7428efcd0cd86e04f17877a`): Hình 8 Lỗi consumer và đường phục hồi có kiểm soát.
+- Toàn bộ 8 sơ đồ đều có nguồn gốc từ mã nguồn nội bộ, tài liệu đặc tả PRD và các quyết định kiến trúc ADR0001–0008.
+
+**Rà soát tính trung thực của hình ảnh giao diện Chrome:**
+- Bám sát biên bản `docs/evidence/t10-1-chrome-user-2026-11-14.md`: Minh chứng giao diện được xác nhận trực tiếp từ thao tác của người dùng trên trình duyệt Chrome tại môi trường sạch T10.1 (`f46bb63a` GA CONFIRMED, `b0075641` Ghế A1 CONFIRMED).
+- Cam kết không tự chèn ảnh chụp giả mạo (0 fake images) hoặc tuyên bố agent đã tự quan sát màn hình Chrome khi không có công cụ chụp ảnh trực tiếp.
+- Bằng chứng đã lưu: [docs/evidence/t10-4-diagrams-images-2026-11-15.json](evidence/t10-4-diagrams-images-2026-11-15.json).
+
+**Kiểm tra và an toàn:**
+- Mã nguồn Java backend, React frontend, Flyway V1–V9, hợp đồng OpenAPI giữ nguyên 100%.
+- Không can thiệp hoặc dừng các cổng dịch vụ `18080`, `18081`, `5173`.
+- Giữ nguyên các thư mục clone / volume độc lập `D:\ticketing-t101-94eeadabbaa1` và `D:\ticketing-t102-e8b72037cdaf`.
+- Task T10.4 chuyển tiếp sang pha cuối cùng T10.4D.
 
 ## T10.4B — Đóng gói mã nguồn ZIP sạch và Kiểm chứng tái lập từ môi trường độc lập (Done, 2026-11-15)
 
