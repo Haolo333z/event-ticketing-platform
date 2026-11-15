@@ -4,13 +4,37 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Báo cáo — T10.3 hoàn thành ngày2026-11-14
-- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done
-- **Task vừa hoàn tất:** T10.3: báo cáo tiếng Việt43trang Word/PDF,8sơ đồ/24bảng,46mục lục đúng trang; đã đối chiếu evidence và kiểm từng trang
-- **Task tiếp theo:** T10.4 chưa bắt đầu; chưa tag/đóng gói phát hành hoặc commit/push
-- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Môi trường riêng đang chạy; chưa commit/push.
+- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4A hoàn thành ngày 2026-11-15
+- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A Done)
+- **Task vừa hoàn tất:** T10.4A: Chuẩn bị nghiệm thu, rà soát checkpoint và chốt Backlog ngoài MVP; thiết lập Checklist nghiệm thu T10.4
+- **Task tiếp theo:** T10.4B (Đóng gói ZIP mã nguồn và thử nghiệm môi trường sạch)
+- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy; chưa commit/push.
 
-- **Task trong TASKS:** 44/45 Done.18bảng/V1–V9 giữ nguyên; OpenAPI18operation (16cũ +2GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** 44/45 Done (T10.4 đang mở). 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operation (16 cũ + 2 GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+
+## T10.4A — Chuẩn bị nghiệm thu, rà soát checkpoint và chốt Backlog ngoài MVP (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Pha 1 của T10.4: rà soát checkpoint và tính toàn vẹn evidence T10.1–T10.3, biên tập checklist nghiệm thu, chốt backlog ngoài MVP và rà soát 7 trường thông tin bìa `[CẦN ĐIỀN]`. Không chỉnh sửa mã nguồn backend/frontend/migration, không commit/push, chưa đánh dấu hoàn thành T10.4 trong TASKS.md.
+
+**Bàn giao:** Tài liệu [docs/T10_4_ACCEPTANCE_CHECKLIST.md](T10_4_ACCEPTANCE_CHECKLIST.md) gồm 3 phần:
+1. *Bảng đối soát Checkpoint & Evidence T10.1–T10.3*:
+   - Commit mốc kiểm tra: HEAD `46704bee8181176a1ef819e0a245fefcaaf64a51` (working tree clean tại thời điểm bắt đầu).
+   - Kiểm tra mã băm SHA-256 thực tế trên đĩa của 3 artifact báo cáo đồ án: `bao-cao-do-an.docx`, `bao-cao-do-an.pdf`, `BAO_CAO.md` đều khớp 100% với giá trị đã lưu trong `docs/evidence/t10-3-report-2026-11-14.json`.
+   - Tổng hợp số liệu đã kiểm chứng: 18 bảng DB (V1–V9), 130 test backend, 54 test frontend, 69 ca test contract OpenAPI 3.1, đo tải T9.2 (300 mẫu CSV, 0 oversell, 0 duplicate), phục hồi sự cố T9.3 (37 snapshot × 11 counter = 0), demo sạch T10.1 và kịch bản thuyết minh định giờ T10.2 (8/8 bước, 365,499 giây), báo cáo 43 trang A4 (8 sơ đồ, 24 bảng, 46 mục mục lục).
+   - Rà soát 7 trường thông tin bìa `[CẦN ĐIỀN]`: Tên trường, Khoa/Viện, MSSV, Lớp/Khóa, Ngành, Giảng viên hướng dẫn, Địa điểm và thời gian nộp; bảo toàn nguyên tắc không tự bịa thông tin hành chính của sinh viên và giảng viên, giữ nguyên placeholder chờ thông tin chính thức.
+2. *Chốt Backlog ngoài MVP & Giới hạn kỹ thuật*:
+   - Phân loại 6 nhóm giới hạn kỹ thuật: Cổng thanh toán & Tài chính (không tiền thật/thẻ/settlement), Nghiệp vụ sự kiện nâng cao (không multi-tenancy/QR production/secondary market/dynamic pricing), Hạ tầng & HA (Modular Monolith, không k8s/multi-region, Kafka RF1 đơn broker, không cam kết chịu mất đĩa), Quy mô & Tải (chưa kiểm chứng Internet scale, không virtual waiting room), Cam kết thông điệp (At-least-once + Inbox deduplication, không cam kết exactly-once xuyên hệ), Giao diện khách (giới hạn 100 bản ghi lịch sử, chưa kiểm thử tự động visual cross-browser).
+   - Khẳng định nguyên tắc: Không tự ý bổ sung tính năng ngoài MVP chỉ để đóng task.
+3. *Checklist thực thi các pha còn lại của T10.4*:
+   - T10.4B: Đóng gói ZIP mã nguồn (loại bỏ `.git`, `node_modules`, `backend/target`, `reports/`, `.local-runtime`, `.env` thật, volumes) và kiểm chứng tái lập từ clone/thư mục độc lập theo README.
+   - T10.4C: Rà soát 8 sơ đồ kiến trúc tại `docs/report/figures/` và bảo đảm tính trung thực đối với ảnh giao diện Chrome theo biên bản xác nhận của người dùng.
+   - T10.4D: Đề xuất commit message chuẩn, release tag `v1.0.0-demo` và điều kiện đóng task 45/45 trên `docs/TASKS.md` và `docs/PROGRESS.md`.
+
+**Kiểm tra và an toàn:**
+- Mã nguồn Java, React, SQL Flyway V1–V9, hợp đồng OpenAPI giữ nguyên 100%.
+- Không can thiệp hoặc dừng các cổng dịch vụ `18080`, `18081`, `5173`.
+- Giữ nguyên các thư mục clone / volume độc lập `D:\ticketing-t101-94eeadabbaa1` và `D:\ticketing-t102-e8b72037cdaf`.
+- Task T10.4 chuyển sang `In Progress` (T10.4A Done), bước tiếp theo là T10.4B.
 
 ## T10.3 — Báo cáo đồ án tiếng Việt (Done, 2026-11-14)
 
