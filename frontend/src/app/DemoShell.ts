@@ -109,12 +109,12 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
 
         // Real Auth Section
         user?h('div',{className:'user-profile-widget'},
-          h('button',{
+          user.role!=='ADMIN'?h('button',{
             type:'button',
             className:'btn-my-bookings',
             onClick:()=>setMyBookingsOpen(true),
             title:'Xem vé đã mua của bạn'
-          },'🎟️ Vé của tôi'),
+          },'🎟️ Vé của tôi'):null,
           h('div',{className:'user-avatar',title:user.displayName},
             user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'
           ),
