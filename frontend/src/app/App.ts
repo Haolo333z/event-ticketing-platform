@@ -155,35 +155,37 @@ export function App({api,store,embedded=false,onRequireAuth,activeBookingId}:{ap
       h('span',{className:'persona'},'Khách hàng demo')
     ),
     h('main',null,
-      // 1. HIGH-IMPACT HERO SECTION (COMMERCIAL MAKEOVER)
-      h('section',{className:'intro hero-banner'},
-        h('div',{className:'hero-badge'},'⚡ NỀN TẢNG PHÂN PHỐI VÉ & QUẢN TRỊ GHẾ SỰ KIỆN HÀNG ĐẦU'),
-        h('h1',null,'Giải Pháp Bán Vé Trực Tuyến Tốc Độ Cao & Phân Bổ Chỗ Ngồi Độc Quyền'),
-        h('p',null,'Hạ tầng phân tán hướng sự kiện (EDA) cam kết 0% bán lố vé (Zero Oversell), xử lý tức thì hàng chục ngàn lượt mua đồng thời với độ trễ dưới 50ms.'),
-        
-        // Quick Action Buttons
-        h('div',{className:'hero-cta-group'},
-          h('button',{type:'button',className:'primary hero-cta-primary',onClick:()=>scrollToSection('events')},'Khám phá vé mở bán ngay ↓'),
-          h('button',{type:'button',className:'hero-cta-secondary',onClick:()=>scrollToSection('pricing')},'Xem bảng giá dịch vụ →')
-        ),
+      // 1. HIGH-IMPACT HERO SECTION (SAOKIM BRANDING ENTERPRISE EDITION)
+      h('section',{className:'intro hero-banner full-bleed-hero'},
+        h('div',{className:'hero-content-wrapper shell'},
+          h('div',{className:'hero-badge'},'★ NỀN TẢNG PHÂN PHỐI VÉ & VẬN HÀNH SỰ KIỆN DOANH NGHIỆP HÀNG ĐẦU'),
+          h('h1',null,'GIẢI PHÁP PHÂN PHỐI VÉ TỐC ĐỘ CAO & PHÂN BỔ CHỖ NGỒI ĐỘC QUYỀN'),
+          h('p',null,'Hạ tầng phân tán hướng sự kiện (EDA) cam kết 0% bán lố vé (Zero Oversell), xử lý tức thì hàng chục ngàn lượt mua đồng thời với độ trễ dưới 50ms. Được tin cậy bởi các đơn vị tổ chức biểu diễn hàng đầu.'),
+          
+          // Quick Action Buttons
+          h('div',{className:'hero-cta-group'},
+            h('button',{type:'button',className:'hero-cta-coral',onClick:()=>scrollToSection('contact')},'Đặt lịch tư vấn ngay →'),
+            h('button',{type:'button',className:'hero-cta-secondary',onClick:()=>scrollToSection('events')},'Khám phá sự kiện mở bán ↓')
+          ),
 
-        // Commercial Stats Bar
-        h('div',{className:'hero-trust-bar'},
-          h('div',{className:'trust-item'},
-            h('strong',null,'100.000+'),
-            h('span',null,'Vé Đã Phân Phối')
-          ),
-          h('div',{className:'trust-item'},
-            h('strong',null,'0%'),
-            h('span',null,'Tỷ Lệ Bán Lố (Zero Oversell)')
-          ),
-          h('div',{className:'trust-item'},
-            h('strong',null,'99.99%'),
-            h('span',null,'Độ Sẵn Sàng Hệ Thống')
-          ),
-          h('div',{className:'trust-item'},
-            h('strong',null,'< 1.500ms'),
-            h('span',null,'Khóa An Toàn ACID')
+          // Commercial Stats Bar
+          h('div',{className:'hero-trust-bar'},
+            h('div',{className:'trust-item'},
+              h('strong',null,'100.000+'),
+              h('span',null,'Vé Đã Phân Phối')
+            ),
+            h('div',{className:'trust-item'},
+              h('strong',null,'0%'),
+              h('span',null,'Tỷ Lệ Bán Lố (Zero Oversell)')
+            ),
+            h('div',{className:'trust-item'},
+              h('strong',null,'99.99%'),
+              h('span',null,'Độ Sẵn Sàng Hệ Thống')
+            ),
+            h('div',{className:'trust-item'},
+              h('strong',null,'< 50ms'),
+              h('span',null,'Độ Trễ Giao Dịch')
+            )
           )
         )
       ),

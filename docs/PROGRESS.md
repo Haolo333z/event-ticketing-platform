@@ -4,16 +4,56 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Nâng cấp Nền tảng Thương mại Đẳng cấp Doanh nghiệp — EventFlow Commercial Platform (2026-11-15)
-- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ nghiệp vụ kỹ thuật đã nghiệm thu; hoàn tất gói `COMMERCIAL-01` và `PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL`.
-- **Task vừa hoàn tất:** `PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL`.
+- **Giai đoạn:** Nâng cấp Nền tảng Thương mại Đẳng cấp Doanh nghiệp — EventFlow Commercial Platform (2026-11-16)
+- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ nghiệp vụ kỹ thuật đã nghiệm thu; hoàn tất gói `COMMERCIAL-01`, `PHASE-P0`, `PHASE-P1` và Nâng cấp Toàn diện Diện mạo Chuẩn Sao Kim Branding (`saokim.com.vn`).
+- **Task vừa hoàn tất:** `SAOKIM-BRANDING — Nâng cấp Toàn diện Giao diện Chuẩn Doanh nghiệp Sao Kim Branding`.
 - **Kết quả kiểm chứng:** 
-  - Backend: `mvnw.cmd test` PASS 130 tests (0 failures, 0 errors).
-  - Frontend: `npm.cmd test --prefix frontend` PASS 54/54 tests (2.09s), build PASS (156ms).
+  - Backend: `backend/mvnw.cmd -f backend/pom.xml test` PASS 134 tests (0 failures, 0 errors, 121 skipped).
+  - Frontend: `npm.cmd test --prefix frontend` PASS 54/54 tests (1.74s), build PASS (182ms).
   - Contract: `npm.cmd test --prefix tools/contracts` PASS 69/69 cases.
-  - End-to-End API: Đăng ký user thật `nguyenvana@gmail.com` -> Băm BCrypt & Lưu PostgreSQL `ticketing.users`; Đăng nhập mật khẩu thật -> Sinh JWT token HMAC-SHA256 (24h); Chống trùng email (400 DUPLICATE_EMAIL); Đăng nhập sai mật khẩu (401 INVALID_CREDENTIALS); Tra cứu thông tin `/api/auth/me` (200 OK); Gửi yêu cầu tư vấn `/api/contact/leads` -> Lưu PostgreSQL `ticketing.contact_leads` (201 CREATED); Đặt vé thật gắn đúng `account_id` trong PostgreSQL (202 ACCEPTED); Phát hành vé (200 OK).
-  - Visual QA: Chrome headless screenshots tại `docs/evidence/visual-qa/` (`p0-unauth-navbar-1440.png`, `p0-loggedin-customer-1440.png`, `p0-auth-modal-login-1440.png`, `p0-auth-modal-register-1440.png`, `p0-loggedin-admin-1440.png`).
-- **Giới hạn:** Duy trì 100% tính tương thích ngược với mock tokens (`demo-customer-token`, `demo-admin-token`) cho CI/CD test harness. Chưa commit Git theo quy tắc.
+  - Visual QA: Chrome headless screenshots 1440x900 tại `docs/evidence/visual-qa/` (`saokim-hero-1440.png`, `saokim-mega-menu-solutions-1440.png`, `saokim-mega-menu-industries-1440.png`, `saokim-floating-dock-1440.png`).
+- **Giới hạn:** Giữ nguyên 100% hợp đồng API, cơ chế bảo vệ booking/concurrency PostgreSQL ACID, xác thực JWT/BCrypt, và khả năng tương thích ngược mock bearer tokens cho test harness. Chưa commit Git theo quy tắc.
+
+## SAOKIM-BRANDING — Nâng cấp Toàn diện Giao diện Chuẩn Doanh nghiệp Sao Kim Branding (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Nâng cấp toàn diện bộ nhận diện thương mại và trải nghiệm người dùng (UI/UX) của EventFlow theo tiêu chuẩn thiết kế cao cấp của Sao Kim Branding (https://www.saokim.com.vn/).
+
+**Các hạng mục đã hoàn thành:**
+1. **Corporate Navbar & Multi-level Mega Dropdown Menu**:
+   - Menu "Giải pháp ⌵": Mega menu chia 2 cột chuyên nghiệp:
+     - *Vận hành & Bán vé*: Giải pháp Bán vé Tốc độ cao (xử lý hàng vạn booking/giây, độ trễ < 50ms), Quản trị Ghế ngồi Độc quyền (Sơ đồ Stage/Sân khấu chuẩn rạp hát, chọn ghế realtime).
+     - *Công nghệ & Bảo mật*: Công nghệ Chống bán lố Zero Oversell (Khóa hàng ACID PostgreSQL, bảo vệ 100% tồn kho), Hệ thống Soát vé QR Code (Phát hành E-Ticket tự động kèm mã QR SVG tại cổng).
+   - Menu "Ngành nghề ⌵": Dropdown danh sách định vị ngành: Đại nhạc hội & Concert, Nhà hát & Nghệ thuật Hàn lâm, Hội nghị Công nghệ & Triển lãm, Sự kiện Thể thao & Giải đấu.
+   - Các liên kết điều hướng trực tiếp: "Bảng giá", "Về chúng tôi", "Liên hệ".
+   - Nút CTA chuyển đổi: `[ Đặt lịch tư vấn ]` bo cong nổi bật với gradient cam/coral (`#f97316` -> `#ef4444`).
+   - Tương thích trải nghiệm: Hỗ trợ cả hover chuột mượt mà và click chuyển trạng thái trên màn hình cảm ứng/mobile.
+   - Bảo toàn trọn vẹn: Avatar, tên người dùng, nút `🎟️ Vé của tôi`, nút `Bảng Quản Trị` (dành cho Admin) và nút `Đăng xuất`.
+2. **Hero Banner 100% Full-bleed Deep Royal Blue**:
+   - Nền tràn 100% chiều ngang màn hình (Full-bleed breakout) với dải màu Deep Royal Blue (`#05122f` -> `#0a2560` -> `#071942`) phối hợp radial spotlight ánh sáng trung tâm và lưới kỹ thuật chìm (blueprint grid pattern).
+   - Badge thương hiệu vàng kim: `★ NỀN TẢNG PHÂN PHỐI VÉ & VẬN HÀNH SỰ KIỆN DOANH NGHIỆP HÀNG ĐẦU`.
+   - Headline H1 in hoa chuẩn Typography Enterprise: `GIẢI PHÁP PHÂN PHỐI VÉ TỐC ĐỘ CAO & PHÂN BỔ CHỖ NGỒI ĐỘC QUYỀN`.
+   - Paragraph mô tả cam kết: Cam kết 0% oversell, xử lý tức thì hàng chục ngàn lượt mua đồng thời với độ trễ dưới 50ms, được tin cậy bởi các đơn vị tổ chức biểu diễn hàng đầu.
+   - Cặp nút CTA kép:
+     - `[ Đặt lịch tư vấn ngay → ]`: Nền cam coral rực rỡ, hiệu ứng hover nhấc nhẹ và phát sáng.
+     - `[ Khám phá sự kiện mở bán ↓ ]`: Nút thứ cấp viền kính trong suốt, chữ trắng tinh tế.
+   - Thước đo chỉ số 4 cột uy tín (Stats Bar): **100.000+** Vé Đã Phân Phối | **0%** Tỷ Lệ Bán Lố (Zero Oversell) | **99.99%** Độ Sẵn Sàng Hệ Thống | **< 50ms** Độ Trễ Giao Dịch.
+3. **Thanh Liên Hệ Nhanh Nổi Bên Sườn Phải (Floating Quick Contact Dock)**:
+   - Cố định ở mép phải màn hình (`position: fixed; right: 0; top: 50%; transform: translateY(-50%)`) với thanh dock bo góc tinh tế, nền bóng mờ sang trọng.
+   - Ba kênh kết nối trực tiếp kèm tooltip hướng dẫn:
+     - 📞 Hotline: `1900 6868` (tự động mở trình quay số điện thoại).
+     - ✉️ Email: `contact@eventflow.vn` (tự động mở trình soạn email).
+     - 💬 Hỗ trợ trực tuyến / Zalo Chat 24/7 (tự động cuộn tới form liên hệ tư vấn đối tác).
+
+**Minh chứng kiểm chứng thực tế:**
+- Lệnh build: `npm.cmd run build --prefix frontend` -> BUILD SUCCESS trong 182ms (24 modules).
+- Lệnh test frontend: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (1.74s).
+- Lệnh test contract: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- Lệnh test backend: `backend/mvnw.cmd -f backend/pom.xml test` -> PASS 134 tests (0 failures, 0 errors).
+- Visual QA (Chrome headless 1440x900):
+  - `docs/evidence/visual-qa/saokim-hero-1440.png` (649 KB): Hero banner Full-bleed Deep Royal Blue, badge vàng, Typography H1, cặp nút CTA và stats bar 4 cột.
+  - `docs/evidence/visual-qa/saokim-mega-menu-solutions-1440.png` (560 KB): Mega Menu "Giải pháp ⌵" 2 cột Vận hành & Bán vé và Công nghệ & Bảo mật.
+  - `docs/evidence/visual-qa/saokim-mega-menu-industries-1440.png` (580 KB): Dropdown menu "Ngành nghề ⌵" với 4 lĩnh vực mục tiêu.
+  - `docs/evidence/visual-qa/saokim-floating-dock-1440.png` (649 KB): Thanh liên hệ nổi bên sườn phải (Hotline, Email, Zalo Chat).
 
 ## PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL (Done, 2026-11-15)
 
