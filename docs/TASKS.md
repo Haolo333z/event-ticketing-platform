@@ -264,7 +264,7 @@
   - **Phụ thuộc:** T10.2. **Module/file:** docs/demo/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.
   - **Acceptance criteria và test bắt buộc:** báo cáo số thực và giới hạn; ghi kết quả thực vào PROGRESS. **Bàn giao/Done:** code hoặc tài liệu của task, bằng chứng test/kiểm tra và cập nhật PROGRESS.
-- [ ] **T10.4 — Chốt backlog ngoài phạm vi, sơ đồ, ảnh và tag demo.**
+- [x] **T10.4 — Chốt backlog ngoài phạm vi, sơ đồ, ảnh và tag demo (Done, 2026-11-15):** chốt backlog ngoài MVP tại docs/T10_4_ACCEPTANCE_CHECKLIST.md; đóng gói mã nguồn tái lập sạch ra file event-ticketing-platform-source.zip (2,8 MB, 261 files, SHA-256 32423cd...); đối soát 8 sơ đồ kiến trúc và bảo toàn minh chứng giao diện trung thực; gắn Git tag v1.0.0-demo; hoàn tất toàn bộ 45/45 tasks của đồ án (100% Done). [Checklist](T10_4_ACCEPTANCE_CHECKLIST.md), [Bằng chứng tái lập](evidence/t10-4-repro-verify-2026-11-15.json), [Bằng chứng sơ đồ](evidence/t10-4-diagrams-images-2026-11-15.json).
   - **Mục tiêu/phạm vi:** Chốt backlog ngoài phạm vi, sơ đồ, ảnh và tag demo. 
   - **Phụ thuộc:** T10.3. **Module/file:** docs/demo/infra; hợp đồng liên quan trong DATA_MODEL/API_CONTRACT/EVENT_CATALOG.
   - **Yêu cầu kỹ thuật:** giữ bất biến PRD và ranh giới transaction ARCHITECTURE; thay đổi schema bằng migration, API theo contract.

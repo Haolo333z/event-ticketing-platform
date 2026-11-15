@@ -4,13 +4,24 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4C hoàn thành ngày 2026-11-15
-- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A, T10.4B, T10.4C Done)
-- **Task vừa hoàn tất:** T10.4C: Kiểm chứng Hình ảnh minh họa & Sơ đồ kỹ thuật
-- **Task tiếp theo:** T10.4D (Đóng mốc nghiệm thu, phát hành Release Tag và hoàn tất đồ án)
-- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy; chưa commit/push.
+- **Giai đoạn:** Hoàn thành toàn diện đồ án — Nghiệm thu & Đóng gói phát hành (2026-11-15)
+- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ lộ trình 10 tuần đã hoàn tất xuất sắc
+- **Task vừa hoàn tất:** T10.4: Chốt backlog ngoài phạm vi, sơ đồ, ảnh, đóng gói mã nguồn và tag demo
+- **Task tiếp theo:** Sẵn sàng bảo vệ đồ án và bàn giao sản phẩm
+- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy.
 
-- **Task trong TASKS:** 44/45 Done (T10.4 đang mở). 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operation (16 cũ + 2 GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+- **Task trong TASKS:** **45/45 Done (100%)**. 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operations, Git tag `v1.0.0-demo`.
+
+## T10.4D — Đóng mốc Nghiệm thu, Phát hành Release Tag và Hoàn tất Đồ án (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Pha 4 của T10.4: commit T10.4C, cập nhật hoàn tất 45/45 tasks trong TASKS.md và PROGRESS.md, commit mốc phát hành và tạo Git release tag `v1.0.0-demo`.
+
+**Kết quả hoàn tất Task T10.4:**
+- **T10.4A**: Lập tài liệu [docs/T10_4_ACCEPTANCE_CHECKLIST.md](T10_4_ACCEPTANCE_CHECKLIST.md) chốt danh mục 6 nhóm Backlog ngoài MVP & Giới hạn kỹ thuật, rà soát 7 trường thông tin bìa `[CẦN ĐIỀN]`.
+- **T10.4B**: Đóng gói mã nguồn sạch ra `event-ticketing-platform-source.zip` (2.828.966 bytes, 261 files, SHA-256 `32423cdfa3abd51bdbb2a6ca829445901dd3d595385637182b5bc8b2693b4e5e`); kiểm chứng khả năng tái lập độc lập từ thư mục tạm sạch thành công 100%.
+- **T10.4C**: Đo đạc và đối soát nguồn gốc 8 sơ đồ kiến trúc tại `docs/report/figures/`; xác nhận tính trung thực của biên bản giao diện Chrome không ảnh giả mạo.
+- **T10.4D**: Chính thức đánh dấu Done cho T10.4 trên `docs/TASKS.md`, nâng tổng tiến độ dự án lên **45/45 tasks Done (100%)**.
+- **Release Tag**: Gắn tag `v1.0.0-demo` trỏ đúng commit nghiệm thu phát hành.
 
 ## T10.4C — Kiểm chứng Hình ảnh minh họa & Sơ đồ kỹ thuật (Done, 2026-11-15)
 
