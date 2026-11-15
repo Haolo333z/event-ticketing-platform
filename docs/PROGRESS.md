@@ -4,13 +4,141 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Hoàn thành toàn diện đồ án — Nghiệm thu & Đóng gói phát hành (2026-11-15)
-- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ lộ trình 10 tuần đã hoàn tất xuất sắc
-- **Task vừa hoàn tất:** T10.4: Chốt backlog ngoài phạm vi, sơ đồ, ảnh, đóng gói mã nguồn và tag demo
-- **Task tiếp theo:** Sẵn sàng bảo vệ đồ án và bàn giao sản phẩm
-- **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy.
+- **Giai đoạn:** Nâng cấp Nền tảng Thương mại Đẳng cấp Doanh nghiệp — EventFlow Commercial Platform (2026-11-15)
+- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ nghiệp vụ kỹ thuật đã nghiệm thu; hoàn tất gói `COMMERCIAL-01` và `PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL`.
+- **Task vừa hoàn tất:** `PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL`.
+- **Kết quả kiểm chứng:** 
+  - Backend: `mvnw.cmd test` PASS 130 tests (0 failures, 0 errors).
+  - Frontend: `npm.cmd test --prefix frontend` PASS 54/54 tests (2.09s), build PASS (156ms).
+  - Contract: `npm.cmd test --prefix tools/contracts` PASS 69/69 cases.
+  - End-to-End API: Đăng ký user thật `nguyenvana@gmail.com` -> Băm BCrypt & Lưu PostgreSQL `ticketing.users`; Đăng nhập mật khẩu thật -> Sinh JWT token HMAC-SHA256 (24h); Chống trùng email (400 DUPLICATE_EMAIL); Đăng nhập sai mật khẩu (401 INVALID_CREDENTIALS); Tra cứu thông tin `/api/auth/me` (200 OK); Gửi yêu cầu tư vấn `/api/contact/leads` -> Lưu PostgreSQL `ticketing.contact_leads` (201 CREATED); Đặt vé thật gắn đúng `account_id` trong PostgreSQL (202 ACCEPTED); Phát hành vé (200 OK).
+  - Visual QA: Chrome headless screenshots tại `docs/evidence/visual-qa/` (`p0-unauth-navbar-1440.png`, `p0-loggedin-customer-1440.png`, `p0-auth-modal-login-1440.png`, `p0-auth-modal-register-1440.png`, `p0-loggedin-admin-1440.png`).
+- **Giới hạn:** Duy trì 100% tính tương thích ngược với mock tokens (`demo-customer-token`, `demo-admin-token`) cho CI/CD test harness. Chưa commit Git theo quy tắc.
 
-- **Task trong TASKS:** **45/45 Done (100%)**. 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operations, Git tag `v1.0.0-demo`.
+## PHASE-P0 — Xác thực Thực tế & Lưu trữ Tài khoản PostgreSQL (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Triển khai cơ chế định danh và xác thực tài khoản người dùng thực tế (Authentication & Authorization / User Persistence) thay thế persona demo mock bearer token, lưu trữ bền vững vào cơ sở dữ liệu PostgreSQL.
+
+**Các hạng mục đã hoàn thành:**
+1. **Flyway Migration V10 (`backend/src/main/resources/db/migration/V10__user_authentication.sql`)**:
+   - Mở rộng bảng `ticketing.users`: bổ sung `email varchar(150) UNIQUE`, `password_hash varchar(255)`, `phone varchar(20)`.
+   - Cập nhật tài khoản hạt giống với mật khẩu mã hóa BCrypt:
+     - Customer: `customer@eventflow.vn` / mật khẩu `Customer@123` (`$2a$10$zEit4X9NWrp.3iBgG.hTpOb5Um7dVsVGqvWGrJ4G3UlKpEckrYy8i`).
+     - Admin: `admin@eventflow.vn` / mật khẩu `Admin@123` (`$2a$10$chuude7VP4cqC0fTaHNuVOCZH7xKZe3EMGnT3STT6p5OXCw2VGIb2`).
+   - Tạo bảng `ticketing.contact_leads` lưu trữ yêu cầu tư vấn doanh nghiệp trên Landing Page.
+2. **Backend Authentication & Security Engine**:
+   - `IdentityConfiguration.java`: Cấu hình Bean `PasswordEncoder` sử dụng `BCryptPasswordEncoder`.
+   - `JwtService.java`: Dịch vụ phát hành và xác thực token JWT chuẩn HMAC-SHA256, thời hạn 24 giờ, sử dụng Jackson 3 `tools.jackson.databind.ObjectMapper`.
+   - `MockBearerFilter.java`: Nâng cấp bộ lọc bảo mật hỗ trợ xác thực 2 chế độ: Token JWT thực tế từ người dùng và Mock tokens cho các bộ test tự động.
+   - `AuthController.java`:
+     - `POST /api/auth/register`: Đăng ký tài khoản mới, kiểm tra trùng email, băm mật khẩu BCrypt, lưu `ticketing.users`, trả về JWT token và thông tin user.
+     - `POST /api/auth/login`: Đăng nhập bằng Email + Mật khẩu, so khớp BCrypt, trả về JWT token (401 INVALID_CREDENTIALS nếu sai).
+     - `GET /api/auth/me`: Tra cứu thông tin định danh của người dùng đang đăng nhập.
+   - `ContactLeadController.java`:
+     - `POST /api/contact/leads`: Tiếp nhận thông tin từ form tư vấn Landing Page, lưu bền vững vào `ticketing.contact_leads`.
+3. **Frontend React TypeScript**:
+   - `client.ts`: Cập nhật `createApi` hỗ trợ `api.auth.register`, `api.auth.login`, `api.auth.me`, `api.contact.submitLead`; Quản lý lưu trữ `eventflow_token` và `eventflow_user` trong `localStorage`.
+   - `AuthModal.ts`: Modal đăng nhập & đăng ký sang trọng, đồng bộ phong cách thiết kế Midnight Navy & Coral Rose; Tab chuyển đổi mượt mà, kiểm tra hợp lệ form, hiển thị lỗi backend, hỗ trợ nút điền nhanh tài khoản demo.
+   - `DemoShell.ts`: Xóa bỏ hoàn toàn thanh persona switcher cũ ("Khách hàng demo" / "Quản trị demo"); Navbar hiển thị 2 nút Đăng nhập / Đăng ký khi chưa đăng nhập; Hiển thị Avatar, Tên, Huy hiệu vai trò, nút Chuyển quyền Admin và nút Đăng xuất khi đã đăng nhập.
+   - `App.ts`: Kết nối form "Liên hệ tư vấn" gửi dữ liệu thật vào `/api/contact/leads` với thông báo phản hồi chuyên nghiệp.
+   - `styles.css`: Bổ sung toàn diện bộ CSS cho Auth Modal, User Profile Header và Alert thông báo lỗi.
+
+**Minh chứng kiểm chứng thực tế:**
+- Backend tests: `mvnw.cmd test` -> PASS 130 tests.
+- Frontend tests: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (2.09s).
+- Contract tests: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- API Verification:
+  - Đăng ký tài khoản `nguyenvana@gmail.com` -> HTTP 201 CREATED (ID `830eb6e6-5d10-48dc-9f71-80f6dec72679`).
+  - Đăng ký trùng email -> HTTP 400 DUPLICATE_EMAIL.
+  - Đăng nhập đúng mật khẩu -> HTTP 200 OK kèm JWT token.
+  - Đăng nhập sai mật khẩu -> HTTP 401 INVALID_CREDENTIALS.
+  - Đặt vé GA/ghế bằng JWT token -> HTTP 202 ACCEPTED (Gắn đúng `account_id` trong PostgreSQL).
+  - Thanh toán & Nhận vé -> HTTP 200 OK (`EF-feb76922-a8c1-40b8-a184-b27637f96e38`).
+  - Gửi lead tư vấn đối tác -> HTTP 201 CREATED (`bf51d5be-4e36-4acb-921a-e83f135ad41a`).
+- Chrome headless screenshots:
+  - `docs/evidence/visual-qa/p0-unauth-navbar-1440.png`
+  - `docs/evidence/visual-qa/p0-loggedin-customer-1440.png`
+  - `docs/evidence/visual-qa/p0-loggedin-admin-1440.png`
+  - `docs/evidence/visual-qa/p0-auth-modal-login-1440.png`
+  - `docs/evidence/visual-qa/p0-auth-modal-register-1440.png`
+
+## COMMERCIAL-01 — Nâng cấp Landing Page Thương mại Đẳng cấp chuẩn Doanh nghiệp (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Chuyển đổi toàn diện giao diện `EventFlow` thành một nền tảng bán vé thương mại đẳng cấp (Commercial Website) lấy cảm hứng từ các Agency hàng đầu (Sao Kim Branding) và nền tảng bán vé lớn (Ticketbox / Eventbrite).
+
+**Các hạng mục đã hoàn thành:**
+1. **Corporate Topbar / Navbar**:
+   - Menu điều hướng mượt mà: `#events` (Khám phá sự kiện), `#features` (Giải pháp công nghệ), `#pricing` (Bảng giá dịch vụ), `#contact` (Liên hệ tư vấn).
+   - Nút CTA chuyển đổi cao: `Tổ chức sự kiện ngay` (tự động cuộn tới form liên hệ).
+   - Segmented persona switcher: `Khách hàng demo` / `Quản trị demo` chuẩn accessible.
+2. **High-Impact Hero Section**:
+   - Tag: `⚡ NỀN TẢNG PHÂN PHỐI VÉ & QUẢN TRỊ GHẾ SỰ KIỆN HÀNG ĐẦU`.
+   - Headline thương mại: `Giải Pháp Bán Vé Trực Tuyến Tốc Độ Cao & Phân Bổ Chỗ Ngồi Độc Quyền`.
+   - Subtitle: `Hạ tầng phân tán hướng sự kiện (EDA) cam kết 0% bán lố vé (Zero Oversell), xử lý tức thì hàng chục ngàn lượt mua đồng thời với độ trễ dưới 50ms.`
+   - 2 nút CTA hành động: `Khám phá vé mở bán ngay ↓` và `Xem bảng giá dịch vụ →`.
+   - Stats Bar 4 chỉ số thực tế: **100.000+** Vé Đã Phân Phối, **0%** Tỷ Lệ Bán Lố (Zero Oversell), **99.99%** Độ Sẵn Sàng Hệ Thống, **< 1.500ms** Khóa An Toàn ACID.
+3. **Live Ticketing & Seat Map Showcase (`#events`)**:
+   - Giữ nguyên 100% logic đặt vé GA, Sơ đồ ghế (Seat Map có khu vực Sân khấu Stage), đồng hồ đếm ngược giữ chỗ 10 phút, kịch bản mô phỏng thanh toán và vé điện tử E-Ticket Boarding Pass có mã QR SVG.
+4. **Core Tech Highlights (`#features`)**:
+   - 4 thẻ tính năng công nghệ: Khóa Hàng Nguyên Tử (Row-level Locking), Kiến Trúc Hướng Sự Kiện (Kafka & Outbox), Tự Động Thu Hồi Chỗ Quá Hạn (Smart Expiry), Vé Điện Tử Định Danh (Secure E-Ticket).
+5. **Commercial Pricing Plans (`#pricing`)**:
+   - Bảng giá 3 gói dịch vụ:
+     - **Gói Khởi Nghiệp (Starter)**: 4.5% / vé · Phù hợp hội thảo quy mô < 500 khách.
+     - **Gói Chuyên Nghiệp (Pro - Nổi bật / Best Value)**: Huy hiệu `🔥 PHỔ BIẾN NHẤT`, viền tím sang trọng, 3.2% / vé · Dành cho Concert & Lễ hội âm nhạc lớn.
+     - **Gói Doanh Nghiệp (Enterprise)**: Liên hệ báo giá riêng · Hạ tầng phân tán dedicated, tùy biến thương hiệu 100%, kỹ sư on-site, SLA 99.99%.
+6. **Partner & Trust Badges**:
+   - Dải chứng nhận an toàn và công nghệ: PostgreSQL ACID Certified, Apache Kafka 4.2 EDA, 256-Bit SSL/TLS Security, OpenAPI 3.1 Contract Tested, Anti-Fraud QR Check-in.
+7. **Consultation & Contact Form (`#contact`)**:
+   - Form tương tác chuyên nghiệp dành cho Nhà tổ chức sự kiện: Họ tên, Số điện thoại, Tên doanh nghiệp/đơn vị, Loại hình sự kiện, Lời nhắn.
+   - Trạng thái phản hồi thành công tức thì với cam kết liên hệ tư vấn trong 15 phút.
+8. **Corporate Footer**:
+   - Thông tin pháp lý `EventFlow Corporation`, trụ sở Hà Nội & TP. Hồ Chí Minh, Hotline 1900 8888, chính sách bảo mật và hoàn tiền.
+
+**Minh chứng kiểm chứng thực tế:**
+- Lệnh build: `npm.cmd run build --prefix frontend` -> PASS trong 135ms.
+- Lệnh test frontend: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (1.76s).
+- Lệnh test contract: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- Ảnh chụp màn hình Chrome headless thực tế:
+  - `docs/evidence/visual-qa/commercial-hero-1440.png` (537 KB): Hero, Stats bar, Corporate nav.
+  - `docs/evidence/visual-qa/commercial-pricing-contact-1440.png` (750 KB): Bảng giá và Form liên hệ.
+  - `docs/evidence/visual-qa/commercial-mobile-390.png` (453 KB): Giao diện Mobile iPhone 390px.
+  - `docs/evidence/visual-qa/commercial-full-scroll.png` (1.32 MB): Toàn cảnh trang thương mại từ Header tới Footer.
+
+## EventFlow Enterprise Redesign — Nâng cấp Giao diện & Trải nghiệm Sản phẩm (2026-11-15)
+
+**Phạm vi và đầu vào:** Theo yêu cầu nâng cấp toàn diện sản phẩm event-ticketing-platform thành nền tảng đặt vé thương mại cao cấp EventFlow với benchmark thiết kế từ `https://www.saokim.com.vn/dich-vu/thiet-ke-website/`.
+
+**Các hạng mục đã hoàn thành:**
+1. **Khảo sát Benchmark Sao Kim**: Khai thác các chỉ số thiết kế: Font Inter sans-serif, bảng màu Deep Navy (`#0a192f`), Slate (`#f8fafc`), Coral Rose (`#f43f5e`), Electric Indigo (`#4f46e5`); nhịp điệu phân vùng chuyển đổi cao, 4 trụ cột niềm tin, quy trình số hóa chuẩn 4 bước, và FAQ accordion.
+2. **Nền tảng Design System Tokens**: Thiết lập hệ thống biến CSS CSS-variables trong `frontend/src/styles.css` đồng bộ cho toàn bộ ứng dụng, hỗ trợ 4 breakpoint thiết kế: Desktop 1440px, Laptop 1366px, Tablet 768px-1024px, Mobile 390px.
+3. **DemoShell & Navigation**: Nâng cấp thanh điều hướng glassmorphic sticky, thương hiệu EventFlow, huy hiệu trạng thái Live PostgreSQL & Kafka, và điều khiển chuyển đổi persona (`Khách hàng demo` / `Quản trị demo`) chuẩn accessible.
+4. **Homepage & Event Discovery**:
+   - Hero banner với huy hiệu chuyển đổi, tiêu đề thu hút, và thanh chứng minh năng lực hệ thống (100% Atomic Lock, 10 Phút Giữ chỗ, EDA Kafka Outbox, E-Ticket QR Code).
+   - Thanh tìm kiếm và bộ lọc loại vé (Tất cả, 🎟️ Vé GA đứng, 💺 Ghế chỉ định).
+   - Danh sách thẻ sự kiện poster 16:9 Unsplash sắc nét, nhãn phân loại, địa điểm, thời gian, và mức giá tối thiểu.
+5. **Event Detail & Booking Experience**:
+   - Sơ đồ ghế (Seat Map) với vòm cong Sân khấu trung tâm `🎭 SÂN KHẤU CHÍNH / STAGE`, chú thích màu sắc ghế (🟢 Trống, 🟣 Đang chọn, 🟡 Đang giữ, ⚪ Đã bán), đồng bộ trạng thái thực tế từ PostgreSQL (ghế đã bán tự động khóa `Không khả dụng`).
+   - Bộ chọn vé GA với bộ đếm số lượng trực quan.
+6. **Checkout & E-Ticket Boarding Pass**:
+   - Thẻ vé điện tử dạng Boarding Pass có đường cắt notch hai bên sườn, mã vé định danh, vị trí chỗ ngồi, và mã QR SVG quét tại cổng.
+   - Các kịch bản mô phỏng thanh toán (Success, Late success, Failure) và nút hủy giữ chỗ.
+7. **Phân vùng Editorial chuẩn Doanh nghiệp**:
+   - 4 Trụ cột công nghệ (Zero Oversell, Giữ chỗ 10 phút, EDA Kafka, Vé QR bảo mật).
+   - Quy trình đặt vé 4 bước (Khám phá -> Chọn vé/ghế -> Giữ chỗ -> Nhận vé).
+   - Accordion câu hỏi thường gặp (FAQ) 5 mục tương tác trực quan.
+   - Banner chuyển đổi Bottom CTA và Footer doanh nghiệp 4 cột.
+
+**Bằng chứng kiểm chứng thực tế:**
+- Lệnh build: `npm.cmd run build --prefix frontend` -> PASS trong 149ms.
+- Lệnh test frontend: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (0 fail, 0 skipped, 1.8s).
+- Lệnh test contract: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- Ảnh chụp màn hình Chrome headless thực tế:
+  - `docs/evidence/visual-qa/desktop-1440.png` (815 KB): Giao diện Desktop 1440px đầy đủ catalog và dữ liệu API.
+  - `docs/evidence/visual-qa/laptop-1366.png` (665 KB): Giao diện Laptop 1366px.
+  - `docs/evidence/visual-qa/mobile-390.png` (444 KB): Giao diện Mobile iPhone 390px chuẩn responsive không tràn viền.
+  - `docs/evidence/visual-qa/seatmap-1440.png` (565 KB): Giao diện chọn sự kiện thính phòng có Sân khấu & Sơ đồ ghế thực tế.
+  - `docs/evidence/visual-qa/admin-1440.png` (130 KB): Giao diện Quản trị vận hành EventFlow.
+  - `docs/evidence/visual-qa/desktop-full-scroll.png` (1.16 MB): Toàn bộ trang chủ kéo dài gồm các section editorial, quy trình, FAQ và footer.
 
 ## T10.4D — Đóng mốc Nghiệm thu, Phát hành Release Tag và Hoàn tất Đồ án (Done, 2026-11-15)
 

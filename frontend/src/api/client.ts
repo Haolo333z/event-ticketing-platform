@@ -9,20 +9,89 @@ export type Command={eventId:string;ticketTypeId:string}&({quantity:number;seatI
 export type Attempt={key:string;payload:Command};
 export type Seat={id:string;label:string;status:'AVAILABLE'|'HELD'|'SOLD'};
 export type Availability={eventId:string;asOf:string;ticketTypes:({ticketTypeId:string;mode:'GA';available:number}|{ticketTypeId:string;mode:'SEATED';seats:Seat[]})[]};
+
+export type User={
+  id:string;
+  displayName:string;
+  email:string;
+  phone?:string;
+  role:'CUSTOMER'|'ADMIN';
+};
+
+export type AuthResponse={
+  token:string;
+  user:User;
+};
+
+export const AUTH_TOKEN_KEY='eventflow_token';
+export const AUTH_USER_KEY='eventflow_user';
+
+export function getStoredToken():string|null{
+  try{
+    if(typeof localStorage!=='undefined')return localStorage.getItem(AUTH_TOKEN_KEY);
+  }catch{/* ignore */}
+  return null;
+}
+
+export function getStoredUser():User|null{
+  try{
+    if(typeof localStorage!=='undefined'){
+      const raw=localStorage.getItem(AUTH_USER_KEY);
+      return raw?JSON.parse(raw):null;
+    }
+  }catch{/* ignore */}
+  return null;
+}
+
+export function setStoredAuth(token:string,user:User):void{
+  try{
+    if(typeof localStorage!=='undefined'){
+      localStorage.setItem(AUTH_TOKEN_KEY,token);
+      localStorage.setItem(AUTH_USER_KEY,JSON.stringify(user));
+    }
+  }catch{/* ignore */}
+}
+
+export function clearStoredAuth():void{
+  try{
+    if(typeof localStorage!=='undefined'){
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(AUTH_USER_KEY);
+    }
+  }catch{/* ignore */}
+}
+
 export class ApiError extends Error{
   code:string;status:number;correlationId?:string;
   constructor(code:string,message:string,status=0,correlationId?:string){super(message);this.name='ApiError';this.code=code;this.status=status;this.correlationId=correlationId;}
 }
+
 export interface Api{
   events():Promise<{items:Event[]}>;detail(id:string):Promise<Event>;availability(id:string):Promise<Availability>;
   create(attempt:Attempt):Promise<Booking>;booking(id:string):Promise<Booking>;mine():Promise<{items:Booking[]}>;
   simulate(attempt:PaymentAttempt):Promise<{paymentIntentId:string;status:'ACCEPTED'}>;cancel(id:string):Promise<Booking>;tickets(id:string):Promise<Ticket[]>;
+  auth?:{
+    register(data:{displayName:string;email:string;password:string;phone?:string}):Promise<AuthResponse>;
+    login(data:{email:string;password:string}):Promise<AuthResponse>;
+    me():Promise<User>;
+  };
+  contact?:{
+    submitLead(data:{fullName:string;email:string;phone:string;companyName?:string;eventScale?:string;message?:string}):Promise<{id:string;message:string}>;
+  };
 }
-export function demoTransport(base:string,fetcher:typeof fetch,token:string){
+
+export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=>string)){
   async function call<T>(path:string,init:RequestInit={}):Promise<T>{
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
+    const resolvedToken=typeof token==='function'?token():token;
     try{
-      const response=await fetcher(base+path,{...init,signal:controller.signal,headers:{...init.headers,Authorization:'Bearer '+token}});
+      const headers:Record<string,string>={
+        ...(init.headers as Record<string,string>|undefined)
+      };
+      if(resolvedToken){
+        headers['Authorization']='Bearer '+resolvedToken;
+      }
+      const response=await fetcher(base+path,{...init,signal:controller.signal,headers});
       let body:Record<string,unknown>;
       try{body=await response.json();}catch{throw new ApiError('NETWORK_ERROR','Chưa xác định được kết quả. Hãy thử lại cùng yêu cầu.');}
       if(!response.ok)throw new ApiError(String(body.code??'INTERNAL_ERROR'),String(body.message??'Không thể hoàn tất yêu cầu'),response.status,body.correlationId as string|undefined);
@@ -32,14 +101,31 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string){
   }
   return call;
 }
+
 export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):Api{
-  const call=demoTransport(base,fetcher,'demo-customer-token');
-  return{events:()=>call('/api/events?size=100'),detail:id=>call('/api/events/'+encodeURIComponent(id)),availability:id=>call('/api/events/'+encodeURIComponent(id)+'/availability'),
+  const tokenProvider=()=>getStoredToken()||'demo-customer-token';
+  const call=demoTransport(base,fetcher,tokenProvider);
+  return{
+    events:()=>call('/api/events?size=100'),
+    detail:id=>call('/api/events/'+encodeURIComponent(id)),
+    availability:id=>call('/api/events/'+encodeURIComponent(id)+'/availability'),
     create:attempt=>call('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':attempt.key},body:JSON.stringify(attempt.payload)}),
-    booking:id=>call('/api/bookings/'+encodeURIComponent(id)),mine:()=>call('/api/me/bookings?size=100'),
+    booking:id=>call('/api/bookings/'+encodeURIComponent(id)),
+    mine:()=>call('/api/me/bookings?size=100'),
     simulate:attempt=>call('/api/bookings/'+encodeURIComponent(attempt.bookingId)+'/simulate-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:attempt.scenario,requestId:attempt.requestId})}),
-    cancel:id=>call('/api/bookings/'+encodeURIComponent(id)+'/cancel',{method:'POST'}),tickets:id=>call('/api/bookings/'+encodeURIComponent(id)+'/tickets')};
+    cancel:id=>call('/api/bookings/'+encodeURIComponent(id)+'/cancel',{method:'POST'}),
+    tickets:id=>call('/api/bookings/'+encodeURIComponent(id)+'/tickets'),
+    auth:{
+      register:(data)=>call('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
+      login:(data)=>call('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
+      me:()=>call('/api/auth/me')
+    },
+    contact:{
+      submitLead:(data)=>call('/api/contact/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    }
+  };
 }
+
 const STORAGE_KEY='eventflow.pending-ga.v1';
 export type Store=Pick<Storage,'getItem'|'setItem'|'removeItem'>;
 export function readAttempt(store:Store):Attempt|null{
@@ -58,9 +144,12 @@ export function saveAttempt(store:Store,value:Attempt|null){if(value)store.setIt
 export function unknownOutcome(error:ApiError){return error.status===0||error.status>=500||error.code==='IDEMPOTENCY_KEY_REUSED';}
 
 const PAYMENT_KEY='eventflow.pending-payment.v1';
-export function readPaymentAttempt(store:Store):PaymentAttempt|null{
-  try{const value=JSON.parse(store.getItem(PAYMENT_KEY)??'null');const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if(value&&uuid.test(value.bookingId)&&uuid.test(value.requestId)&&['SUCCESS','FAILURE','DELAY_TIMEOUT'].includes(value.scenario))return{bookingId:value.bookingId,scenario:value.scenario,requestId:value.requestId};
-  }catch{/* No automatic new payment if session data is unavailable. */}return null;
+export function readPaymentAttempt(storage:Store):PaymentAttempt|null{
+  try{
+    const value=JSON.parse(storage.getItem(PAYMENT_KEY)??'null');const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if(value&&uuid.test(value.bookingId)&&uuid.test(value.requestId)&&['SUCCESS','FAILURE','DELAY_TIMEOUT'].includes(value.scenario))
+      return{bookingId:value.bookingId,requestId:value.requestId,scenario:value.scenario};
+  }catch{/* Ignore malformed session state. */}
+  return null;
 }
-export function savePaymentAttempt(store:Store,value:PaymentAttempt|null){if(value)store.setItem(PAYMENT_KEY,JSON.stringify(value));else store.removeItem(PAYMENT_KEY);}
+export function savePaymentAttempt(storage:Store,value:PaymentAttempt|null){if(value)storage.setItem(PAYMENT_KEY,JSON.stringify(value));else storage.removeItem(PAYMENT_KEY);}

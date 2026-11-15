@@ -39,7 +39,8 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
   }
   const canSimulate=booking.status!=='CONFIRMED'&&booking.status!=='REFUND_REQUIRED'&&!(accepted&&booking.status==='PENDING_PAYMENT');
   return h('section',{className:'checkout','aria-label':'Thanh toán mô phỏng'},
-    h('h3',null,'Thanh toán mô phỏng'),h('p',{className:'demo-warning'},'Demo — không thu tiền thật. Không nhập thông tin thẻ.'),
+    h('h3',null,'Thanh toán mô phỏng'),
+    h('p',{className:'demo-warning'},'Demo — không thu tiền thật. Không nhập thông tin thẻ.'),
     error&&h('div',{role:'alert',className:'alert error'},error.message,h('small',null,' · Mã lỗi: '+error.code),error.correlationId&&h('small',null,' · Mã tra cứu: '+error.correlationId)),
     notice&&h('p',{role:'status'},notice),
     pending&&h('div',{className:'alert pending'},'Yêu cầu mô phỏng chưa rõ kết quả cho booking '+pending.bookingId+'. Giữ nguyên requestId và kịch bản khi thử lại.',h('button',{type:'button',disabled:busy,onClick:()=>void pay(pending.scenario)},'Thử lại thanh toán cùng yêu cầu')),
@@ -48,8 +49,45 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
     ] as const).map(([scenario,label])=>h('button',{key:scenario,type:'button',disabled:busy||!!pending||!canSimulate,onClick:()=>void pay(scenario)},label)),
       booking.status==='PENDING_PAYMENT'&&h('button',{type:'button',className:'quiet',disabled:busy||!!pending,onClick:()=>void cancel()},'Hủy giữ chỗ')),
     booking.status==='REFUND_REQUIRED'&&h('p',{className:'alert pending'},'Kết quả thành công đến sau khi mất quyền giữ chỗ. Không phát vé; nghĩa vụ bù trừ được worker hoàn tiền mô phỏng xử lý. Trạng thái này được giữ để theo dõi; không có giao dịch tiền thật.'),
-    h('section',{'aria-label':'Vé của booking',className:'tickets'},h('h3',null,'Vé của booking'),
+    h('section',{'aria-label':'Vé của booking',className:'tickets'},
+      h('h3',null,'Vé điện tử của bạn (E-Tickets)'),
       booking.status!=='CONFIRMED'?h('p',null,'Chưa có vé. Chỉ booking CONFIRMED được phát vé.'):h('div',null,
         h('button',{type:'button',className:'quiet',disabled:busy,onClick:()=>void refresh().catch(value=>setError(value instanceof ApiError?value:new ApiError('NETWORK_ERROR','Chưa tải được vé')))},'Tải lại vé'),
-        tickets.length===0?h('p',{role:'status'},'Chưa tải được vé từ máy chủ.'):h('ul',{className:'ticket-list'},...tickets.map(ticket=>h('li',{key:ticket.id,'data-ticket-id':ticket.id},h('strong',null,ticket.seatLabel?'Ghế '+ticket.seatLabel:'Vé GA · số '+ticket.ticketOrdinal),h('code',null,ticket.code),h('small',null,'Mã tra cứu demo · '+ticket.id)))))));
+        tickets.length===0?h('p',{role:'status'},'Chưa tải được vé từ máy chủ.'):h('ul',{className:'ticket-list'},...tickets.map(ticket=>h('li',{key:ticket.id,'data-ticket-id':ticket.id,className:'e-ticket-card'},
+          h('div',{className:'ticket-notch-top'}),
+          h('div',{className:'ticket-notch-bottom'}),
+          h('div',{className:'ticket-main'},
+            h('div',{className:'ticket-header'},
+              h('span',{className:'ticket-badge'},'🎟️ EVENTFLOW OFFICIAL TICKET'),
+              h('span',{className:'ticket-status-tag'},'ĐÃ XÁC NHẬN')
+            ),
+            h('div',{className:'ticket-body-content'},
+              h('div',{className:'ticket-details'},
+                h('strong',{className:'ticket-seat-label'},ticket.seatLabel?'Ghế '+ticket.seatLabel:'Vé GA · số '+ticket.ticketOrdinal),
+                h('div',{className:'ticket-code-wrap'},
+                  h('span',{className:'code-caption'},'MÃ CHECK-IN:'),
+                  h('code',{className:'ticket-code'},ticket.code)
+                ),
+                h('small',{className:'ticket-id-sub'},'Mã tra cứu demo · '+ticket.id)
+              ),
+              h('div',{className:'ticket-qr-zone'},
+                h('div',{className:'qr-box'},
+                  h('svg',{viewBox:'0 0 24 24',width:'48',height:'48',fill:'none',stroke:'currentColor',strokeWidth:'1.5'},
+                    h('rect',{x:'3',y:'3',width:'7',height:'7'}),
+                    h('rect',{x:'14',y:'3',width:'7',height:'7'}),
+                    h('rect',{x:'3',y:'14',width:'7',height:'7'}),
+                    h('rect',{x:'14',y:'14',width:'3',height:'3'}),
+                    h('rect',{x:'18',y:'18',width:'3',height:'3'}),
+                    h('rect',{x:'18',y:'14',width:'3',height:'3'}),
+                    h('rect',{x:'14',y:'18',width:'3',height:'3'})
+                  )
+                ),
+                h('small',{className:'qr-hint'},'Quét mã tại cổng')
+              )
+            )
+          )
+        )))
+      )
+    )
+  );
 }

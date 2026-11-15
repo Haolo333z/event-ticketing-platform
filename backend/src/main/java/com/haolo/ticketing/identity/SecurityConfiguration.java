@@ -10,25 +10,38 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-@Configuration @ConditionalOnWebApplication
+@Configuration
+@ConditionalOnWebApplication
 public class SecurityConfiguration {
-    @Bean org.springframework.security.core.userdetails.UserDetailsService noPasswordUsers(){
-        return username->{throw new org.springframework.security.core.userdetails.UsernameNotFoundException("Password login is disabled");};
+
+    @Bean
+    org.springframework.security.core.userdetails.UserDetailsService noPasswordUsers() {
+        return username -> {
+            throw new org.springframework.security.core.userdetails.UsernameNotFoundException("Password login is handled via /api/auth/login");
+        };
     }
-    @Bean SecurityFilterChain chain(HttpSecurity http,DemoSettings settings,JdbcTemplate jdbc,ApiErrors errors) throws Exception {
-        return http.csrf(c->c.disable()).requestCache(c->c.disable()).httpBasic(c->c.disable()).formLogin(c->c.disable())
-            .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/actuator/health/liveness","/actuator/health/readiness","/error").permitAll()
-                .requestMatchers(HttpMethod.GET,"/actuator/metrics","/actuator/metrics/**").access((authentication,context)->new org.springframework.security.authorization.AuthorizationDecision(settings.safeProfile&&authentication.get().getAuthorities().stream().anyMatch(a->a.getAuthority().equals("ROLE_ADMIN"))))
-                .requestMatchers(HttpMethod.GET,"/api/events","/api/events/**").permitAll()
-                .requestMatchers(HttpMethod.POST,"/api/bookings").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.POST,"/api/bookings/*/simulate-payment","/api/bookings/*/cancel").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET,"/api/bookings/*/tickets").hasAnyRole("CUSTOMER","ADMIN")
-                .requestMatchers(HttpMethod.GET,"/api/me/bookings").hasRole("CUSTOMER")
-                .requestMatchers(HttpMethod.GET,"/api/bookings/*").hasAnyRole("CUSTOMER","ADMIN")
-                .requestMatchers("/api/admin/**").hasRole("ADMIN").anyRequest().denyAll())
-            .exceptionHandling(c->c.authenticationEntryPoint((req,res,ex)->errors.write(req,res,401,"UNAUTHENTICATED","Cần đăng nhập"))
-                .accessDeniedHandler((req,res,ex)->errors.write(req,res,403,"FORBIDDEN","Không có quyền truy cập")))
-            .addFilterBefore(new MockBearerFilter(settings,jdbc,errors),UsernamePasswordAuthenticationFilter.class).build();
+
+    @Bean
+    SecurityFilterChain chain(HttpSecurity http, DemoSettings settings, JdbcTemplate jdbc, ApiErrors errors, JwtService jwtService) throws Exception {
+        return http.csrf(c -> c.disable()).requestCache(c -> c.disable()).httpBasic(c -> c.disable()).formLogin(c -> c.disable())
+            .sessionManagement(c -> c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(c -> c
+                .requestMatchers("/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/actuator/metrics", "/actuator/metrics/**").access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(settings.safeProfile && authentication.get().getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))))
+                .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/contact/leads").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/bookings").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.POST, "/api/bookings/*/simulate-payment", "/api/bookings/*/cancel").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.GET, "/api/bookings/*/tickets").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/me/bookings").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.GET, "/api/bookings/*").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().denyAll())
+            .exceptionHandling(c -> c
+                .authenticationEntryPoint((req, res, ex) -> errors.write(req, res, 401, "UNAUTHENTICATED", "Cần đăng nhập"))
+                .accessDeniedHandler((req, res, ex) -> errors.write(req, res, 403, "FORBIDDEN", "Không có quyền truy cập")))
+            .addFilterBefore(new MockBearerFilter(settings, jdbc, errors, jwtService), UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 }

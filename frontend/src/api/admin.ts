@@ -1,4 +1,4 @@
-import {demoTransport} from './client.ts';
+import {demoTransport,getStoredToken} from './client.ts';
 import type {Event,Booking,Status,Seat} from './client.ts';
 
 export type Page<T>={items:T[];page:number;size:number;totalElements:number};
@@ -26,7 +26,8 @@ export interface AdminApi{
   replayEvent(id:string,request:ReplayRequest):Promise<ReplayAccepted>;
 }
 export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):AdminApi{
-  const call=demoTransport(base,fetcher,'demo-admin-token');
+  const tokenProvider=()=>getStoredToken()||'demo-admin-token';
+  const call=demoTransport(base,fetcher,tokenProvider);
   return{
     events:(page,size)=>call('/api/admin/events?'+new URLSearchParams({page:String(page),size:String(size)})),
     inventory:id=>call('/api/admin/events/'+encodeURIComponent(id)+'/inventory'),
