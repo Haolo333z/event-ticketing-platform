@@ -1324,3 +1324,36 @@ Build trong launcher lần boot và restart báo **130test/121skip/0failure/erro
 **Giới hạn:** Chrome do chủ dự án xác nhận, chưa có file ảnh để archive; agent kiểm HTTP/SQL sau restart, không tự làm visual QA Chrome sau đó. Đây là restart có kiểm soát của2booking đãCONFIRMED, không phải cắt điện/mất đĩa hoặc kill đúngCOMMIT đang chạy. Cache và một máy/broker được giữ, không suy thành nghiệm thu HA hoặc production; không dùng tiền thật.
 
 **Demo riêng đang mở:** frontend `http://localhost:5173`, catalog `http://127.0.0.1:18080/api/events`, health `http://127.0.0.1:18080/actuator/health`. Chỉ chạy lệnh stop/start ở thư mục clone nêu trên; không dùng thư mục demo gốc để thao tác môi trường này.
+
+
+## Giai đoạn P1 — Hoàn thiện toàn diện luồng nghiệp vụ Khách hàng & Quản trị viên (2026-11-16)
+
+Đã hoàn thành xuất sắc toàn bộ các mục tiêu của Giai đoạn P1:
+
+### 1. Phía Khách hàng (Customer Experience)
+- **Cổng xác thực giữ vé thông minh (Auth Booking Gate)**: Khi người dùng chưa đăng nhập bấm "Giữ vé GA" hoặc "Giữ ghế đã chọn", hệ thống tự động mở `AuthModal` ở tab "Đăng nhập" kèm thông báo bảo lưu lựa chọn (`auth-gate-banner`). Sau khi đăng nhập thành công, luồng giữ chỗ tự động được thực hiện ngay lập tức mà người dùng không cần phải chọn lại sự kiện, loại vé hay ghế ngồi.
+- **Màn hình "Vé của tôi" (My Bookings Modal)**: Nút `🎟️ Vé của tôi` tích hợp trên thanh điều hướng khi đã đăng nhập. Tự động lấy danh sách booking của tài khoản từ `GET /api/me/bookings`, hiển thị chi tiết số tiền, thời hạn, trạng thái (`CONFIRMED`, `PENDING_PAYMENT`, `EXPIRED`, `REFUND_REQUIRED`). Với các đơn `CONFIRMED`, hiển thị vé điện tử chính thức (E-Ticket) với mã QR SVG sắc nét, mã check-in và số ghế/số thứ tự vé. Với đơn `PENDING_PAYMENT`, cho phép người dùng bấm "Tiếp tục thanh toán" để quay lại thanh toán mô phỏng.
+
+### 2. Phía Quản trị viên (Admin Dashboard)
+- **Quản lý Người dùng (Users Tab)**:
+  - Backend: API `GET /api/admin/users?page=0&size=20&search=...` được bảo vệ bằng quyền `ROLE_ADMIN`, truy vấn bảng `ticketing.users` theo thời gian tạo mới nhất, hỗ trợ tìm kiếm phân trang theo tên, email, số điện thoại, tuyệt đối không lộ trường `password_hash`.
+  - Frontend: Tab "Người dùng" trong Admin Dashboard hiển thị bảng thành viên thực tế, huy hiệu vai trò `Quản trị viên` (Gold) / `Khách hàng` (Blue), và thanh tìm kiếm tức thì.
+- **Yêu cầu Doanh nghiệp (Leads Tab)**:
+  - Backend: API `GET /api/admin/leads?page=0&size=20` được bảo vệ bằng `ROLE_ADMIN`, truy vấn bảng `ticketing.contact_leads`.
+  - Frontend: Tab "Yêu cầu Doanh nghiệp" hiển thị đầy đủ thông tin đối tác tổ chức sự kiện liên hệ tư vấn.
+- **Tạo Sự kiện Mới (Create Event)**:
+  - Form tạo sự kiện chuẩn doanh nghiệp trong tab "Sự kiện", hỗ trợ cả chế độ vé GA (sức chứa) và Seated (nhãn ghế chi tiết). Khi bấm lưu, dữ liệu được ghi bền vững vào PostgreSQL qua `POST /api/admin/events` và xuất hiện ngay trên trang chủ.
+
+### 3. Kết quả Kiểm thử & Bằng chứng
+- **Backend Tests**: 134/134 tests PASS (0 failures, 0 errors).
+- **Frontend Tests**: 54/54 tests PASS (0 failures, 0 errors).
+- **Contract Tests**: 69/69 checks PASS (OpenAPI 3.1, 18 operations).
+- **Visual QA Artifacts (Chrome Headless 1440x900)**:
+  - `docs/evidence/visual-qa/p1-unauth-booking-gate.png`: Cổng kiểm tra đăng nhập khi giữ vé.
+  - `docs/evidence/visual-qa/p1-my-bookings-1440.png`: Màn hình "Vé của tôi" với danh sách đơn và thẻ vé điện tử QR Code.
+  - `docs/evidence/visual-qa/p1-admin-users-1440.png`: Tab quản lý người dùng với dữ liệu thật từ PostgreSQL.
+  - `docs/evidence/visual-qa/p1-admin-create-event-1440.png`: Form tạo sự kiện mới của Quản trị viên.
+
+### 4. Giới hạn & Tuân thủ
+- Tuân thủ quy tắc `AGENTS.md` và `RULES.md`: Không tự ý commit/push, giữ nguyên working tree để Tech Lead kiểm tra và phê duyệt.
+- Thanh toán và hoàn tiền giữ nguyên cơ chế mô phỏng an toàn (không giao dịch tiền thật).

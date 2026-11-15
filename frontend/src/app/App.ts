@@ -1,6 +1,6 @@
 import {createElement as h,useEffect,useRef,useState} from 'react';
 import type {ChangeEvent,FormEvent} from 'react';
-import {ApiError,readAttempt,saveAttempt,unknownOutcome,readPaymentAttempt} from '../api/client.ts';
+import {ApiError,readAttempt,saveAttempt,unknownOutcome,readPaymentAttempt,getStoredUser} from '../api/client.ts';
 import {Checkout} from './Checkout.ts';
 import type {Api,Attempt,Availability,Booking,Event,Store} from '../api/client.ts';
 
@@ -30,7 +30,7 @@ function scrollToSection(id: string) {
   }
 }
 
-export function App({api,store,embedded=false}:{api:Api;store:Store;embedded?:boolean}){
+export function App({api,store,embedded=false,onRequireAuth,activeBookingId}:{api:Api;store:Store;embedded?:boolean;onRequireAuth?:(resumeAction:()=>void)=>void;activeBookingId?:string|null}){
   const[pending,setPending]=useState<Attempt|null>(()=>readAttempt(store));
   const[events,setEvents]=useState<Event[]>([]);const[loading,setLoading]=useState(true);
   const initialSelected = pending?.payload.eventId ?? (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('eventId') ?? '' : '');
@@ -81,8 +81,14 @@ export function App({api,store,embedded=false}:{api:Api;store:Store;embedded?:bo
     const timer=setInterval(()=>{if(Date.now()-started>budget){clearInterval(timer);if(active)setNotice('Đã dừng tự cập nhật. Bạn có thể bấm Cập nhật booking.');return;}api.booking(id).then(value=>{if(active){setBooking(value);if(value.status!=='PENDING_PAYMENT'){void historyRefresh();if(selected)void api.availability(selected).then(snapshot=>{if(active)setAvailability(snapshot);}).catch(()=>{});}}}).catch(()=>{if(active)setNotice('Chưa cập nhật được trạng thái. Bạn có thể tải lại booking.');});},3000);
     return()=>{active=false;clearInterval(timer);};
   },[api,booking?.bookingId,booking?.status,selected]);
-  async function submit(event:FormEvent){
-    event.preventDefault();if(submitting.current)return;submitting.current=true;setBusy(true);setError(null);setNotice('');let attempt=pending;
+  useEffect(()=>{
+    if(activeBookingId){
+      void openBooking(activeBookingId);
+      setTimeout(()=>scrollToSection('booking-result-section'),100);
+    }
+  },[activeBookingId]);
+  async function executeBooking(){
+    if(submitting.current)return;submitting.current=true;setBusy(true);setError(null);setNotice('');let attempt=pending;
     try{
       if(!attempt){
         const mode=detail?.ticketTypes.find(t=>t.id===typeId)?.mode;
@@ -98,6 +104,18 @@ export function App({api,store,embedded=false}:{api:Api;store:Store;embedded?:bo
       if(!unknownOutcome(problem)){saveAttempt(store,null);setPending(null);}fail(problem);
       if(['INVENTORY_UNAVAILABLE','HOLD_EXPIRY_PROCESSING'].includes(problem.code)&&selected){setSeatIds([]);try{setAvailability(await api.availability(selected));}catch{/* Preserve the original conflict message. */}}
     }finally{setBusy(false);submitting.current=false;}
+  }
+  async function submit(event:FormEvent){
+    event.preventDefault();
+    if(submitting.current)return;
+    const currentUser=getStoredUser();
+    if(!pending&&!currentUser&&onRequireAuth){
+      onRequireAuth(()=>{
+        void executeBooking();
+      });
+      return;
+    }
+    await executeBooking();
   }
   async function openBooking(id:string){try{setBooking(await api.booking(id));setError(null);setNotice('');}catch(value){fail(value);}}
   const type=detail?.ticketTypes.find(t=>t.id===typeId);const snapshot=availability?.ticketTypes.find(t=>t.ticketTypeId===typeId);
@@ -332,7 +350,7 @@ export function App({api,store,embedded=false}:{api:Api;store:Store;embedded?:bo
       ),
 
       // BOOKING RESULT & CHECKOUT
-      booking&&h('section',{className:'result','aria-label':'Kết quả booking'},
+      booking&&h('section',{id:'booking-result-section',className:'result','aria-label':'Kết quả booking'},
         h('div',{className:'section-heading'},
           h('h2',null,'Booking của bạn'),
           h('span',{className:'status-pill'},labels[booking.status]??booking.status)

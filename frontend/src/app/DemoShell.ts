@@ -2,6 +2,7 @@ import {createElement as h,useState,useEffect} from 'react';
 import {App} from './App.ts';
 import {AdminDashboard} from './AdminDashboard.ts';
 import {AuthModal} from './AuthModal.ts';
+import {MyBookingsModal} from './MyBookingsModal.ts';
 import type {Api,Store,User} from '../api/client.ts';
 import {getStoredUser,clearStoredAuth} from '../api/client.ts';
 import type {AdminApi} from '../api/admin.ts';
@@ -15,6 +16,8 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
   const mockCustomer = searchParams?.get('mockUser') === 'customer';
   const mockAdmin = searchParams?.get('mockUser') === 'admin';
   const initialModal = searchParams?.get('openAuth');
+  const initialGate = searchParams?.get('gate') === 'true';
+  const initialMyBookings = searchParams?.get('openMyBookings') === 'true';
 
   const initialUser: User | null = mockCustomer ? {
     id: '830eb6e6-5d10-48dc-9f71-80f6dec72679',
@@ -31,8 +34,12 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
   } : getStoredUser());
 
   const[user,setUser]=useState<User|null>(initialUser);
-  const[authModalOpen,setAuthModalOpen]=useState(!!initialModal);
+  const[authModalOpen,setAuthModalOpen]=useState(!!initialModal || initialGate);
   const[authModalTab,setAuthModalTab]=useState<'login'|'register'>(initialModal === 'register' ? 'register' : 'login');
+  const[gateNotice,setGateNotice]=useState(initialGate ? 'Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.' : '');
+  const[myBookingsOpen,setMyBookingsOpen]=useState(initialMyBookings);
+  const[pendingBookingAction,setPendingBookingAction]=useState<(()=>void)|null>(null);
+  const[activeBookingId,setActiveBookingId]=useState<string|null>(null);
 
   useEffect(()=>{
     if(!mockCustomer && !mockAdmin){
@@ -57,12 +64,18 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
     clearStoredAuth();
     setUser(null);
     setPersona('customer');
+    setMyBookingsOpen(false);
   }
 
   function handleAuthSuccess(loggedInUser:User){
     setUser(loggedInUser);
     if(loggedInUser.role==='ADMIN'){
       setAdminVisited(true);
+    }
+    if(pendingBookingAction){
+      const action=pendingBookingAction;
+      setPendingBookingAction(null);
+      setTimeout(()=>action(),100);
     }
   }
 
@@ -96,6 +109,12 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
 
         // Real Auth Section
         user?h('div',{className:'user-profile-widget'},
+          h('button',{
+            type:'button',
+            className:'btn-my-bookings',
+            onClick:()=>setMyBookingsOpen(true),
+            title:'Xem vé đã mua của bạn'
+          },'🎟️ Vé của tôi'),
           h('div',{className:'user-avatar',title:user.displayName},
             user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'
           ),
@@ -150,13 +169,35 @@ export function DemoShell({customer,admin,store}:{customer:Api;admin:AdminApi;st
     h(AuthModal,{
       isOpen:authModalOpen,
       initialTab:authModalTab,
-      onClose:()=>setAuthModalOpen(false),
+      gateNotice,
+      onClose:()=>{setAuthModalOpen(false);setGateNotice('');},
       onSuccess:handleAuthSuccess,
       api:customer
     }),
 
+    h(MyBookingsModal,{
+      isOpen:myBookingsOpen,
+      onClose:()=>setMyBookingsOpen(false),
+      api:customer,
+      onSelectBooking:(id)=>{
+        setActiveBookingId(id);
+        setPersona('customer');
+      }
+    }),
+
     h('div',{hidden:persona!=='customer',className:'persona-view-container'},
-      h(App,{api:customer,store,embedded:true})
+      h(App,{
+        api:customer,
+        store,
+        embedded:true,
+        activeBookingId,
+        onRequireAuth:(resumeAction)=>{
+          setPendingBookingAction(()=>resumeAction);
+          setGateNotice('Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.');
+          setAuthModalTab('login');
+          setAuthModalOpen(true);
+        }
+      })
     ),
     adminVisited&&h('div',{hidden:persona!=='admin',className:'persona-view-container'},
       h(AdminDashboard,{api:admin})

@@ -5,12 +5,13 @@ import {setStoredAuth} from '../api/client.ts';
 export interface AuthModalProps {
   isOpen:boolean;
   initialTab?:'login'|'register';
+  gateNotice?:string;
   onClose:()=>void;
   onSuccess:(user:User)=>void;
   api:Api;
 }
 
-export function AuthModal({isOpen,initialTab='login',onClose,onSuccess,api}:AuthModalProps){
+export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSuccess,api}:AuthModalProps){
   const[tab,setTab]=useState<'login'|'register'>(initialTab);
   const[email,setEmail]=useState('');
   const[password,setPassword]=useState('');
@@ -88,6 +89,11 @@ export function AuthModal({isOpen,initialTab='login',onClose,onSuccess,api}:Auth
           className:'auth-tab-btn'+(tab==='register'?' active':''),
           onClick:()=>{setTab('register');setError(null);}
         },'Đăng ký tài khoản')
+      ),
+
+      gateNotice&&h('div',{className:'auth-gate-banner',role:'status'},
+        h('span',null,'🔒 '),
+        gateNotice
       ),
 
       error&&h('div',{className:'auth-error-alert',role:'alert'},
