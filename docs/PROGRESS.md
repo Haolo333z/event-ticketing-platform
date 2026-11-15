@@ -4,13 +4,41 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4A hoàn thành ngày 2026-11-15
-- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A Done)
-- **Task vừa hoàn tất:** T10.4A: Chuẩn bị nghiệm thu, rà soát checkpoint và chốt Backlog ngoài MVP; thiết lập Checklist nghiệm thu T10.4
-- **Task tiếp theo:** T10.4B (Đóng gói ZIP mã nguồn và thử nghiệm môi trường sạch)
+- **Giai đoạn:** Nghiệm thu & Đóng gói — T10.4B hoàn thành ngày 2026-11-15
+- **Tiến độ:** T1.1–T7.4, T8.1–T8.4, T9.1–T9.4, T10.1–T10.3 Done; T10.4 In Progress (T10.4A, T10.4B Done)
+- **Task vừa hoàn tất:** T10.4B: Đóng gói mã nguồn ZIP sạch và Kiểm chứng tái lập từ môi trường độc lập
+- **Task tiếp theo:** T10.4C (Kiểm chứng hình ảnh minh họa & sơ đồ kỹ thuật)
 - **Giới hạn:** Không có file ảnh Chrome được công cụ truy cập trong lượt này; ghi nguồn xác nhận của người dùng, không tuyên bố đã xem/lưu ảnh. Giữ nguyên 7 ô [CẦN ĐIỀN] trong tài liệu báo cáo để chờ thông tin hành chính chính thức của tác giả. Môi trường riêng đang chạy; chưa commit/push.
 
 - **Task trong TASKS:** 44/45 Done (T10.4 đang mở). 18 bảng/V1–V9 giữ nguyên; OpenAPI 18 operation (16 cũ + 2 GET recovery), không thêm dependency. Các mục cũ bên dưới giữ bằng chứng lịch sử.
+
+## T10.4B — Đóng gói mã nguồn ZIP sạch và Kiểm chứng tái lập từ môi trường độc lập (Done, 2026-11-15)
+
+**Phạm vi và đầu vào:** Pha 2 của T10.4: commit T10.4A, đóng gói mã nguồn sạch ra file lưu trữ `event-ticketing-platform-source.zip`, loại trừ toàn bộ mã rác, cache và dữ liệu nhạy cảm theo đúng Checklist T10.4A. Giải nén và kiểm chứng tái lập độc lập tại thư mục tạm của hệ thống; thu thập bằng chứng vào `docs/evidence/t10-4-repro-verify-2026-11-15.json`. Không sửa mã nguồn ứng dụng, không commit/push mã nguồn, chưa đánh dấu hoàn thành T10.4 trong TASKS.md.
+
+**Kết quả đóng gói file ZIP:**
+- File archive: `event-ticketing-platform-source.zip` tại thư mục gốc repository.
+- Dung lượng: **2.828.966 bytes** (~2,70 MiB), nén Deflate mức 9 từ 261 file sạch (tổng dung lượng gốc 5.329.825 bytes).
+- Mã băm SHA-256: `32423cdfa3abd51bdbb2a6ca829445901dd3d595385637182b5bc8b2693b4e5e`.
+- Git hygiene: Quy tắc `*.zip` được bổ sung vào `.gitignore`, file zip không bị đưa vào Git tracking.
+
+**Đối soát các thành phần loại trừ:**
+- Đã xác minh 100% loại trừ: `.git/`, `frontend/node_modules/`, `tools/contracts/node_modules/`, `backend/target/`, `dist/`, `reports/`, `infra/.local-runtime/`, `.env` thật (chỉ giữ lại `.env.example`), `*.zip`, `*.log`, `.idea/`, `.vscode/`.
+
+**Kiểm chứng tái lập độc lập (Reproducibility Verification):**
+- Thư mục giải nén độc lập: `C:\Users\tinht\AppData\Local\Temp\ticketing-repro-verify`.
+- Cấu trúc bản sao: 261 files; xác nhận không có `.git`, không có `node_modules`, không có `target`, không có `.env` trước khi khởi tạo; các thư mục cốt lõi `backend/`, `frontend/`, `infra/`, `docs/`, `tools/` đầy đủ.
+- Khởi tạo môi trường: `powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1` tạo `.env` sạch từ `.env.example` thành công.
+- Maven Wrapper: `backend\mvnw.cmd -version` thực thi thành công: Apache Maven 3.9.16, Java 25.0.5 (Eclipse Adoptium).
+- Frontend manifest: `frontend/package.json` (`ticketing-frontend`) và `frontend/package-lock.json` (lockfileVersion: 3) hợp lệ và đầy đủ.
+- Dọn dẹp: Thư mục tạm `ticketing-repro-verify` đã được dọn sạch sau kiểm chứng.
+- Bằng chứng đã lưu: [docs/evidence/t10-4-repro-verify-2026-11-15.json](evidence/t10-4-repro-verify-2026-11-15.json).
+
+**Kiểm tra và an toàn:**
+- Mã nguồn backend, frontend, migration, openapi contracts giữ nguyên 100%.
+- Không can thiệp hoặc dừng các cổng dịch vụ `18080`, `18081`, `5173`.
+- Giữ nguyên các thư mục clone / volume độc lập `D:\ticketing-t101-94eeadabbaa1` và `D:\ticketing-t102-e8b72037cdaf`.
+- Task T10.4 chuyển tiếp sang pha T10.4C.
 
 ## T10.4A — Chuẩn bị nghiệm thu, rà soát checkpoint và chốt Backlog ngoài MVP (Done, 2026-11-15)
 

@@ -16,3 +16,4 @@ infra/.local-runtime/
 reports/
 *.pem
 *.key
+*.zip

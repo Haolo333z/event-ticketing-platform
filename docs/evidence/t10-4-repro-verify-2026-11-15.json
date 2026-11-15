@@ -1,0 +1,117 @@
+{
+  "task": "T10.4B",
+  "status": "DONE",
+  "date": "2026-11-15",
+  "timezone": "Asia/Saigon",
+  "sourceCommit": "a65cc4986168d1e327657e63fba0cd7104b2e5f0",
+  "archive": {
+    "filename": "event-ticketing-platform-source.zip",
+    "relativePath": "event-ticketing-platform-source.zip",
+    "bytes": 2828966,
+    "sha256": "32423cdfa3abd51bdbb2a6ca829445901dd3d595385637182b5bc8b2693b4e5e",
+    "totalFiles": 261,
+    "uncompressedBytes": 5329825,
+    "gitTracked": false,
+    "gitignoreRule": "*.zip"
+  },
+  "exclusionsVerified": [
+    {
+      "pattern": ".git/",
+      "description": "Git repository history and internal metadata",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": "node_modules/",
+      "description": "Downloaded npm dependencies in frontend and tools",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": "target/",
+      "description": "Compiled Maven artifacts and build target directories",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": "dist/",
+      "description": "Frontend compiled distribution output",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": "reports/",
+      "description": "Local test reports, load test samples and intermediate renders",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": ".local-runtime/",
+      "description": "Ephemeral runtime data in infra/.local-runtime",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": ".env, .env.*",
+      "description": "Active environment configurations containing real local passwords",
+      "status": "PASS",
+      "foundInZip": false,
+      "envExamplePreserved": true
+    },
+    {
+      "pattern": "*.zip",
+      "description": "Nested archive files",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": "*.log",
+      "description": "Runtime log files in frontend or root",
+      "status": "PASS",
+      "foundInZip": false
+    },
+    {
+      "pattern": ".idea/, .vscode/",
+      "description": "Local IDE configuration folders",
+      "status": "PASS",
+      "foundInZip": false
+    }
+  ],
+  "reproducibilityVerification": {
+    "testDirectory": "C:\\Users\\tinht\\AppData\\Local\\Temp\\ticketing-repro-verify",
+    "extractionStatus": "PASS",
+    "totalExtractedFiles": 261,
+    "structureChecks": {
+      "gitAbsent": true,
+      "nodeModulesAbsent": true,
+      "targetAbsent": true,
+      "envAbsentBeforeInit": true,
+      "envExamplePresent": true,
+      "backendPresent": true,
+      "frontendPresent": true,
+      "infraPresent": true,
+      "docsPresent": true,
+      "toolsPresent": true
+    },
+    "staticVerification": {
+      "envInit": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/local-env.ps1",
+        "envCreated": true,
+        "status": "PASS"
+      },
+      "mavenWrapper": {
+        "command": ".\\mvnw.cmd -version (in backend)",
+        "output": "Apache Maven 3.9.16 (2bdd9fddda4b155ebf8000e807eb73fd829a51d5)",
+        "javaVersion": "25.0.5, vendor: Eclipse Adoptium",
+        "status": "PASS"
+      },
+      "frontendManifests": {
+        "packageName": "ticketing-frontend",
+        "lockfileVersion": 3,
+        "valid": true,
+        "status": "PASS"
+      }
+    },
+    "cleanupStatus": "PASS"
+  }
+}
