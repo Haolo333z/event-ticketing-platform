@@ -309,7 +309,7 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
       if(resolvedToken && !headers['Authorization'] && !headers['authorization']){
         headers['Authorization']='Bearer '+resolvedToken;
       }
-      let response=await fetcher(base+path,{...init,signal:controller.signal,headers,credentials:'include'});
+      let response=await fetcher(base+path,{...init,signal:controller.signal,headers});
 
       // 401 interceptor with token family refresh
       if(response.status===401&&!path.startsWith('/api/auth/login')&&!path.startsWith('/api/auth/register')&&!path.startsWith('/api/auth/refresh')){
@@ -319,7 +319,7 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
             ...(init.headers as Record<string,string>|undefined),
             'Authorization':'Bearer '+refreshedToken
           };
-          response=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders,credentials:'include'});
+          response=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
         }
       }
 
@@ -350,8 +350,8 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
     auth:{
       register:(data)=>call('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       login:(data)=>call('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
-      refresh:()=>call('/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'}}),
-      logout:()=>call('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'}}),
+      refresh:()=>call('/api/auth/refresh',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
+      logout:()=>call('/api/auth/logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
       me:()=>call('/api/auth/me')
     },
     contact:{
