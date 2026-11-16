@@ -1,8 +1,8 @@
 import {createElement as h,useEffect,useRef,useState} from 'react';
 import type {ChangeEvent,FormEvent} from 'react';
-import {ApiError,readAttempt,saveAttempt,unknownOutcome,readPaymentAttempt,getStoredUser} from '../api/client.ts';
+import {ApiError,readAttempt,saveAttempt,unknownOutcome,readPaymentAttempt,getStoredUser,getStoredToken} from '../api/client.ts';
 import {Checkout} from './Checkout.ts';
-import type {Api,Attempt,Availability,Booking,Event,Store} from '../api/client.ts';
+import type {Api,Attempt,Availability,Booking,Event,Store,User} from '../api/client.ts';
 
 const vnd=(value:number)=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(value);
 const date=(value:string)=>new Date(value).toLocaleString('vi-VN');
@@ -30,7 +30,7 @@ function scrollToSection(id: string) {
   }
 }
 
-export function App({api,store,embedded=false,onRequireAuth,activeBookingId,currentPath,onNavigate}:{api:Api;store:Store;embedded?:boolean;onRequireAuth?:(resumeAction:()=>void)=>void;activeBookingId?:string|null;currentPath?:string;onNavigate?:(path:string)=>void}){
+export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId,currentPath,onNavigate}:{api:Api;store:Store;user?:User|null;embedded?:boolean;onRequireAuth?:(resumeAction:()=>void)=>void;activeBookingId?:string|null;currentPath?:string;onNavigate?:(path:string)=>void}){
   function nav(targetPath: string) {
     if (onNavigate) {
       onNavigate(targetPath);
@@ -118,7 +118,7 @@ export function App({api,store,embedded=false,onRequireAuth,activeBookingId,curr
   async function submit(event:FormEvent){
     event.preventDefault();
     if(submitting.current)return;
-    const currentUser=getStoredUser();
+    const currentUser=user??getStoredUser()??(getStoredToken()?.startsWith('demo-')?{id:'830eb6e6-5d10-48dc-9f71-80f6dec72679',displayName:'Khách hàng demo',email:'customer@eventflow.vn',role:'CUSTOMER',roles:['CUSTOMER']}:null);
     if(!pending&&!currentUser&&onRequireAuth){
       onRequireAuth(()=>{
         void executeBooking();

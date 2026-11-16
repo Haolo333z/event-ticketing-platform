@@ -33,8 +33,87 @@ T7 bổ sung hai API đọc ADMIN theo ADR0008: GET `/api/admin/events` phân tr
 | GET /api/bookings/{id}/tickets | owner/ADMIN | Vé khi CONFIRMED; không có vé cho EXPIRED/REFUND_REQUIRED |
 | POST /api/admin/events, PATCH /api/admin/events/{id} | ADMIN | Tạo/sửa sự kiện theo quy tắc admin |
 | GET /api/admin/bookings | ADMIN | Danh sách có filter/trạng thái |
-| GET /api/admin/operations/outbox | ADMIN, local/test | Trạng thái event |
-| POST /api/admin/operations/events/{eventId}/replay | ADMIN, local/test | Replay có audit, giới hạn, 202 |
+## Danh Mục Endpoints EventFlow V2 Toàn Diện
+
+EventFlow V2 chuẩn hóa hệ thống RESTful API phân định rõ theo 4 vai trò nghiệp vụ (CUSTOMER, STAFF, ORGANIZER, ADMIN) và các phân hệ nền tảng:
+
+### 1. Phân hệ Định danh & Xác thực (Identity & RBAC)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| POST | `/api/auth/register` | Public | Đăng ký tài khoản CUSTOMER mới, trả `AuthResponse` {token, user} |
+| POST | `/api/auth/login` | Public | Đăng nhập email/password, trả Bearer JWT + HttpOnly Refresh Cookie |
+| POST | `/api/auth/refresh` | Public / Cookie | Xoay vòng phiên an toàn (Token Family Reuse Detection) |
+| POST | `/api/auth/logout` | Public / Cookie | Thu hồi refresh token trong PostgreSQL và xóa cookie |
+| GET | `/api/auth/me` | Authenticated | Lấy thông tin tài khoản và danh sách roles của phiên đăng nhập |
+| POST | `/api/auth/google` | Public | Xác thực đăng nhập Google OIDC, tự động liên kết tài khoản |
+
+### 2. Phân hệ Khách hàng (Customer Commerce & E-Ticket)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| GET | `/api/events` | Public | Danh sách sự kiện đã xuất bản (PUBLISHED), hỗ trợ phân trang & tìm kiếm |
+| GET | `/api/events/{id}` | Public | Chi tiết sự kiện, thông tin địa điểm và các loại vé đang mở |
+| GET | `/api/events/{id}/availability` | Public | Snapshot tồn kho tham khảo (vé GA còn trống, trạng thái ghế ngồi) |
+| POST | `/api/bookings` | CUSTOMER | Khóa hàng nguyên tử `SELECT FOR UPDATE`, tạo đơn giữ chỗ 10 phút, trả 202 Location |
+| GET | `/api/bookings/{id}` | Owner / ADMIN | Chi tiết đơn đặt vé, trạng thái thanh toán và lịch sử chuyển dịch |
+| GET | `/api/me/bookings` | CUSTOMER | Danh sách lịch sử các đơn đặt vé của tài khoản đăng nhập |
+| POST | `/api/bookings/{id}/cancel` | Owner | Hủy giữ chỗ đơn hàng khi đang ở trạng thái `PENDING_PAYMENT` |
+| GET | `/api/bookings/{id}/tickets` | Owner / ADMIN | Danh sách vé điện tử đã phát hành (chỉ khả dụng khi `CONFIRMED`) |
+| GET | `/api/tickets/{id}/qr` | Owner / STAFF / ADMIN | Sinh Signed Opaque QR Token ký số HMAC-SHA256 chống giả mạo |
+
+### 3. Phân hệ Cổng Thanh Toán Sandbox & Đối Soát (Payment Gateway)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| POST | `/api/payments/checkout` | CUSTOMER | Sinh URL thanh toán ký số HMAC-SHA512 chuyển hướng sang VNPAY Sandbox |
+| GET | `/api/payments/vnpay/ipn` | Server-to-Server | Tiếp nhận Server Callback IPN, đối soát chữ ký số, xử lý idempotent |
+| GET | `/api/payments/vnpay/return` | Public | Tiếp nhận kết quả thanh toán trả về trên trình duyệt người dùng |
+| GET | `/api/bookings/{id}/payment-status`| Owner / ADMIN | Polling kiểm tra trạng thái thanh toán đơn hàng |
+| POST | `/api/bookings/{id}/simulate-payment`| Owner (test) | Mô phỏng 3 kịch bản kiểm thử (SUCCESS, FAILURE, DELAY_TIMEOUT) |
+
+### 4. Phân hệ Soát Vé Sự Kiện (Staff Portal)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| GET | `/api/staff/events` | STAFF / ADMIN | Danh sách sự kiện nhân viên được phân công làm việc |
+| POST | `/api/staff/check-in` | STAFF / ADMIN | Giao dịch soát vé nguyên tử, kiểm tra chữ ký số, chống quét trùng vé |
+| GET | `/api/staff/events/{id}/stats` | STAFF / ADMIN | Thống kê realtime: tổng vé bán, đã check-in, còn lại, tỷ lệ % |
+| GET | `/api/staff/events/{id}/history` | STAFF / ADMIN | Nhật ký 50 lượt check-in gần nhất tại cổng soát vé |
+
+### 5. Phân hệ Quản Trị Nhà Tổ Chức (Organizer Management)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| GET | `/api/organizer/profile` | ORGANIZER / ADMIN| Lấy hồ sơ đối tác doanh nghiệp của Nhà tổ chức |
+| POST | `/api/organizer/profile` | Authenticated | Khởi tạo / cập nhật hồ sơ đối tác (tự động cấp vai trò ORGANIZER) |
+| GET | `/api/venues` | Authenticated | Danh mục địa điểm biểu diễn tiêu chuẩn và layout ghế ngồi |
+| GET | `/api/categories` | Public | Danh mục phân loại sự kiện (Concert, Theater, Conference, Sports) |
+| GET | `/api/organizer/events` | ORGANIZER / ADMIN| Danh sách sự kiện thuộc quyền sở hữu của Nhà tổ chức (cô lập IDOR) |
+| POST | `/api/organizer/events` | ORGANIZER / ADMIN| Tạo sự kiện mới (trạng thái ban đầu `DRAFT`) |
+| GET | `/api/organizer/events/{id}` | ORGANIZER / ADMIN| Chi tiết sự kiện thuộc quyền sở hữu |
+| PUT | `/api/organizer/events/{id}` | ORGANIZER / ADMIN| Chỉnh sửa thông tin sự kiện |
+| POST | `/api/organizer/events/{id}/publish`| ORGANIZER / ADMIN| Xuất bản mở bán sự kiện ra Public Catalog (`PUBLISHED`) |
+| POST | `/api/organizer/events/{id}/close`| ORGANIZER / ADMIN| Đóng bán vé sự kiện (`CLOSED`) |
+| POST | `/api/organizer/events/{id}/staff`| ORGANIZER / ADMIN| Phân công nhân sự soát vé cho sự kiện |
+| DELETE | `/api/organizer/events/{id}/staff/{userId}`| ORGANIZER / ADMIN| Thu hồi quyền soát vé của nhân sự tại sự kiện |
+
+### 6. Phân hệ Quản Trị Hệ Thống Toàn Nền Tảng (Admin Platform)
+| Method | Path | Role | Mô Tả & Response |
+|---|---|---|---|
+| GET | `/api/admin/users` | ADMIN | Danh sách người dùng toàn sàn, tìm kiếm họ tên/email/phone, lọc vai trò |
+| POST | `/api/admin/users/{id}/roles`| ADMIN | Cấp / thu hồi vai trò người dùng (chống `CANNOT_DEMOTE_SELF`) |
+| PUT | `/api/admin/users/{id}/status`| ADMIN | Khóa / mở khóa tài khoản (chống `CANNOT_LOCK_SELF`) |
+| GET | `/api/admin/refunds` | ADMIN | Danh sách các yêu cầu hoàn tiền đang chờ phê duyệt |
+| POST | `/api/admin/refunds/{id}/process`| ADMIN | Phê duyệt hoàn tiền (`APPROVE` -> COMPLETED, `REJECT` -> FAILED) |
+| GET | `/api/admin/reports/summary` | ADMIN | Chỉ số KPI toàn nền tảng: tổng doanh thu, vé bán, occupancy, check-in |
+| GET | `/api/admin/reports/events` | ADMIN | Báo cáo chi tiết doanh thu và tỷ lệ lấp đầy theo từng sự kiện |
+| GET | `/api/admin/reports/export-csv` | ADMIN | Xuất báo cáo CSV chuẩn RFC 4180 có UTF-8 BOM, chống CSV Formula Injection |
+| GET | `/api/admin/leads` | ADMIN | Danh sách leads tư vấn doanh nghiệp, lọc trạng thái |
+| PUT | `/api/admin/leads/{id}/status` | ADMIN | Cập nhật trạng thái leads (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`) |
+| POST | `/api/contact/leads` | Public | Tiếp nhận yêu cầu tư vấn & leads từ trang Liên hệ khách hàng |
+| GET | `/api/admin/events` | ADMIN | Quản lý toàn bộ sự kiện trên sàn (kể cả DRAFT, CLOSED) |
+| GET | `/api/admin/events/{id}/inventory`| ADMIN | Tồn kho chi tiết phục vụ kiểm toán |
+| GET | `/api/admin/bookings` | ADMIN | Quản trị đơn hàng toàn sàn, lọc theo trạng thái |
+| GET | `/api/admin/operations/outbox`| ADMIN | Danh sách sự kiện Outbox phục vụ vận hành EDA |
+| GET | `/api/admin/operations/recovery`| ADMIN | Quản lý lỗi tiêu thụ Kafka và trạng thái Dead Letter Queue (DLQ) |
+| POST | `/api/admin/operations/events/{id}/replay`| ADMIN | Replay sự kiện có ghi nhật ký kiểm toán (giới hạn tối đa 3 lần/event) |
+
 
 ## Request/response mẫu
 

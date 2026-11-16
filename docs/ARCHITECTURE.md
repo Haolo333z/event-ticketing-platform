@@ -208,4 +208,28 @@ Snapshot DB là một SQL read-only dùng cùng đồng hồ/snapshot PostgreSQL
 
 Thêm tab Khôi phục trong quản trị demo, tái sử dụng POST replay T6.4; thêm hai GET read-only theo API_CONTRACT/OpenAPI để tổng hợp lỗi publisher/consumer/DLQ và đọc event/audit/consumer receipt. Query dùng REPEATABLE_READ cho list/count/detail. Audit vẫn là replay_requests có giới hạn3 trên outbox, không tạo bảng audit hoặc migration mới. Giữ nguyên eventId/envelope/inbox và mọi điều kiện của ReplayService. Record không liên kết được outbox chỉ xem; không có force/reset/purge hoặc sửa raw record. Lý do kỹ thuật chỉ là metadata/class lỗi an toàn đã lưu, không hứa phân tích chính xác root cause SQL; đối chiếu log bằng correlationId khi cần. Chi tiết lấy tối đa100lỗi consumer gần nhất, audit replay tối đa3được hiển thị đầy đủ; danh sách recovery vẫn phân trang.
 
-UI có filter/trang/loading/error/empty, panel chi tiết gần đầu danh sách và focus khi mở, đóng rõ ràng. Bắt buộc reason1..500Unicode code point. Không tự gửi POST khi chọn/làm mới; chặn double click và giữ requestId/reason trong phiên khi kết quả chưa rõ để gửi lại đúng request. Hiển thị202 là đã chấp nhận/xếp hàng, riêng với trạng thái gửi và consumer receipt/audit; không suy HTTP202 là đã khôi phục nghiệp vụ. Hiển thị event đã xử lý và ngân sách còn lại, nhưng không tạo đường vượt3request hoặc bỏ inbox. Test bắt buộc phát lại payment/confirmed qua Kafka thật và đối chiếu vé, inventory, history, outbox và inbox trước/sau; audit chỉ tăng cho requestId mới.
+## 12. Kiến Trúc Mở Rộng EventFlow V2 (Hoàn Thiện Giai Đoạn V2)
+
+EventFlow V2 nâng tầm toàn diện hệ thống từ kiến trúc MVP ban đầu thành một nền tảng thương mại doanh nghiệp vững chắc (Enterprise Event Platform):
+
+### 12.1. Phân Hệ Định Danh Đa Vai Trò (4-Role RBAC & Token Family)
+- **4 Vai Trò Chuẩn Hóa:** `CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`.
+- **Cơ Chế Token Family An Toàn:** Quản lý refresh token dạng gia đình (Token Family) lưu trong bảng `ticketing.refresh_tokens`. Khi phát hiện token cũ trong gia đình bị sử dụng lại (Token Reuse Attack), hệ thống tự động vô hiệu hóa (`is_revoked = true`) toàn bộ cây token của gia đình đó, bắt buộc người dùng đăng nhập lại.
+- **Phân Quyền Khai Báo:** Kích hoạt `@EnableMethodSecurity(prePostEnabled = true)` trên Spring Security 6 / Spring Boot 4, bảo vệ tài nguyên theo vai trò và quyền sở hữu (Event Scope / IDOR Protection).
+
+### 12.2. Kiến Trúc Cổng Thanh Toán Hexagonal (Ports & Adapters)
+- **Port:** Định nghĩa giao diện trừu tượng `PaymentGatewayPort`.
+- **Adapters:**
+  - `VnPayGatewayAdapter`: Tích hợp Cổng thanh toán VNPAY Sandbox qua URL ký số HMAC-SHA512 và xác thực Server Callback IPN.
+  - `PaymentSimulatorAdapter`: Bảo toàn phân hệ mô phỏng nội bộ phục vụ kiểm thử tự động CI/CD.
+- **Late Payment Arbitration:** Khi nhận được IPN thanh toán thành công nhưng đơn hàng đã bị quá hạn giữ chỗ (`EXPIRED`) và kho vé đã giải phóng, hệ thống tự động kích hoạt trọng tài phân xử: chuyển trạng thái đơn sang `REFUND_REQUIRED`, lưu vết vào `ticketing.refund_attempts`, bảo toàn 100% bất biến chống bán lố vé (Zero Oversell).
+
+### 12.3. Phân Hệ Soát Vé Tại Chỗ (Staff Mobile Check-in Terminal)
+- **Signed Opaque QR Token:** Mã hóa vé dạng token ký số HMAC-SHA256 (`ticketId.ticketCode.eventId.issuedAt.signature`), chống tuyệt đối việc quét vé giả mạo hoặc chỉnh sửa URL.
+- **Giao Dịch Soát Vé Nguyên Tử (Atomic Check-in Transaction):** Thực hiện chèn vào bảng `ticketing.ticket_check_ins` với ràng buộc duy nhất `UNIQUE (ticket_id)`. Ngăn chặn 100% tình trạng gian lận quét trùng vé (anti double check-in, trả lỗi 409 Conflict kèm thông tin thời gian và cổng quét lần đầu).
+
+### 12.4. Phân Hệ Quản Trị Hệ Thống Toàn Nền Tảng (Admin Platform)
+- **Quản Trị Người Dùng & Chống Leo Quyền:** Chống Privilege Escalation, không cho phép Admin tự hạ quyền (`CANNOT_DEMOTE_SELF`) hoặc tự khóa tài khoản của chính mình (`CANNOT_LOCK_SELF`).
+- **Phê Duyệt Hoàn Tiền (Refund Processing):** Quy trình 2 bước với nhật ký kiểm toán `ticketing.audit_logs` và hóa đơn điện tử `ticketing.email_notifications`.
+- **Bảo Vệ Xuất Dữ Liệu Doanh Thu (Anti-CSV Formula Injection):** Hàm `sanitizeCsvField` tự động gắn nháy đơn cho các trường bắt đầu bằng ký tự nguy hiểm (`=`, `+`, `-`, `@`, `\t`, `\r`), bảo vệ tuyệt đối kế toán viên mở file trên Microsoft Excel và LibreOffice Calc.
+

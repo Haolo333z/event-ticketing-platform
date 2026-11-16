@@ -410,11 +410,20 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         h('div', { style: { display: 'none' }, 'aria-hidden': 'true' },
           h('button', {
             type: 'button',
-            onClick: () => { setPersona('customer'); setCurrentPath('/'); }
+            onClick: () => {
+              setPersona('customer');
+              setCurrentPath('/');
+              setUser({ id: '830eb6e6-5d10-48dc-9f71-80f6dec72679', displayName: 'Khách hàng demo', email: 'customer@eventflow.vn', role: 'CUSTOMER', roles: ['CUSTOMER'] });
+            }
           }, 'Khách hàng demo'),
           h('button', {
             type: 'button',
-            onClick: () => { setAdminVisited(true); setPersona('admin'); setCurrentPath('/admin'); }
+            onClick: () => {
+              setAdminVisited(true);
+              setPersona('admin');
+              setCurrentPath('/admin');
+              setUser({ id: '10000000-0000-4000-8000-000000000002', displayName: 'Quản trị viên', email: 'admin@eventflow.vn', role: 'ADMIN', roles: ['ADMIN'] });
+            }
           }, 'Quản trị demo')
         )
       )
@@ -441,51 +450,20 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
 
     // Multi-Page Route Render Switching
     h('div', { className: 'route-page-container' },
-      currentPath === '/admin' || persona === 'admin' ? (
-        adminVisited ? h(AdminDashboard, { api: admin }) : null
-      ) : currentPath === '/giai-phap' ? (
-        h(SolutionsPage, { onNavigate: navigate })
-      ) : currentPath === '/bang-gia' ? (
-        h(PricingPage, { onNavigate: navigate })
-      ) : currentPath === '/lien-he' ? (
-        h(ContactPage, { api: customer, onNavigate: navigate })
-      ) : currentPath === '/organizer' ? (
-        h(OrganizerDashboard, {
-          api: customer,
-          user,
-          onNavigate: navigate,
-          onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
-        })
-      ) : currentPath === '/staff' ? (
-        h(StaffCheckInPage, {
-          api: customer,
-          user,
-          onNavigate: navigate,
-          onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
-        })
-      ) : currentPath === '/payment-return' ? (
-        h(PaymentReturnPage, {
-          api: customer,
-          onNavigate: navigate
-        })
-      ) : currentPath === '/ve-cua-toi' ? (
-        h(MyBookingsPage, {
-          api: customer,
-          user,
-          onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); },
-          onNavigate: navigate,
-          onSelectBooking: (id) => {
-            setActiveBookingId(id);
-            navigate('/dat-ve');
-          }
-        })
-      ) : (currentPath === '/dat-ve' || currentPath === '/events') ? (
+      // Admin Dashboard panel (preserved when visited)
+      adminVisited ? h('div', { style: { display: (currentPath === '/admin' || persona === 'admin') ? 'block' : 'none' } },
+        h(AdminDashboard, { api: admin })
+      ) : null,
+
+      // Customer App Core (preserved to retain active booking & form states)
+      h('div', { style: { display: ((currentPath === '/' || currentPath === '/dat-ve' || currentPath === '/events') && persona !== 'admin') ? 'block' : 'none' } },
         h(App, {
           api: customer,
           store,
+          user,
           embedded: true,
           activeBookingId,
-          currentPath: '/dat-ve',
+          currentPath: (currentPath === '/dat-ve' || currentPath === '/events') ? '/dat-ve' : '/',
           onNavigate: navigate,
           onRequireAuth: (resumeAction) => {
             setPendingBookingAction(() => resumeAction);
@@ -494,23 +472,38 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
             setAuthModalOpen(true);
           }
         })
-      ) : (
-        // Default Home Page Route ('/' or other)
-        h(App, {
-          api: customer,
-          store,
-          embedded: true,
-          activeBookingId,
-          currentPath: '/',
-          onNavigate: navigate,
-          onRequireAuth: (resumeAction) => {
-            setPendingBookingAction(() => resumeAction);
-            setGateNotice('Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.');
-            setAuthModalTab('login');
-            setAuthModalOpen(true);
-          }
-        })
-      )
+      ),
+
+      // Other Multi-Page Routes
+      currentPath === '/giai-phap' && persona !== 'admin' ? h(SolutionsPage, { onNavigate: navigate }) : null,
+      currentPath === '/bang-gia' && persona !== 'admin' ? h(PricingPage, { onNavigate: navigate }) : null,
+      currentPath === '/lien-he' && persona !== 'admin' ? h(ContactPage, { api: customer, onNavigate: navigate }) : null,
+      currentPath === '/organizer' && persona !== 'admin' ? h(OrganizerDashboard, {
+        api: customer,
+        user,
+        onNavigate: navigate,
+        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+      }) : null,
+      currentPath === '/staff' && persona !== 'admin' ? h(StaffCheckInPage, {
+        api: customer,
+        user,
+        onNavigate: navigate,
+        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+      }) : null,
+      currentPath === '/payment-return' && persona !== 'admin' ? h(PaymentReturnPage, {
+        api: customer,
+        onNavigate: navigate
+      }) : null,
+      currentPath === '/ve-cua-toi' && persona !== 'admin' ? h(MyBookingsPage, {
+        api: customer,
+        user,
+        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); },
+        onNavigate: navigate,
+        onSelectBooking: (id) => {
+          setActiveBookingId(id);
+          navigate('/dat-ve');
+        }
+      }) : null
     ),
 
     // Floating Quick Contact Dock (Sao Kim style)

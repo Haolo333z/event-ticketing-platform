@@ -1,6 +1,6 @@
 # DATA_MODEL — Thiết kế dữ liệu PostgreSQL
 
-> Đến hết Phần6 đã có V1–V8/13bảng, thêm tickets/payment_compensations vào11bảng Phần5. Payments có correlation_id để giữ trace cho delayed result. V9 bổ sung inbox/audit/recovery và lịch sử refund (ADR0007). PRD là nguồn nghiệp vụ, ARCHITECTURE là nguồn transaction boundary.
+> EventFlow V2 đã hoàn thiện chuỗi 15 Flyway Migrations (V1–V15) với tổng cộng **35 bảng nghiệp vụ** trong schema `ticketing`. PostgreSQL 17 là nguồn sự thật (Single Source of Truth) chuẩn ACID; Kafka 4.2 phân phối sự kiện sau commit. PRD là nguồn nghiệp vụ, ARCHITECTURE là nguồn transaction boundary.
 
 ## Phân chia tồn kho
 
@@ -9,10 +9,21 @@
 - booking_items lưu snapshot ticket_type_id, seat_id hoặc quantity, unit_price_vnd và total_price_vnd tại lúc đặt. Đổi giá sau đó không sửa đơn cũ.
 - Trạng thái booking là nguồn sự thật của vòng đời; seat/GA chứa hiệu ứng giữ/bán được đối chiếu theo booking_item.
 
-## Quan hệ chính
+## Quan hệ chính (V2 35 Bảng Nghiệp Vụ)
 
 ~~~mermaid
 erDiagram
+    USERS ||--o{ USER_ROLES : has
+    ROLES ||--o{ USER_ROLES : defines
+    USERS ||--o{ REFRESH_TOKENS : owns
+    USERS ||--o{ EXTERNAL_IDENTITIES : authenticates
+    USERS ||--o| ORGANIZER_PROFILES : registers
+    ORGANIZER_PROFILES ||--o{ EVENTS : owns
+    VENUES ||--o{ EVENTS : hosts
+    EVENT_CATEGORIES ||--o{ EVENTS : classifies
+    EVENTS ||--o{ EVENT_MEDIA : includes
+    USERS ||--o{ EVENT_STAFF_ASSIGNMENTS : assigned
+    EVENTS ||--o{ EVENT_STAFF_ASSIGNMENTS : staffs
     USERS ||--o{ BOOKINGS : places
     EVENTS ||--o{ BOOKINGS : receives
     EVENTS ||--o{ TICKET_TYPES : offers
@@ -26,14 +37,18 @@ erDiagram
     USERS ||--o{ IDEMPOTENCY_KEYS : scopes
     BOOKINGS ||--o| IDEMPOTENCY_KEYS : result
     BOOKINGS ||--o{ PAYMENTS : records
-    PAYMENTS ||--o| PAYMENT_COMPENSATIONS : compensates
-    BOOKINGS ||--o{ PAYMENT_COMPENSATIONS : requires
+    BOOKINGS ||--o{ PAYMENT_ATTEMPTS : initiates
+    PAYMENTS ||--o| PAYMENT_NOTIFICATIONS : records_ipn
+    BOOKINGS ||--o{ REFUND_ATTEMPTS : requests
     BOOKING_ITEMS ||--o{ TICKETS : issues
     BOOKINGS ||--o{ TICKETS : owns
+    TICKETS ||--o{ TICKET_CHECK_INS : checks_in
     BOOKINGS ||--o{ OUTBOX_EVENTS : emits
     OUTBOX_EVENTS ||--o{ INBOX_EVENTS : deduplicates_logically
     BOOKINGS ||--o{ BOOKING_STATUS_HISTORY : transitions
-    OUTBOX_EVENTS o|--o{ BOOKING_STATUS_HISTORY : causes_logically
+    BOOKINGS ||--o{ EMAIL_NOTIFICATIONS : receipts
+    USERS ||--o{ AUDIT_LOGS : audits
+    CONTACT_LEADS ||--o{ AUDIT_LOGS : audited_by
 ~~~
 
 ## Bảng, khóa và ràng buộc dự kiến
@@ -131,4 +146,75 @@ V1–V8 giữ nguyên. V9 chuẩn hóa next_attempt_at của outbox cũ (NULL �
 - message_failures: unique(consumer,topic,partition_id,record_offset), raw record/key, attempts=3, DEAD/RESOLVED, event_id nullable cho poison record và trạng thái gửi DLQ hữu hạn.
 - compensation_attempts: FK compensation, PK(compensation_id,attempt), outcome FAILED/COMPLETED. payment_compensations thêm next_attempt_at; attempt_count tối đa3 do worker kiểm soát, unique(payment_id) vẫn bảo vệ một nghĩa vụ.
 
-Không có buffer bỏ gap hoặc FK inbox→outbox. Recovery/audit dùng thực tế bởi consumer và replay T6; không phải bảng dự phòng. Xem ADR0007.
+## V10 đến V15 — Nâng Cấp Toàn Diện EventFlow V2 (35 Bảng Nghiệp Vụ)
+
+Chuỗi Migration V10–V15 hoàn tất mở rộng từ 18 bảng lên đủ đúng **35 bảng nghiệp vụ** trong schema `ticketing`:
+
+### 1. Phân hệ Định danh & 4-Role RBAC (Flyway V10 - 6 bảng)
+- `roles`: PK `id VARCHAR(32)` (`CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`), description, created_at.
+- `users`: PK `id UUID DEFAULT gen_random_uuid()`, email UNIQUE, password_hash, display_name, phone, status (`ACTIVE`, `LOCKED`), created_at, updated_at.
+- `user_roles`: Composite PK `(user_id, role_id)`, FK `users(id)`, FK `roles(id)`, granted_by, granted_at.
+- `refresh_tokens`: PK `id UUID`, user_id, token_hash VARCHAR(64) UNIQUE, token_family UUID, is_revoked, expires_at, created_at (hỗ trợ Token Family Reuse Detection).
+- `password_reset_tokens`: PK `id UUID`, user_id, token_hash UNIQUE, expires_at, used_at, created_at.
+- `external_identities`: Composite PK `(provider, provider_subject)`, user_id FK, email, email_verified, linked_at (hỗ trợ Google OIDC).
+
+### 2. Phân hệ Quản trị Nhà tổ chức & Địa điểm (Flyway V11 & V12 - 5 bảng)
+- `organizer_profiles`: PK `id UUID`, user_id UNIQUE FK `users(id)`, organization_name, contact_email, phone, tax_code, status (`PENDING`, `APPROVED`, `REJECTED`), verified_at, created_at, updated_at.
+- `venues`: PK `id UUID`, name, address, city, country, capacity, seating_layout_json (lưu trữ cấu hình tọa độ ghế, sân khấu), created_at.
+- `event_categories`: PK `id UUID`, name UNIQUE, description, icon_url, display_order, is_active.
+- `event_media`: PK `id UUID`, event_id FK `events(id)`, media_type (`POSTER`, `BANNER`, `GALLERY`), media_url, display_order, created_at.
+- `event_staff_assignments`: Composite PK `(event_id, staff_user_id)`, assigned_by, assigned_at, revoked_at (quản lý phạm vi nhân sự soát vé theo sự kiện).
+
+### 3. Cổng thanh toán Sandbox bên ngoài & Hoàn tiền (Flyway V13 - 3 bảng)
+- `payment_attempts`: PK `id UUID`, booking_id FK `bookings(id)`, provider (`VNPAY`, `INTERNAL_SIMULATOR`), merchant_ref UNIQUE, amount_vnd, currency, status (`INITIATED`, `PENDING_GATEWAY`, `SUCCESS`, `FAILED`, `EXPIRED`), gateway_url, expires_at, created_at.
+- `payment_notifications`: PK `id UUID`, provider, notification_ref, booking_id FK, payload_json, signature, is_valid_signature, processed_status (`SUCCESS`, `IGNORED_DUPLICATE`, `FAILED`, `LATE_PAYMENT_REFUND`), error_message, received_at (IPN journal bảo đảm 100% idempotent).
+- `refund_attempts`: PK `id UUID`, booking_id FK `bookings(id)`, payment_id, amount_vnd, reason (`LATE_PAYMENT_AFTER_EXPIRY`, `ADMIN_MANUAL_REFUND`, `CUSTOMER_CANCELLATION`), status (`REQUESTED`, `PROCESSING`, `COMPLETED`, `FAILED`), settled_at, created_at.
+
+### 4. Soát vé Check-in Nguyên tử & Chống Quét Trùng (Flyway V14 - 1 bảng)
+- `ticket_check_ins`: PK `id UUID`, ticket_id UNIQUE FK `tickets(id)`, event_id FK `events(id)`, staff_user_id FK `users(id)`, gate_name VARCHAR(64), device_info TEXT, checked_in_at TIMESTAMPTZ (ràng buộc UNIQUE ticket_id ngăn chặn triệt để double check-in).
+
+### 5. Quản trị Doanh nghiệp, Báo cáo & Hóa đơn (Flyway V15 - 2 bảng + Audit Log)
+- `contact_leads`: PK `id UUID`, full_name, email, phone, company_name, message, status (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`), notes, created_at, updated_at.
+- `email_notifications`: PK `id UUID`, booking_id FK, recipient_email, subject, template_type (`BOOKING_CONFIRMED_RECEIPT`, `PAYMENT_REFUND_APPROVED`), payload_json, status (`SENT`, `PENDING`, `FAILED`), sent_at (nhật ký biên nhận hóa đơn điện tử).
+- `audit_logs`: PK `id UUID`, actor_id, actor_role, action, target_type, target_id, details_json, ip_address, created_at.
+
+## Tổng Kết Danh Mục 35 Bảng Nghiệp Vụ V2
+
+| STT | Tên Bảng | Migration | Mục Đích Nghiệp Vụ |
+|:---:|---|:---:|---|
+| 1 | `users` | V10 | Người dùng nền tảng (Customer, Staff, Organizer, Admin) |
+| 2 | `roles` | V10 | Danh mục 4 vai trò chuẩn hóa RBAC |
+| 3 | `user_roles` | V10 | Bảng liên kết phân quyền đa vai trò cho người dùng |
+| 4 | `refresh_tokens` | V10 | Token gia hạn phiên an toàn (Token Family Reuse Detection) |
+| 5 | `password_reset_tokens` | V10 | Token phục hồi mật khẩu bảo mật |
+| 6 | `external_identities` | V10 | Định danh liên kết OAuth2 / Google OIDC |
+| 7 | `organizer_profiles` | V11 | Hồ sơ pháp nhân & thông tin Nhà tổ chức |
+| 8 | `venues` | V11 | Quản lý địa điểm tổ chức sự kiện & sơ đồ rạp |
+| 9 | `event_categories` | V11 | Danh mục phân loại sự kiện (Concert, Theater, Conference, Sports) |
+| 10 | `event_media` | V11 | Quản lý poster, banner và hình ảnh sự kiện |
+| 11 | `events` | V1, V7, V11 | Vòng đời sự kiện (Draft, Published, Closed, Cancelled) |
+| 12 | `event_staff_assignments` | V12 | Phân công nhân sự soát vé theo từng sự kiện |
+| 13 | `ticket_types` | V1 | Cấu hình hạng vé (GA hoặc Ghế chỉ định) |
+| 14 | `inventory_ga` | V1 | Quản lý sức chứa vé GA nguyên tử chống bán lố |
+| 15 | `seats` | V1, V2, V7 | Sơ đồ ghế ngồi khán phòng và trạng thái giữ/bán |
+| 16 | `bookings` | V1, V3, V7 | Đơn đặt vé người dùng và trạng thái thanh toán |
+| 17 | `booking_items` | V1 | Chi tiết từng hạng mục đặt vé trong đơn hàng |
+| 18 | `booking_status_history` | V5, V6 | Lịch sử chuyển dịch trạng thái đơn hàng |
+| 19 | `idempotency_keys` | V5 | Khóa chống lặp yêu cầu đặt vé (Zero Duplicate Booking) |
+| 20 | `payments` | V1, V3, V8 | Bản ghi kết quả thanh toán mô phỏng & lịch sử |
+| 21 | `payment_attempts` | V13 | Khởi tạo giao dịch thanh toán cổng ngoài (VNPAY Sandbox) |
+| 22 | `payment_notifications` | V13 | Nhật ký Server Callback IPN chống tấn công lặp lại |
+| 23 | `refund_attempts` | V13 | Yêu cầu hoàn tiền thanh toán muộn & quản trị duyệt hoàn |
+| 24 | `payment_compensations` | V8 | Nghĩa vụ bồi hoàn cho thanh toán muộn sau khi hết hạn |
+| 25 | `compensation_attempts` | V9 | Lịch sử các lần thực thi bù trừ hoàn tiền |
+| 26 | `tickets` | V8 | Vé điện tử phát hành sau khi đơn hàng CONFIRMED |
+| 27 | `ticket_check_ins` | V14 | Giao dịch soát vé nguyên tử chống quét vé trùng lặp |
+| 28 | `outbox_events` | V1, V3, V5, V8 | Mẫu Transactional Outbox phân phối sự kiện Kafka EDA |
+| 29 | `inbox_events` | V9 | Bảng nhận sự kiện và khử trùng lặp tiêu thụ Kafka (Dedup) |
+| 30 | `message_failures` | V4, V9 | Nhật ký lỗi xử lý thông điệp và quản lý Dead Letter Queue (DLQ) |
+| 31 | `event_projections` | V8, V9 | Bảng tổng hợp chiếu trạng thái sự kiện cho kiểm toán |
+| 32 | `projection_events` | V8, V9 | Chi tiết các sự kiện được chiếu vào mô hình đọc |
+| 33 | `contact_leads` | V15 | Tiếp nhận leads tư vấn doanh nghiệp & giải pháp sự kiện |
+| 34 | `email_notifications` | V15 | Nhật ký biên nhận hóa đơn điện tử / email outbox |
+| 35 | `audit_logs` | V15 | Nhật ký kiểm toán toàn diện các hành động quản trị hệ thống |
+

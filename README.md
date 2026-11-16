@@ -1,19 +1,22 @@
-# event-ticketing-platform
+# event-ticketing-platform — EventFlow Enterprise V2
 
-Hệ thống bán vé demo để thực hành đặt vé đồng thời, giữ chỗ có thời hạn và phục hồi xử lý sự kiện. Khách đặt GA (không chỉ định ghế) hoặc chọn ghế, thanh toán mô phỏng rồi xem vé. ADMIN quản lý sự kiện, tồn kho, booking, outbox và khôi phục lỗi. **Không thu tiền thật; chỉ dùng local/test.**
+Hệ thống phân phối vé sự kiện tốc độ cao và vận hành toàn diện EventFlow V2. Kiến trúc Modular Monolith hướng sự kiện (EDA) kết hợp PostgreSQL 17 ACID và Apache Kafka 4.2, cam kết 0% bán lố vé (Zero Oversell), xử lý phân bổ chỗ ngồi độc quyền, tích hợp cổng thanh toán Sandbox (VNPAY), phát hành vé điện tử E-Ticket QR Code SVG ký số HMAC-SHA256, bàn làm việc soát vé thời gian thực cho Staff và cổng quản trị hệ thống toàn sàn cho Admin. **Không thu tiền thật; cổng thanh toán Sandbox chỉ dùng local/test.**
 
-## Kiến trúc và luồng nghiệp vụ
+## Kiến trúc và luồng nghiệp vụ V2
 
-Modular monolith Java/Spring Boot: HTTP API và worker cùng ứng dụng, chia module catalog, booking/inventory, payment/ticket, messaging và operations. React/TypeScript gọi API thật. Java/Node chạy trên Windows, PostgreSQL/Kafka chạy Docker Compose. Không dùng Redis trong baseline.
+Modular monolith Java LTS (JDK 25) / Spring Boot 4.1.2: HTTP API và worker cùng ứng dụng, chia module định danh 4 vai trò, nhà tổ chức, địa điểm, đặt vé/tồn kho, cổng thanh toán Hexagonal, soát vé check-in, messaging và platform operations. React 19 / TypeScript gọi API thật. Java/Node chạy trên host Windows, PostgreSQL/Kafka chạy Docker Compose.
 
 | Thành phần | Trách nhiệm |
 |---|---|
-| PostgreSQL | Nguồn sự thật: booking, quyền giữ ghế/GA, giá chụp lúc đặt, payment demo, vé, lịch sử |
-| Flyway | V1–V9, 18 bảng nghiệp vụ; restart validate, không chạy lại migration thành công |
-| Outbox → Kafka | Publisher đọc **sau commit**, gửi theo booking/version, retry hữu hạn và giữ lỗi bền |
-| Consumer + inbox | Inbox và thay đổi nghiệp vụ cùng transaction PostgreSQL; event trùng trở thành no-op |
-| Expiry/refund worker | Nhả hold đúng một lần, xử lý nghĩa vụ hoàn tiền mô phỏng |
-| Operations | Log JSON/correlation ID, health, metrics, recovery/replay có quyền/audit/giới hạn |
+| PostgreSQL 17 | Nguồn sự thật: 35 bảng nghiệp vụ (V1–V15), khóa hàng nguyên tử `SELECT FOR UPDATE`, quyền giữ ghế/GA, giá snapshot, vé, phiên token family, IPN journal |
+| Flyway | V1–V15, 35 bảng nghiệp vụ; tự động kiểm tra tính toàn vẹn (validate) và thực thi migration sạch |
+| 4-Role RBAC | Phân quyền 4 vai trò chuẩn hóa: `CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`; Token Family Session an toàn qua HttpOnly Cookie |
+| Cổng Thanh Toán | Kiến trúc Lục giác (Ports & Adapters): Tích hợp song song Cổng thanh toán VNPAY Sandbox (HMAC-SHA512) và Simulator nội bộ; xử lý IPN Idempotent và trọng tài hoàn tiền muộn (Late Refund Arbitration) |
+| Outbox → Kafka | Publisher đọc **sau commit**, gửi theo booking/version, retry hữu hạn và lưu lỗi bền |
+| Consumer + inbox | Inbox và thay đổi nghiệp vụ cùng transaction PostgreSQL; khử trùng lặp tiêu thụ (At-least-once + Dedup) |
+| Soát Vé Check-in | Giao dịch soát vé nguyên tử (`ticket_check_ins`), xác thực chữ ký số QR Token HMAC-SHA256, chống 100% tình trạng quét trùng vé (Anti Double Check-in) |
+| Expiry/refund worker | Nhả hold đúng một lần theo đồng hồ DB, xử lý nghĩa vụ hoàn tiền mô phỏng |
+| Platform Admin | Quản trị người dùng & phân quyền, duyệt hoàn tiền 2 bước, báo cáo KPI & xuất CSV chống Formula Injection, tiếp nhận leads doanh nghiệp |
 
 GA: chọn 1–6 vé → `POST /api/bookings` có `Idempotency-Key` → booking `PENDING_PAYMENT`, giữ inventory, history và outbox cùng commit → HTTP 202. Ghế: chọn ID ghế, giữ toàn bộ hoặc rollback toàn bộ. Availability chỉ tham khảo, PostgreSQL quyết định giữ được hay không. Cùng key/nội dung trả kết quả cũ; cùng key/nội dung khác trả 409. Lỗi mạng/503: dùng **Thử lại cùng yêu cầu**, giữ key/body qua reload cùng tab.
 
@@ -128,22 +131,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File infra/stop-local.ps1 -StopSe
 
 Script xác minh đường dẫn JVM/Vite thuộc workspace, từ chối tiến trình lạ; compose stop giữ dữ liệu. Không cần reset DB hoặc down --volumes để chạy lại.
 
-## Tài khoản demo và thử giao diện
+## Tài khoản đăng nhập và 4 vai trò EventFlow V2
 
-Seed sạch: một sự kiện ghế A1–A4, một sự kiện GA capacity 100, customer và admin. Dữ liệu đang dùng có thể khác sau khi đặt vé. Token dưới đây là **fixture công khai local/test**, không phải credential production:
+Hệ thống hỗ trợ cả 2 phương thức xác thực: Đăng nhập thực tế (Email/Password & Google Sign-In OIDC) và Bearer token demo cố định (chỉ dành cho môi trường local/test):
 
-| Persona | Bearer token tự gọi API |
-|---|---|
-| Khách hàng demo | demo-customer-token |
-| Quản trị demo | demo-admin-token |
+| Vai Trò | Email Đăng Nhập Mặc Định | Mật Khẩu | Bearer Token Test | Cổng Giao Diện Chính |
+|---|---|---|---|---|
+| **CUSTOMER** | `customer@eventflow.vn` | `Customer@123456` | `demo-customer-token` | `/` (Trang chủ), `/dat-ve` (Đặt vé), `/ve-cua-toi` (Ví vé QR SVG) |
+| **STAFF** | `staff@eventflow.vn` | `Staff@123456` | `demo-staff-token` | `/staff` (Bàn làm việc soát vé QR Scanner & Check-in Terminal) |
+| **ORGANIZER** | `organizer@eventflow.vn` | `Organizer@123456` | `demo-organizer-token` | `/organizer` (Hồ sơ đối tác, tạo sự kiện, phân bổ nhân sự) |
+| **ADMIN** | `admin@eventflow.vn` | `Admin@123456` | `demo-admin-token` | `/admin` (5 tab quản trị người dùng, duyệt hoàn tiền, báo cáo, leads) |
 
-Không có mật khẩu đăng nhập. Server ánh xạ token sang principal/role, không tin userId/role client khai. Token lạ → 401; khách gọi admin → 403. Không bật mock auth ngoài local/test hay mở demo ra Internet.
+### Trải nghiệm các phân hệ chính trên trình duyệt:
 
-1. Chrome http://127.0.0.1:5173 → Khách hàng demo → sự kiện GA → số lượng 2 → Giữ vé GA. Thấy PENDING_PAYMENT, ID, giá server và thời hạn. Mô phỏng thành công → chờ CONFIRMED/2 vé; xem lịch sử.
-2. Sự kiện ghế → chọn ghế trống → giữ ghế. Không trả tiền, chờ TTL + lượt worker rồi tải lại: EXPIRED, ghế trống trở lại. Tranh ghế có thể 409 dù snapshot cũ còn trống.
-3. Mô phỏng thất bại → PAYMENT_FAILED/không vé. Mô phỏng kết quả đến muộn → EXPIRED/REFUND_REQUIRED, không phát vé. Refund cũng chỉ mô phỏng.
-4. Quản trị demo → Sự kiện/Booking/Outbox xem dữ liệu thật. Tạo/Sửa có form gần nút, Đóng/Hủy. DRAFT chưa public; PUBLISHED mới xuất hiện với khách.
-5. Khôi phục → lọc sự kiện, xem trạng thái/lý do/inbox/DLQ/audit. Danh sách sạch có thể trống. Sau khi sửa nguyên nhân, chọn event có outbox hợp lệ, nhập lý do và replay. 202 là xếp hàng; làm mới để xem kết quả. Tối đa 3 request mới/event; retry giữ cùng requestId. Event đã xử lý là no-op ở consumer, không thêm vé/nghiệp vụ. Raw record không có outbox chỉ để điều tra; không có nút ép xử lý.
+1. **Khách Hàng (Customer Commerce):** Truy cập `http://127.0.0.1:5173/dat-ve`, chọn sự kiện, chọn vé GA hoặc ghế chỉ định trên sơ đồ Stage 3D trực quan. Giữ vé 10 phút bảo vệ bằng cơ chế `SELECT FOR UPDATE`. Thanh toán qua cổng VNPAY Sandbox hoặc 3 kịch bản mô phỏng. Sau khi thành công, vào `/ve-cua-toi` để xem thẻ Boarding Pass E-Ticket và mã QR Code SVG ký số HMAC-SHA256, hỗ trợ in vé điện tử A4.
+2. **Nhân Viên Soát Vé (Staff Check-in):** Truy cập `/staff`, chọn sự kiện được phân công, quét mã QR Token hoặc nhập mã vé. Giao dịch kiểm soát nguyên tử tại `ticketing.ticket_check_ins` cam kết chống 100% tình trạng quét trùng vé.
+3. **Nhà Tổ Chức Sự Kiện (Organizer Portal):** Truy cập `/organizer`, quản lý hồ sơ đối tác, tạo sự kiện DRAFT, chọn địa điểm chuẩn (`venues`), cấu hình vé GA/ghế, xuất bản PUBLISHED và phân công nhân sự soát vé.
+4. **Quản Trị Viên Toàn Hệ Thống (Admin Platform):** Truy cập `/admin`, quản lý 5 tab nghiệp vụ: Quản trị tài khoản & cấp quyền (chống leo quyền), Duyệt hoàn tiền 2 bước, Báo cáo doanh thu & xuất CSV chuẩn RFC 4180 chống CSV Formula Injection, Tiếp nhận leads tư vấn doanh nghiệp, và Vận hành Outbox/Kafka Recovery.
 
 ## Chạy test
 

@@ -306,7 +306,7 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
       const headers:Record<string,string>={
         ...(init.headers as Record<string,string>|undefined)
       };
-      if(resolvedToken){
+      if(resolvedToken && !headers['Authorization'] && !headers['authorization']){
         headers['Authorization']='Bearer '+resolvedToken;
       }
       let response=await fetcher(base+path,{...init,signal:controller.signal,headers,credentials:'include'});

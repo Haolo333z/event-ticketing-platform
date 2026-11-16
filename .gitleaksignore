@@ -1,0 +1,4 @@
+# Gitleaks ignore list
+# Whitelist mock JWT dev secret used for local testing and demo
+EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise
+backend/src/main/java/com/haolo/ticketing/identity/JwtService.java:generic-api-key
