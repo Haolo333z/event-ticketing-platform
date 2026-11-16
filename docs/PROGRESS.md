@@ -1637,3 +1637,53 @@ Build trong launcher lần boot và restart báo **130test/121skip/0failure/erro
 ### 4. Giới hạn & Tuân thủ
 - Tuân thủ quy tắc `AGENTS.md` và `RULES.md`: Không tự ý commit/push, giữ nguyên working tree để Tech Lead kiểm tra và phê duyệt.
 - Thanh toán và hoàn tiền giữ nguyên cơ chế mô phỏng an toàn (không giao dịch tiền thật).
+
+## Giai đoạn 3 — Trải Nghiệm Khách Hàng Commerce & Ví Vé Điện Tử E-Ticket QR Code SVG Ký Số HMAC-SHA256 (T14) (2026-11-16)
+
+Đã hoàn thành toàn diện toàn bộ các mục tiêu của Task T14 (Phase 3) theo đúng Lộ trình Nâng cấp EventFlow V2:
+
+### 1. Gắn Chặt Đặt Vé Với Tài Khoản Thực & Bảo Vệ Giao Dịch
+- **Tài khoản thực tế**: Lệnh tạo booking `POST /api/bookings` lấy trực tiếp `account_id` từ `SecurityContextHolder` (`principal.accountId()`).
+- **Hỗ trợ đa vai trò (Multi-Role Support)**: Cập nhật `BookingCommandService`, `BookingQueryService`, `BookingCancelService`, và `PaymentSimulatorService` từ so sánh đơn lẻ chuỗi `role().equals(...)` sang `hasRole("CUSTOMER")` và `hasRole("ADMIN")`. Người dùng sở hữu nhiều vai trò (ví dụ: vừa là `CUSTOMER` vừa là `ORGANIZER`) được hỗ trợ đặt vé và quản lý đơn hàng bình thường.
+- **Bảo toàn giao dịch ACID**: 100% cơ chế khóa hàng nguyên tử `SELECT FOR UPDATE` trên `inventory_ga` và `seats` được giữ nguyên, đảm bảo 0% oversell.
+
+### 2. Dịch Vụ Chữ Ký Số QR Code (`TicketQrService`) & Endpoint An Toàn
+- **Cấu trúc Signed Opaque QR Token**:
+  `ticketId.ticketCode.eventId.issuedAt.signature`
+  - Hoàn toàn bảo vệ quyền riêng tư (không chứa PII: tên, email, CCCD, thông tin thanh toán).
+  - Ký số `HmacSHA256` với khóa bí mật cấu hình từ `eventflow.ticket.qr-secret`.
+  - Chữ ký mã hóa `Base64Url` không padding (`=`).
+- **Phương thức xác thực `verifyQrToken(String token)`**:
+  - Tách token thành 5 phần, kiểm tra định dạng UUID và timestamp hợp lệ.
+  - Tính toán chữ ký HMAC-SHA256 mong đợi và so sánh bằng `MessageDigest.isEqual(...)` để ngăn chặn triệt để tấn công Timing Attack.
+  - Sẵn sàng tích hợp cho Phân hệ Soát vé Check-in của Staff (Task T16).
+- **Endpoint `GET /api/tickets/{id}/qr`**:
+  - Được cấu hình phân quyền qua `SecurityConfiguration.java` với `hasAnyRole("CUSTOMER", "ADMIN")`.
+  - **Kiểm soát quyền sở hữu nghiêm ngặt (Owner-only Isolation / Chống IDOR)**: Kiểm tra `bookings.account_id = principal.accountId()` hoặc `hasRole("ADMIN")`. Khách hàng B xem vé của Khách hàng A bị từ chối ngay lập tức với mã lỗi `403 FORBIDDEN`.
+  - Đơn hàng chưa thanh toán thành công (`!CONFIRMED`) bị từ chối với mã lỗi `400 BAD_REQUEST`.
+
+### 3. Giao Diện "Vé Của Tôi" & Trình Tạo Mã QR Code Vector SVG Động
+- **Trình tạo mã QR Code Vector SVG động (`QrCodeSvg.ts`)**:
+  - Triển khai thuật toán sinh ma trận điểm QR chuẩn ISO/IEC 18004 bằng pure TypeScript (GF(256) Galois Field, đa thức sinh Reed-Solomon, mask pattern 0, Finder patterns, Timing & Alignment patterns).
+  - Render thẻ `<svg>` vector sắc nét với `shapeRendering: crispEdges`, co giãn mượt mà ở mọi độ phân giải màn hình hoặc khi in ấn.
+  - Thay thế hoàn toàn mã SVG tĩnh mock trước đây.
+- **Thẻ Vé Điện Tử Boarding Pass Sang Trọng**:
+  - Tích hợp thông tin sự kiện liên kết: Tên sự kiện, Địa điểm biểu diễn, Thời gian bắt đầu.
+  - Hiển thị đầy đủ Họ tên người mua, Email đăng ký, Trạng thái đơn hàng, Số ghế / Hạng vé GA, Mã kiểm soát vé điện tử, Thẻ xác nhận "✓ ĐÃ KÝ SỐ BẢO MẬT".
+  - **Tính năng In Vé Điện Tử (Print Pass)**: Tích hợp nút `🖨️ In Vé Điện Tử (Print Pass)` gọi `window.print()`, định dạng CSS in ấn `@media print` trang trọng (ẩn navbar, footer, sidebar để chỉ in bản Boarding Pass gọn gàng chuẩn A4).
+
+### 4. Kết Quả Kiểm Thử Thực Tế & Bằng Chứng
+- **Backend Tests**: **179/179 tests PASS** (0 failures, 0 errors, 121 skipped - do tắt integration profile không có cờ IT).
+  - Lệnh: `./backend/mvnw.cmd -f backend/pom.xml test`
+  - Bao gồm toàn bộ suite: `TicketQrServiceTest` (11 tests), `TicketQrIntegrationTest` (5 tests), `TicketControllerTest` (1 test), `FourRoleSecurityTest`, `OrganizerIntegrationTest`, `V11MigrationVerificationTest`, `V12MigrationVerificationTest`, v.v.
+- **Frontend Tests**: **62/62 tests PASS** (0 failures, 0 errors).
+  - Lệnh: `npm test --prefix frontend`
+  - Bổ sung `QrCodeSvg.test.ts` (3 tests) và `MyBookingsPage.test.ts` (2 tests).
+- **Frontend Build**: **BUILD SUCCESS** (0 TypeScript errors, bundle `vite build` 275ms).
+  - Lệnh: `npm run build --prefix frontend`
+- **Contract Tests**: **69/69 checks PASS** (OpenAPI 3.1, 18 operations).
+  - Lệnh: `npm test --prefix tools/contracts`
+
+### 5. Giới Hạn Kiểm Chứng & Tuân Thủ
+- **Bảo toàn Git**: Giữ toàn bộ thay đổi uncommitted trong working tree, không tự ý `git commit` hoặc `git push` theo đúng chỉ thị `AGENTS.md` và `RULES.md`.
+- **Thanh toán**: Giữ nguyên cơ chế thanh toán mô phỏng an toàn, sẵn sàng kết nối cổng sandbox ở Giai đoạn 4 (Task T15).

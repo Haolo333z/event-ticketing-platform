@@ -1,5 +1,6 @@
 import { createElement as h, useState, useEffect } from 'react';
-import type { Api, Booking, User, Ticket } from '../api/client.ts';
+import type { Api, Booking, User, Ticket, Event } from '../api/client.ts';
+import { QrCodeSvg } from './QrCodeSvg.ts';
 
 const labels: Record<string, string> = {
   PENDING_PAYMENT: 'Chờ thanh toán',
@@ -33,6 +34,8 @@ export function MyBookingsPage({
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [qrMap, setQrMap] = useState<Record<string, string>>({});
+  const [eventDetail, setEventDetail] = useState<Event | null>(null);
 
   async function loadBookings() {
     if (!user) return;
@@ -57,19 +60,65 @@ export function MyBookingsPage({
     }
   }, [user]);
 
+  // Load event details for selected booking
+  useEffect(() => {
+    if (!selectedBooking) {
+      setEventDetail(null);
+      return;
+    }
+    const eventId = (selectedBooking as { eventId?: string }).eventId;
+    if (!eventId) return;
+
+    let active = true;
+    api.detail(eventId)
+      .then(ev => {
+        if (active) setEventDetail(ev);
+      })
+      .catch(() => {
+        if (active) setEventDetail(null);
+      });
+    return () => { active = false; };
+  }, [selectedBooking, api]);
+
+  // Load tickets and fetch HMAC-SHA256 Signed QR Code tokens
   useEffect(() => {
     if (!selectedBooking || selectedBooking.status !== 'CONFIRMED') {
       setTickets([]);
+      setQrMap({});
       return;
     }
     let active = true;
     setTicketsLoading(true);
     api.tickets(selectedBooking.bookingId)
-      .then(items => {
-        if (active) setTickets(items);
+      .then(async items => {
+        if (!active) return;
+        setTickets(items);
+
+        // Fetch signed QR tokens for each ticket
+        const map: Record<string, string> = {};
+        await Promise.allSettled(
+          items.map(async t => {
+            try {
+              if (api.ticketQr) {
+                const qrRes = await api.ticketQr(t.id);
+                if (qrRes && qrRes.qrToken) {
+                  map[t.id] = qrRes.qrToken;
+                }
+              }
+            } catch {
+              // Fallback to code if qr endpoint fails
+            }
+          })
+        );
+        if (active) {
+          setQrMap(map);
+        }
       })
       .catch(() => {
-        if (active) setTickets([]);
+        if (active) {
+          setTickets([]);
+          setQrMap({});
+        }
       })
       .finally(() => {
         if (active) setTicketsLoading(false);
@@ -91,10 +140,10 @@ export function MyBookingsPage({
           h('span', { className: 'breadcrumb-separator' }, ' / '),
           h('span', { className: 'breadcrumb-current' }, 'Vé của tôi')
         ),
-        h('div', { className: 'hero-badge' }, '🎟️ QUẢN LÝ VÉ ĐIỆN TỬ & MÃ SOÁT VÉ QR CODE'),
+        h('div', { className: 'hero-badge' }, '🎟️ VÍ VÉ ĐIỆN TỬ & MÃ SOÁT VÉ QR CODE KÝ SỐ HMAC-SHA256'),
         h('h1', { className: 'page-title' }, 'Vé Điện Tử Của Tôi (My E-Tickets)'),
         h('p', { className: 'page-subtitle' },
-          'Toàn bộ vé sự kiện và chỗ ngồi đã xác nhận của bạn. ' +
+          'Toàn bộ vé sự kiện và chỗ ngồi đã thanh toán của bạn. ' +
           'Xuất trình mã QR Boarding Pass tại cửa kiểm soát hoặc in vé để tham dự sự kiện.'
         )
       )
@@ -183,17 +232,27 @@ export function MyBookingsPage({
             ),
 
             // Boarding Pass Ticket Container
-            h('div', { className: 'boarding-pass' },
+            h('div', { className: 'boarding-pass printable-pass' },
               h('div', { className: 'boarding-pass-notch top-notch' }),
               h('div', { className: 'pass-header' },
                 h('div', { className: 'pass-brand' },
                   h('strong', null, 'EVENTFLOW BOARDING PASS'),
-                  h('span', null, 'CỔNG CHECK-IN ĐIỆN TỬ')
+                  h('span', null, 'CỔNG SOÁT VÉ ĐIỆN TỬ THÔNG MINH')
                 ),
                 h('div', { className: 'pass-code' }, selectedBooking.bookingId.slice(0, 13).toUpperCase())
               ),
 
               h('div', { className: 'pass-body' },
+                // Event information banner
+                eventDetail && h('div', { className: 'pass-event-highlight' },
+                  h('div', { className: 'event-badge-label' }, '🎵 THÔNG TIN SỰ KIỆN'),
+                  h('h2', { className: 'event-headline-title' }, eventDetail.title),
+                  h('div', { className: 'event-venue-time' },
+                    h('span', { className: 'venue-span' }, '📍 ' + eventDetail.venue),
+                    h('span', { className: 'time-span' }, '⏰ ' + date(eventDetail.startsAt))
+                  )
+                ),
+
                 h('div', { className: 'pass-info-grid' },
                   h('div', { className: 'pass-field' },
                     h('span', { className: 'field-label' }, 'HỌ VÀ TÊN KHÁN GIẢ'),
@@ -208,48 +267,48 @@ export function MyBookingsPage({
                     h('strong', { className: 'field-value' }, vnd(selectedBooking.totalAmountVnd))
                   ),
                   h('div', { className: 'pass-field' },
-                    h('span', { className: 'field-label' }, 'TRẠNG THÁI VÉ'),
+                    h('span', { className: 'field-label' }, 'TRẠNG THÁI ĐƠN HÀNG'),
                     h('strong', { className: 'field-value status-text' }, labels[selectedBooking.status] ?? selectedBooking.status)
                   )
                 ),
 
-                // Issued Tickets List (QR Codes)
+                // Security guarantee tag
+                selectedBooking.status === 'CONFIRMED' && h('div', { className: 'pass-security-seal' },
+                  h('span', { className: 'seal-badge' }, '🛡️ BẢO MẬT CHỮ KÝ SỐ'),
+                  h('span', { className: 'seal-text' }, 'Mã vé ký số HMAC-SHA256, xác thực tức thì tại cổng check-in và chống quay vòng mã.')
+                ),
+
+                // Issued Tickets List (Vector SVG QR Codes)
                 selectedBooking.status === 'CONFIRMED' ? (
-                  ticketsLoading ? h('p', { className: 'muted' }, 'Đang nạp mã vé định danh…') :
+                  ticketsLoading ? h('p', { className: 'muted loading-pulse' }, 'Đang nạp mã vé định danh và chữ ký số…') :
                   tickets.length > 0 ? h('div', { className: 'issued-tickets-list' },
-                    tickets.map((t, idx) => h('div', { key: t.code, className: 'issued-ticket-row' },
-                      h('div', { className: 'ticket-qr-box' },
-                        h('svg', {
-                          viewBox: '0 0 100 100',
-                          className: 'qr-svg-code',
-                          'aria-label': 'Mã QR soát vé ' + t.code
-                        },
-                          h('rect', { width: '100', height: '100', fill: '#ffffff' }),
-                          h('path', {
-                            d: 'M10 10h30v30h-30zM15 15h20v20h-20zM60 10h30v30h-30zM65 15h20v20h-20zM10 60h30v30h-30zM15 65h20v20h-20zM45 15h10v10h-10zM45 35h10v10h-10zM15 45h10v10h-10zM35 45h10v10h-10zM55 45h10v10h-10zM75 45h10v10h-10zM45 55h10v10h-10zM65 55h10v10h-10zM45 75h10v10h-10zM65 75h10v10h-10zM75 75h15v15h-15z',
-                            fill: '#05122f'
+                    tickets.map((t, idx) => {
+                      const qrValue = qrMap[t.id] || t.code;
+                      return h('div', { key: t.code, className: 'issued-ticket-row' },
+                        h('div', { className: 'ticket-qr-box' },
+                          h(QrCodeSvg, {
+                            value: qrValue,
+                            size: 140,
+                            ariaLabel: 'Mã QR soát vé ' + t.code
                           })
+                        ),
+                        h('div', { className: 'ticket-meta-info' },
+                          h('div', { className: 'ticket-number-tag' }, 'Vé #' + (idx + 1) + (t.seatLabel ? ' — Ghế: ' + t.seatLabel : ' — Vé GA')),
+                          h('div', { className: 'ticket-unique-code' }, t.code),
+                          h('div', { className: 'ticket-qr-status' },
+                            qrMap[t.id] ? h('span', { className: 'badge-verified' }, '✓ ĐÃ KÝ SỐ BẢO MẬT') : h('span', { className: 'badge-pending' }, 'ĐANG NẠP MÃ QR…')
+                          ),
+                          h('small', { className: 'ticket-hint' }, 'Xuất trình mã QR này trực tiếp trên điện thoại hoặc bản in cho nhân viên soát vé tại cửa.')
                         )
-                      ),
-                      h('div', { className: 'ticket-meta-info' },
-                        h('div', { className: 'ticket-number-tag' }, 'Vé #' + (idx + 1) + (t.seatLabel ? ' — Ghế: ' + t.seatLabel : ' — Vé GA')),
-                        h('div', { className: 'ticket-unique-code' }, t.code),
-                        h('small', { className: 'ticket-hint' }, 'Xuất trình mã này cho nhân viên soát vé tại cửa vào.')
-                      )
-                    ))
+                      );
+                    })
                   ) : h('div', { className: 'issued-ticket-row' },
                     h('div', { className: 'ticket-qr-box' },
-                      h('svg', {
-                        viewBox: '0 0 100 100',
-                        className: 'qr-svg-code',
-                        'aria-label': 'Mã QR soát vé'
-                      },
-                        h('rect', { width: '100', height: '100', fill: '#ffffff' }),
-                        h('path', {
-                          d: 'M10 10h30v30h-30zM15 15h20v20h-20zM60 10h30v30h-30zM65 15h20v20h-20zM10 60h30v30h-30zM15 65h20v20h-20zM45 15h10v10h-10zM45 35h10v10h-10zM15 45h10v10h-10zM35 45h10v10h-10zM55 45h10v10h-10zM75 45h10v10h-10zM45 55h10v10h-10zM65 55h10v10h-10zM45 75h10v10h-10zM65 75h10v10h-10zM75 75h15v15h-15z',
-                          fill: '#05122f'
-                        })
-                      )
+                      h(QrCodeSvg, {
+                        value: 'EF-' + selectedBooking.bookingId.toUpperCase(),
+                        size: 140,
+                        ariaLabel: 'Mã QR soát vé'
+                      })
                     ),
                     h('div', { className: 'ticket-meta-info' },
                       h('div', { className: 'ticket-number-tag' }, 'Vé Điện Tử Hợp Lệ'),
@@ -272,11 +331,11 @@ export function MyBookingsPage({
               h('div', { className: 'boarding-pass-notch bottom-notch' }),
               h('div', { className: 'pass-footer' },
                 h('div', { className: 'pass-actions' },
-                  h('button', {
+                  selectedBooking.status === 'CONFIRMED' && h('button', {
                     type: 'button',
                     className: 'print-pass-btn',
                     onClick: () => window.print()
-                  }, '🖨️ In vé / Lưu PDF'),
+                  }, '🖨️ In Vé Điện Tử (Print Pass)'),
                   h('button', {
                     type: 'button',
                     className: 'order-more-btn',

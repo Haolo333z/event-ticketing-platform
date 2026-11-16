@@ -22,18 +22,18 @@ public class BookingQueryService {
     }
     public Booking get(DemoPrincipal principal,UUID id){
         if(principal==null)throw new ApiException(401,"UNAUTHENTICATED","Cần đăng nhập");
-        boolean admin=principal.role().equals("ADMIN");
+        boolean admin=principal.hasRole("ADMIN");
         var rows=admin?jdbc.query("SELECT * FROM ticketing.bookings WHERE id=?",this::map,id):jdbc.query("SELECT * FROM ticketing.bookings WHERE id=? AND account_id=?",this::map,id,principal.accountId());
         if(rows.isEmpty())throw ApiException.missing();return rows.getFirst();
     }
     public Page mine(DemoPrincipal principal,int page,int size){
-        if(principal==null||!principal.role().equals("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách hàng có lịch sử cá nhân");
+        if(principal==null||!principal.hasRole("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách hàng có lịch sử cá nhân");
         if(page<0||page>10000||size<1||size>100)throw ApiException.invalid();
         long count=jdbc.queryForObject("SELECT count(*) FROM ticketing.bookings WHERE account_id=?",Long.class,principal.accountId());
         return new Page(jdbc.query("SELECT * FROM ticketing.bookings WHERE account_id=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,principal.accountId(),size,page*size),page,size,count);
     }
     public Page admin(DemoPrincipal principal,int page,int size,String status){
-        if(principal==null||!principal.role().equals("ADMIN"))throw new ApiException(403,"FORBIDDEN","Chỉ quản trị viên được xem danh sách booking");
+        if(principal==null||!principal.hasRole("ADMIN"))throw new ApiException(403,"FORBIDDEN","Chỉ quản trị viên được xem danh sách booking");
         if(page<0||page>10000||size<1||size>100||status!=null&&!Set.of("PENDING_PAYMENT","CONFIRMED","PAYMENT_FAILED","CANCELLED","EXPIRED","REFUND_REQUIRED").contains(status))throw ApiException.invalid();
         String filter=status==null?"":" WHERE status=?";var args=new ArrayList<Object>();if(status!=null)args.add(status);
         long total=jdbc.queryForObject("SELECT count(*) FROM ticketing.bookings"+filter,Long.class,args.toArray());

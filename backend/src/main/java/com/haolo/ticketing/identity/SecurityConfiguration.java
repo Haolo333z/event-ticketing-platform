@@ -36,6 +36,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/api/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.POST, "/api/bookings/*/simulate-payment", "/api/bookings/*/cancel").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/bookings/*/tickets").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/tickets/*/qr", "/api/tickets/**").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/me/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/bookings/*").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

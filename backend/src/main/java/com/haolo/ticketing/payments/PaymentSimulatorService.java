@@ -31,7 +31,7 @@ public class PaymentSimulatorService {
         return recordUntil(principal,booking,input,correlation,transactions.newDeadline());
     }
     private Receipt recordUntil(DemoPrincipal principal,UUID booking,SimulationInput input,UUID correlation,long deadline){
-        if(!settings.safeProfile||principal==null||!principal.role().equals("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Mô phỏng chỉ dành cho khách demo local/test");
+        if(!settings.safeProfile||principal==null||!principal.hasRole("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Mô phỏng chỉ dành cho khách demo local/test");
         return transactions.runUntil(()->{
             var current=lifecycle.lock(booking);
             if(!principal.accountId().equals(current.get("account_id")))throw ApiException.missing();

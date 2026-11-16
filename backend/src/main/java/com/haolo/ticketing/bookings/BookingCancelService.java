@@ -15,7 +15,7 @@ public class BookingCancelService {
     private final BookingQueryService queries;
     public BookingCancelService(BookingTransactions transactions,BookingLifecycle lifecycle,PaymentResultProcessor processor,BookingQueryService queries){this.transactions=transactions;this.lifecycle=lifecycle;this.processor=processor;this.queries=queries;}
     public BookingQueryService.Booking cancel(DemoPrincipal principal,UUID id,UUID correlation){
-        if(principal==null||!principal.role().equals("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách sở hữu booking được hủy");
+        if(principal==null||!principal.hasRole("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách sở hữu booking được hủy");
         boolean allowed=transactions.run(()->{
             var booking=lifecycle.lock(id);if(!principal.accountId().equals(booking.get("account_id")))throw ApiException.missing();
             processor.processLockedBooking(id);booking=lifecycle.lock(id);

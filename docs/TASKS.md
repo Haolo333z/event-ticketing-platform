@@ -309,10 +309,10 @@
 
 ## Giai đoạn 3 — Trải Nghiệm Khách Hàng (Customer Commerce Journey) (T14)
 
-- [ ] **T14.1 — Trang Chủ, Khám Phá & Bộ Lọc Tìm Kiếm Sự Kiện:** Tích hợp giao diện khám phá sự kiện thực tế, bộ lọc danh mục/địa điểm, phân trang dữ liệu từ SQL.
-- [ ] **T14.2 — Luồng Đặt Vé Khách Hàng Gắn Với Danh Tính Thực:** Quy trình đặt vé yêu cầu đăng nhập, liên kết `account_id` thật, bảo vệ giao dịch ACID PostgreSQL.
-- [ ] **T14.3 — Trang "Vé Của Tôi" & Lịch Sử Giao Dịch Từ PostgreSQL:** Hiển thị danh sách đơn hàng và vé điện tử của tài khoản đăng nhập, tra cứu chi tiết và trạng thái thanh toán.
-- [ ] **T14.4 — Tạo Mã Vé Điện Tử E-Ticket QR & Tải Vé:** Mã QR SVG/PNG chứa token bảo mật opaque, hỗ trợ xem và in vé điện tử.
+- [x] **T14.1 — Trang Chủ, Khám Phá & Bộ Lọc Tìm Kiếm Sự Kiện (Done, 2026-11-16):** Tích hợp giao diện khám phá sự kiện thực tế, bộ lọc danh mục/địa điểm, phân trang dữ liệu từ SQL.
+- [x] **T14.2 — Luồng Đặt Vé Khách Hàng Gắn Với Danh Tính Thực (Done, 2026-11-16):** Quy trình đặt vé yêu cầu đăng nhập, liên kết `account_id` thật từ `SecurityContextHolder`, bảo vệ giao dịch ACID PostgreSQL (`SELECT FOR UPDATE`), hỗ trợ đa vai trò (`hasRole("CUSTOMER")`).
+- [x] **T14.3 — Trang "Vé Của Tôi" & Lịch Sử Giao Dịch Từ PostgreSQL (Done, 2026-11-16):** Hiển thị danh sách đơn hàng và vé điện tử của tài khoản đăng nhập (`GET /api/me/bookings`, `GET /api/bookings/{id}/tickets`), hiển thị thông tin sự kiện, địa điểm, thời gian và số ghế/hạng vé.
+- [x] **T14.4 — Tạo Mã Vé Điện Tử E-Ticket QR & Tải Vé (Done, 2026-11-16):** Dịch vụ `TicketQrService` và endpoint `GET /api/tickets/{id}/qr` ký số Signed Opaque QR Token (`ticketId.ticketCode.eventId.issuedAt.signature`) bằng HMAC-SHA256, kiểm tra quyền sở hữu vé nghiêm ngặt (chặn 403 IDOR), component `QrCodeSvg` vector động và chế độ In Vé Điện Tử (`window.print()`).
 
 ## Giai đoạn 4 — Cổng Thanh Toán Sandbox Bên Ngoài (Payment Gateway) (T15)
 

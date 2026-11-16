@@ -64,3 +64,6 @@ messaging:
   dlq-topic: ${KAFKA_DLQ_TOPIC:ticketing.booking.dlq.v1}
   group-prefix: ${KAFKA_GROUP_PREFIX:ticketing}
   refund-simulated-failures: ${REFUND_SIMULATED_FAILURES:0}
+eventflow:
+  ticket:
+    qr-secret: ${EVENTFLOW_TICKET_QR_SECRET:eventflow-super-secure-hmac-sha256-qr-signing-key-secret-2026}

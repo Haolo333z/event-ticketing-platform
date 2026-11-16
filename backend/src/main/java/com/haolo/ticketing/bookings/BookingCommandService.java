@@ -21,7 +21,7 @@ public class BookingCommandService {
         this.jdbc=jdbc;this.transactions=transactions;this.policy=policy;this.catalog=catalog;this.inventory=inventory;this.seats=seats;this.outbox=outbox;this.mapper=mapper;
     }
     public Result create(DemoPrincipal principal,String key,BookingRequest request,UUID correlationId){
-        if(principal==null||!principal.role().equals("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách hàng được tạo booking");
+        if(principal==null||!principal.hasRole("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách hàng được tạo booking");
         if(key==null||!key.matches("[A-Za-z0-9._:-]{1,128}")||request.quantity()>policy.maxQuantity())throw ApiException.invalid();
         return transactions.run(()->execute(principal.accountId(),key,request,correlationId));
     }

@@ -5,6 +5,7 @@ export type Booking={bookingId:string;status:Status;expiresAt:string;totalAmount
 export type Scenario='SUCCESS'|'FAILURE'|'DELAY_TIMEOUT';
 export type PaymentAttempt={bookingId:string;scenario:Scenario;requestId:string};
 export type Ticket={id:string;bookingId:string;bookingItemId:string;ticketOrdinal:number;code:string;seatId:string|null;seatLabel:string|null};
+export type TicketQrResponse={ticketId:string;ticketCode:string;eventId:string;qrToken:string;issuedAt:string};
 export type Command={eventId:string;ticketTypeId:string}&({quantity:number;seatIds?:never}|{seatIds:string[];quantity?:never});
 export type Attempt={key:string;payload:Command};
 export type Seat={id:string;label:string;status:'AVAILABLE'|'HELD'|'SOLD'};
@@ -147,6 +148,7 @@ export interface Api{
   events():Promise<{items:Event[]}>;detail(id:string):Promise<Event>;availability(id:string):Promise<Availability>;
   create(attempt:Attempt):Promise<Booking>;booking(id:string):Promise<Booking>;mine():Promise<{items:Booking[]}>;
   simulate(attempt:PaymentAttempt):Promise<{paymentIntentId:string;status:'ACCEPTED'}>;cancel(id:string):Promise<Booking>;tickets(id:string):Promise<Ticket[]>;
+  ticketQr?(id:string):Promise<TicketQrResponse>;
   auth?:{
     register(data:{displayName:string;email:string;password:string;phone?:string}):Promise<AuthResponse>;
     login(data:{email:string;password:string}):Promise<AuthResponse>;
@@ -256,6 +258,7 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
     simulate:attempt=>call('/api/bookings/'+encodeURIComponent(attempt.bookingId)+'/simulate-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:attempt.scenario,requestId:attempt.requestId})}),
     cancel:id=>call('/api/bookings/'+encodeURIComponent(id)+'/cancel',{method:'POST'}),
     tickets:id=>call('/api/bookings/'+encodeURIComponent(id)+'/tickets'),
+    ticketQr:id=>call('/api/tickets/'+encodeURIComponent(id)+'/qr'),
     auth:{
       register:(data)=>call('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       login:(data)=>call('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
