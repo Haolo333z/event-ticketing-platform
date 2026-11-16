@@ -44,6 +44,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/organizer/venues", "/api/organizer/categories").permitAll()
                 .requestMatchers("/api/organizer/profile").authenticated()
                 .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/payments/vnpay/return", "/api/payments/vnpay/ipn").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/payments/checkout").hasAnyRole("CUSTOMER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/bookings/*/payment-status").hasAnyRole("CUSTOMER", "ADMIN")
                 .anyRequest().denyAll())
             .exceptionHandling(c -> c
                 .authenticationEntryPoint((req, res, ex) -> errors.write(req, res, 401, "UNAUTHENTICATED", "Cần đăng nhập"))

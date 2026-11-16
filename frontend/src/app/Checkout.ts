@@ -6,7 +6,26 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
   const[pending,setPending]=useState<PaymentAttempt|null>(()=>readPaymentAttempt(store));
   const[busy,setBusy]=useState(false),[error,setError]=useState<ApiError|null>(null),[notice,setNotice]=useState('');
   const[tickets,setTickets]=useState<Ticket[]>([]),[accepted,setAccepted]=useState(false);
+  const[vnpayLoading,setVnpayLoading]=useState(false);
   const sending=useRef(false);
+
+  async function checkoutVnPay(){
+    if(sending.current||busy||vnpayLoading)return;
+    setVnpayLoading(true);setError(null);
+    try{
+      if(api.payments?.checkout){
+        const returnUrl=typeof window!=='undefined'?window.location.origin+'/payment-return':'http://localhost:5173/payment-return';
+        const res=await api.payments.checkout({bookingId:booking.bookingId,provider:'VNPAY',returnUrl});
+        if(res&&res.gatewayUrl&&typeof window!=='undefined'){
+          window.location.href=res.gatewayUrl;
+        }
+      }
+    }catch(val){
+      setError(val instanceof ApiError?val:new ApiError('NETWORK_ERROR','Không thể kết nối cổng thanh toán VNPAY. Thử lại hoặc dùng mô phỏng.'));
+    }finally{
+      setVnpayLoading(false);
+    }
+  }
   useEffect(()=>{
     let active=true;setTickets([]);
     if(booking.status==='CONFIRMED')api.tickets(booking.bookingId).then(value=>{if(active)setTickets(value);}).catch(value=>{if(active)setError(value instanceof ApiError?value:new ApiError('NETWORK_ERROR','Chưa tải được vé. Hãy tải lại.'));});
@@ -44,6 +63,15 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
     error&&h('div',{role:'alert',className:'alert error'},error.message,h('small',null,' · Mã lỗi: '+error.code),error.correlationId&&h('small',null,' · Mã tra cứu: '+error.correlationId)),
     notice&&h('p',{role:'status'},notice),
     pending&&h('div',{className:'alert pending'},'Yêu cầu mô phỏng chưa rõ kết quả cho booking '+pending.bookingId+'. Giữ nguyên requestId và kịch bản khi thử lại.',h('button',{type:'button',disabled:busy,onClick:()=>void pay(pending.scenario)},'Thử lại thanh toán cùng yêu cầu')),
+    booking.status==='PENDING_PAYMENT'&&h('div',{className:'payment-gateway-box'},
+      h('button',{
+        type:'button',
+        className:'btn-vnpay-pay',
+        disabled:busy||vnpayLoading||!!pending||!canSimulate,
+        onClick:()=>void checkoutVnPay()
+      },vnpayLoading?'Đang kết nối cổng VNPAY…':'💳 Thanh Toán VNPAY Sandbox (ATM / QR Code)'),
+      h('div',{className:'divider-or'},h('span',null,'hoặc chọn kịch bản mô phỏng kiểm thử:'))
+    ),
     h('div',{className:'payment-actions'},...([
       ['SUCCESS','Mô phỏng thành công'],['FAILURE','Mô phỏng thất bại'],['DELAY_TIMEOUT','Mô phỏng kết quả đến muộn']
     ] as const).map(([scenario,label])=>h('button',{key:scenario,type:'button',disabled:busy||!!pending||!canSimulate,onClick:()=>void pay(scenario)},label)),

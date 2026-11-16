@@ -316,11 +316,11 @@
 
 ## Giai đoạn 4 — Cổng Thanh Toán Sandbox Bên Ngoài (Payment Gateway) (T15)
 
-- [ ] **T15.1 — Thiết Kế Cổng Kết Nối Payment Gateway Port & Bảng Giao Dịch Thanh Toán:** Thiết kế `PaymentGatewayPort`, bảng `payment_attempts`, `payment_notifications`, `refund_attempts`.
-- [ ] **T15.2 — Luồng Khởi Tạo Giao Dịch & Chuyển Hướng Sandbox Checkout:** Tạo mã giao dịch, ký checksum bảo mật, chuyển hướng trình duyệt sang cổng thanh toán sandbox.
-- [ ] **T15.3 — Tiếp Nhận Kết Quả Trả Về (Return URL) & Xử Lý Server Callback (IPN):** Xác thực chữ ký số webhook, đảm bảo tính idempotent và an toàn tuyệt đối khi mạng gián đoạn.
-- [ ] **T15.4 — Đối Soát Giao Dịch, Phục Hồi Lỗi & Xử Lý Thanh Toán Muộn (Late Payment Arbitration):** Quản lý trạng thái không rõ ràng, xử lý booking quá hạn hết hold chuyển sang nghĩa vụ hoàn tiền (`REFUND_REQUIRED`).
-- [ ] **T15.5 — Điều Phối & Xử Lý Hoàn Tiền (Refund Orchestration):** Luồng hoàn tiền tự động hoặc bán tự động cho các giao dịch quá hạn hoặc hủy sự kiện.
+- [x] **T15.1 — Thiết Kế Cổng Kết Nối Payment Gateway Port & Bảng Giao Dịch Thanh Toán (Done, 2026-11-16):** Migration Flyway V13 tạo 3 bảng `payment_attempts`, `payment_notifications` (IPN journal), `refund_attempts` (tổng 32 bảng schema `ticketing`). Thiết kế kiến trúc Lục giác `PaymentGatewayPort`, `PaymentGatewayRegistry` tích hợp `VnPayGatewayAdapter` và bảo toàn `PaymentSimulatorAdapter`.
+- [x] **T15.2 — Luồng Khởi Tạo Giao Dịch & Chuyển Hướng Sandbox Checkout (Done, 2026-11-16):** Endpoint `POST /api/payments/checkout` đọc số tiền snapshot từ đơn hàng DB, sinh `merchantRef` duy nhất, ký số HMAC-SHA512 URL chuyển hướng sang cổng VNPAY Sandbox.
+- [x] **T15.3 — Tiếp Nhận Kết Quả Trả Về (Return URL) & Xử Lý Server Callback (IPN) (Done, 2026-11-16):** Endpoint `GET /api/payments/vnpay/ipn` (Server-to-Server) xác thực chữ ký HMAC-SHA512, đối soát `merchantRef` và số tiền, xử lý idempotent 100% qua `payment_notifications` chống callback trùng lặp, chuyển trạng thái `CONFIRMED` và phát vé tự động khi thành công. Endpoint `GET /api/payments/vnpay/return` hỗ trợ giao diện người dùng.
+- [x] **T15.4 — Đối Soát Giao Dịch, Phục Hồi Lỗi & Xử Lý Thanh Toán Muộn (Late Payment Arbitration) (Done, 2026-11-16):** Bảo toàn bất biến Zero Oversell; khi IPN thành công nhưng booking đã quá hạn giữ chỗ (`expires_at < now()`) và kho vé đã giải phóng, hệ thống chuyển trạng thái đơn sang `REFUND_REQUIRED`, tự động tạo bản ghi trong `refund_attempts` với lý do `LATE_PAYMENT_AFTER_EXPIRY`, tuyệt đối không cướp lại vé của người khác.
+- [x] **T15.5 — Điều Phối & Xử Lý Hoàn Tiền (Refund Orchestration) & Frontend Integration (Done, 2026-11-16):** Bổ sung nút thanh toán VNPAY Sandbox trên `Checkout.ts`, tạo trang kết quả `/payment-return` (`PaymentReturnPage.ts`) hiển thị chi tiết mã giao dịch và số tiền, tích hợp polling trạng thái qua `GET /api/bookings/{id}/payment-status`.
 
 ## Giai đoạn 5 — Soát Vé Check-in & Vận Hành Sự Kiện (Staff Portal) (T16)
 

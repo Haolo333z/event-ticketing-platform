@@ -7,6 +7,7 @@ import { SolutionsPage } from './SolutionsPage.ts';
 import { PricingPage } from './PricingPage.ts';
 import { ContactPage } from './ContactPage.ts';
 import { MyBookingsPage } from './MyBookingsPage.ts';
+import { PaymentReturnPage } from './PaymentReturnPage.ts';
 import { OrganizerDashboard } from './OrganizerDashboard.ts';
 import type { Api, Store, User } from '../api/client.ts';
 import { getStoredUser, clearStoredAuth } from '../api/client.ts';
@@ -24,6 +25,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     if (path === '/giai-phap') return '/giai-phap';
     if (path === '/bang-gia') return '/bang-gia';
     if (path === '/ve-cua-toi') return '/ve-cua-toi';
+    if (path === '/payment-return') return '/payment-return';
     if (path === '/organizer') return '/organizer';
     if (path === '/lien-he') return '/lien-he';
     if (path === '/dat-ve' || path === '/events') return '/dat-ve';
@@ -444,6 +446,11 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           user,
           onNavigate: navigate,
           onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        })
+      ) : currentPath === '/payment-return' ? (
+        h(PaymentReturnPage, {
+          api: customer,
+          onNavigate: navigate
         })
       ) : currentPath === '/ve-cua-toi' ? (
         h(MyBookingsPage, {

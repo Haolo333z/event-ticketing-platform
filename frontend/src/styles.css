@@ -4858,3 +4858,126 @@ legend {
     display: none !important;
   }
 }
+/* ==========================================================================
+   VNPAY PAYMENT GATEWAY & RETURN PAGE STYLES (TASK T15)
+   ========================================================================== */
+.payment-gateway-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.btn-vnpay-pay {
+  background: linear-gradient(135deg, #005baa 0%, #0073e6 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 91, 170, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-vnpay-pay:hover:not(:disabled) {
+  background: linear-gradient(135deg, #004b8d 0%, #005baa 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 91, 170, 0.35);
+}
+
+.btn-vnpay-pay:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.divider-or {
+  text-align: center;
+  margin: 12px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+  position: relative;
+}
+
+.payment-result-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.payment-result-card.result-success {
+  border-top: 5px solid #16a34a;
+}
+
+.payment-result-card.result-failure {
+  border-top: 5px solid #dc2626;
+}
+
+.result-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.result-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.result-header h2 {
+  font-size: 22px;
+  color: #05122f;
+  margin: 0 0 8px 0;
+}
+
+.result-desc {
+  color: #475569;
+  font-size: 14px;
+}
+
+.result-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.amount-highlight {
+  color: #005baa;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}

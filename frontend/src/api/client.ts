@@ -6,6 +6,35 @@ export type Scenario='SUCCESS'|'FAILURE'|'DELAY_TIMEOUT';
 export type PaymentAttempt={bookingId:string;scenario:Scenario;requestId:string};
 export type Ticket={id:string;bookingId:string;bookingItemId:string;ticketOrdinal:number;code:string;seatId:string|null;seatLabel:string|null};
 export type TicketQrResponse={ticketId:string;ticketCode:string;eventId:string;qrToken:string;issuedAt:string};
+
+export type CheckoutResult={
+  attemptId:string;
+  merchantRef:string;
+  amountVnd:number;
+  currency:string;
+  gatewayUrl:string;
+  expiresAt:string;
+};
+
+export type PaymentStatus={
+  bookingId:string;
+  status:Status;
+  totalAmountVnd:number;
+  provider?:string;
+  merchantRef?:string;
+  gatewayUrl?:string;
+  expiresAt:string;
+};
+
+export type VnPayReturnResult={
+  isValidSignature:boolean;
+  isSuccess:boolean;
+  providerTxRef:string;
+  merchantRef:string;
+  amountVnd:number;
+  responseCode:string;
+  message:string;
+};
 export type Command={eventId:string;ticketTypeId:string}&({quantity:number;seatIds?:never}|{seatIds:string[];quantity?:never});
 export type Attempt={key:string;payload:Command};
 export type Seat={id:string;label:string;status:'AVAILABLE'|'HELD'|'SOLD'};
@@ -149,6 +178,11 @@ export interface Api{
   create(attempt:Attempt):Promise<Booking>;booking(id:string):Promise<Booking>;mine():Promise<{items:Booking[]}>;
   simulate(attempt:PaymentAttempt):Promise<{paymentIntentId:string;status:'ACCEPTED'}>;cancel(id:string):Promise<Booking>;tickets(id:string):Promise<Ticket[]>;
   ticketQr?(id:string):Promise<TicketQrResponse>;
+  payments?:{
+    checkout(data:{bookingId:string;provider?:string;returnUrl?:string}):Promise<CheckoutResult>;
+    status(bookingId:string):Promise<PaymentStatus>;
+    vnpayReturn(params:Record<string,string>):Promise<VnPayReturnResult>;
+  };
   auth?:{
     register(data:{displayName:string;email:string;password:string;phone?:string}):Promise<AuthResponse>;
     login(data:{email:string;password:string}):Promise<AuthResponse>;
@@ -284,6 +318,14 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
       assignStaff:(id,data)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/staff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       revokeStaff:(id,staffUserId)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/staff/'+encodeURIComponent(staffUserId),{method:'DELETE'}),
       staffCandidates:(q)=>call('/api/organizer/staff-candidates'+(q?'?q='+encodeURIComponent(q):''))
+    },
+    payments:{
+      checkout:(data)=>call('/api/payments/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
+      status:(id)=>call('/api/bookings/'+encodeURIComponent(id)+'/payment-status'),
+      vnpayReturn:(params)=>{
+        const qs=new URLSearchParams(params).toString();
+        return call('/api/payments/vnpay/return?'+qs);
+      }
     }
   };
 }

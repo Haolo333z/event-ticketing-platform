@@ -1687,3 +1687,71 @@ Build trong launcher lần boot và restart báo **130test/121skip/0failure/erro
 ### 5. Giới Hạn Kiểm Chứng & Tuân Thủ
 - **Bảo toàn Git**: Giữ toàn bộ thay đổi uncommitted trong working tree, không tự ý `git commit` hoặc `git push` theo đúng chỉ thị `AGENTS.md` và `RULES.md`.
 - **Thanh toán**: Giữ nguyên cơ chế thanh toán mô phỏng an toàn, sẵn sàng kết nối cổng sandbox ở Giai đoạn 4 (Task T15).
+
+## Giai đoạn 4 — Cổng Thanh Toán Sandbox Bên Ngoài & Xử Lý Giao Dịch Phức Tạp (T15) (2026-11-16)
+
+Đã hoàn thành toàn diện toàn bộ các mục tiêu của Task T15 (Phase 4) theo đúng Lộ trình Nâng cấp EventFlow V2:
+
+### 1. Cơ Sở Dữ Liệu: Flyway Migration V13 Bổ Sung
+- **File migration**: `backend/src/main/resources/db/migration/V13__payment_gateway_attempts_and_refunds.sql`
+- **Bảng mới tạo**:
+  - `ticketing.payment_attempts`: Lưu trữ lịch sử từng lần khách hàng chuyển hướng checkout qua cổng thanh toán (`booking_id`, `provider`, `merchant_ref`, `amount_vnd`, `status`, `gateway_url`, `expires_at`).
+  - `ticketing.payment_notifications`: Nhật ký bất biến tiếp nhận Webhook IPN từ cổng thanh toán đối tác, hỗ trợ ràng buộc `UNIQUE(provider, provider_tx_ref, event_type)` bảo đảm xử lý Idempotent 100%.
+  - `ticketing.refund_attempts`: Theo dõi nghĩa vụ và trạng thái hoàn tiền khi khách hàng thanh toán muộn (`REFUND_REQUIRED`).
+- **Tổng số bảng**: Schema `ticketing` hiện có đúng **32 bảng**, kiểm chứng qua [V13MigrationVerificationTest.java](file:///d:/event-ticketing-platform/backend/src/test/java/com/haolo/ticketing/payments/V13MigrationVerificationTest.java).
+
+### 2. Kiến Trúc Ports & Adapters Cho Cổng Thanh Toán
+- **Interface Cốt Lõi `PaymentGatewayPort`**: Tách rời hoàn toàn domain logic khỏi SDK nhà cung cấp.
+- **`VnPayGatewayAdapter`**:
+  - Triển khai chuẩn tích hợp VNPAY Version 2.1.0 (HMAC-SHA512 checksum).
+  - Thuật toán sắp xếp tham số alphabet ASCII, URL encoding và băm chữ ký số hex 128 ký tự.
+  - Hỗ trợ đối soát và kiểm tra toàn vẹn chữ ký số với bí mật cấu hình từ `eventflow.payment.vnpay.hash-secret`.
+- **`PaymentSimulatorAdapter` & `PaymentGatewayRegistry`**:
+  - Bảo toàn 100% cơ chế mô phỏng thanh toán nội bộ phục vụ automated tests và CI/CD độc lập với mạng Internet.
+  - Tự động định tuyến request theo provider name (`VNPAY`, `SIMULATOR`).
+
+### 3. REST API Khởi Tạo Thanh Toán & Webhook IPN Server-to-Server
+- **`POST /api/payments/checkout`**:
+  - Bảo vệ bởi `hasAnyRole('CUSTOMER', 'ADMIN')`, xác thực quyền sở hữu đơn hàng (chặn 403 IDOR).
+  - Trích xuất số tiền snapshot trực tiếp từ database (`bookings.total_amount_vnd`), tuyệt đối không nhận tham số tiền từ client gửi lên.
+  - Sinh mã `merchantRef` duy nhất, lưu `payment_attempts` và trả về `gatewayUrl` đã ký số HMAC-SHA512.
+- **`GET /api/payments/vnpay/ipn` (Server-to-Server Webhook)**:
+  - Xác thực chữ ký HMAC-SHA512 (sai trả `RspCode: 97`).
+  - Đối chiếu mã đơn hàng tồn tại (không thấy trả `RspCode: 01`).
+  - Đối soát số tiền chính xác (sai trả `RspCode: 04`).
+  - Kiểm tra idempotent qua `payment_notifications` (trùng lặp trả `RspCode: 02`).
+  - Chuyển tiếp trạng thái đơn hàng nguyên tử qua `PaymentResultProcessor`:
+    - Thanh toán thành công trong hạn: Cập nhật `CONFIRMED`, xuất vé điện tử, gửi Kafka Outbox event.
+    - Thanh toán thất bại/hủy: Cập nhật `PAYMENT_FAILED`, nhả kho vé.
+- **Bảo Toàn Trọng Tài Thanh Toán Muộn (Late Payment Arbitration)**:
+  - Khi IPN báo thành công nhưng đơn hàng đã quá hạn giữ vé 600s (`expires_at < now()`) và kho vé đã giải phóng:
+    Đơn hàng chuyển sang `REFUND_REQUIRED`, tự động tạo bản ghi trong `refund_attempts` với lý do `LATE_PAYMENT_AFTER_EXPIRY`, tuyệt đối không cướp lại vé của người khác (0% Oversell).
+- **`GET /api/payments/vnpay/return` & `GET /api/bookings/{id}/payment-status`**:
+  - Hỗ trợ điều hướng trình duyệt và polling trạng thái realtime.
+
+### 4. Giao Diện Người Dùng: Checkout VNPAY & Trang Kết Quả `/payment-return`
+- **Tùy chọn thanh toán trong `Checkout.ts`**:
+  - Nút `💳 Thanh Toán VNPAY Sandbox (ATM / QR Code)` tự động gọi API checkout và chuyển hướng sang cổng thanh toán VNPAY.
+  - Giữ nguyên các kịch bản mô phỏng kiểm thử nhanh.
+- **Trang Kết quả `/payment-return` (`PaymentReturnPage.ts`)**:
+  - Đón nhận kết quả trả về từ VNPAY, hiển thị chi tiết mã tham chiếu, ngân hàng thanh toán, số tiền và mã giao dịch.
+  - Nút chuyển tiếp trực tiếp vào "Ví vé điện tử" (`/ve-cua-toi`) khi thành công.
+
+### 5. Kết Quả Kiểm Thử Thực Tế & Bằng Chứng
+- **Backend Tests**: **193/193 tests PASS** (0 failures, 0 errors, 121 skipped - do tắt integration profile không có cờ IT).
+  - Lệnh: `./backend/mvnw.cmd -f backend/pom.xml test`
+  - Các tests mới của phân hệ payment:
+    - [V13MigrationVerificationTest.java](file:///d:/event-ticketing-platform/backend/src/test/java/com/haolo/ticketing/payments/V13MigrationVerificationTest.java): 1 test PASS (Flyway migration V13 thành công, 3 bảng mới, tổng 32 bảng).
+    - [VnPayGatewayAdapterTest.java](file:///d:/event-ticketing-platform/backend/src/test/java/com/haolo/ticketing/payments/VnPayGatewayAdapterTest.java): 4 tests PASS (Ký số URL checkout, verify callback thành công, verify khách hủy, chặn chữ ký bị làm giả).
+    - [PaymentCheckoutControllerTest.java](file:///d:/event-ticketing-platform/backend/src/test/java/com/haolo/ticketing/payments/PaymentCheckoutControllerTest.java): 3 tests PASS (Khởi tạo checkout, chặn 403 không phải chủ đơn, tra cứu payment status).
+    - [VnPayIpnIntegrationTest.java](file:///d:/event-ticketing-platform/backend/src/test/java/com/haolo/ticketing/payments/VnPayIpnIntegrationTest.java): 6 tests PASS (IPN checksum sai -> 97, không thấy đơn -> 01, sai tiền -> 04, trùng lặp -> 02, thành công đúng hạn -> 00, **thanh toán muộn -> tạo refund_attempts an toàn**).
+- **Frontend Tests**: **63/63 tests PASS** (0 failures, 0 errors).
+  - Lệnh: `npm test --prefix frontend`
+  - Bổ sung `PaymentReturnPage.test.ts` (1 test).
+- **Frontend Build**: **BUILD SUCCESS** (0 TypeScript errors, bundle `vite build` 227ms).
+  - Lệnh: `npm run build --prefix frontend`
+- **Contract Tests**: **69/69 checks PASS** (OpenAPI 3.1, 18 operations).
+  - Lệnh: `npm test --prefix tools/contracts`
+
+### 6. Giới Hạn Kiểm Chứng & Tuân Thủ
+- **Bảo toàn Git**: Giữ toàn bộ thay đổi uncommitted trong working tree, không tự ý `git commit` hoặc `git push` theo đúng chỉ thị `AGENTS.md` và `RULES.md`.
