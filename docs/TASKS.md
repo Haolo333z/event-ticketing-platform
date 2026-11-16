@@ -339,11 +339,11 @@
 
 ## Giai đoạn 7 — Hoàn Thiện Giao Diện Sản Phẩm & Visual QA (T18)
 
-- [ ] **T18.1 — Chuẩn Hóa Hệ Thống Design Tokens & Components:** Bộ UI kit thương mại chuẩn doanh nghiệp, thống nhất màu sắc, typography và tương tác.
-- [ ] **T18.2 — Hoàn Thiện Giao Diện Khám Phá & Chi Tiết Sự Kiện:** Tinh chỉnh trải nghiệm người dùng trên Desktop, Laptop và Mobile.
-- [ ] **T18.3 — Tối Ưu UX Luồng Xác Thực, Đặt Vé, Thanh Toán & Vé Điện Tử:** Xử lý đầy đủ các trạng thái loading, lỗi mạng, hết vé, giữ chỗ thành công.
-- [ ] **T18.4 — Hoàn Thiện Dashboard Cho Cả 4 Vai Trò:** Tối ưu không gian làm việc cho Customer, Staff, Organizer và Admin.
-- [ ] **T18.5 — Kiểm Thử Giao Diện Đa Thiết Bị (Visual QA & Accessibility):** Chụp ảnh bằng chứng 1440x900, 1366x768, 390x844 cho toàn bộ các màn hình chính.
+- [x] **T18.1 — Chuẩn Hóa Hệ Thống Design Tokens & Components (Done, 2026-11-17):** Thống nhất bảng màu chuẩn Sao Kim Branding (`#4338ca`/`#6366f1` Indigo, `#0284c7` Sky, `#059669` Emerald, `#d97706` Amber, `#e11d48` Rose, `#0f172a` Slate), spacing chuẩn 4/8/12/16/24/32px, bo góc 8/12/16/20px, hiệu ứng đổ bóng đa lớp, utilities skeleton loader (`.skeleton-pulse`) và spinner loader (`.ef-spinner`).
+- [x] **T18.2 — Hoàn Thiện Giao Diện Khám Phá & Chi Tiết Sự Kiện (Done, 2026-11-17):** Trang Chủ (`/`) với mega-menu điều hướng, hero banner tốc độ cao, danh mục nổi bật, floating dock. Trang Đặt Vé (`/dat-ve`) với bộ lọc GA/Seated và tìm kiếm realtime. Sơ Đồ Ghế Trực Quan với Stage 3D, phân khu ghế và tooltip thông tin ghế.
+- [x] **T18.3 — Tối Ưu UX Luồng Xác Thực, Đặt Vé, Thanh Toán & Vé Điện Tử (Done, 2026-11-17):** Luồng thanh toán (`/checkout`) với đếm ngược giữ vé, cổng VNPAY Sandbox và 3 kịch bản mô phỏng. Trang kết quả thanh toán (`/payment-return`). Trang Ví Vé (`/ve-cua-toi`) với Boarding Pass E-Ticket sang trọng, mã QR Vector SVG ký số HMAC-SHA256 và chế độ In Vé Điện Tử (`window.print()`).
+- [x] **T18.4 — Hoàn Thiện Dashboard Cho Cả 4 Vai Trò (Done, 2026-11-17):** Tối ưu 4 cổng làm việc riêng biệt: Customer Portal (Ví vé cá nhân), Staff Portal (`/staff` bàn làm việc soát vé công nghệ cao), Organizer Portal (`/organizer` quản lý sự kiện & nhân sự), Admin Portal (`/admin` 5 tab nghiệp vụ toàn diện).
+- [x] **T18.5 — Kiểm Thử Giao Diện Đa Thiết Bị (Visual QA & Accessibility) (Done, 2026-11-17):** Chụp tự động 30 ảnh màn hình bằng chứng qua Chrome headless trên 3 độ phân giải tiêu chuẩn: Desktop Wide (1440 × 900), Laptop Standard (1366 × 768) và Mobile Viewport (390 × 844 iPhone standard) cho toàn bộ 10 phân hệ và 4 dashboard. Lưu bằng chứng tại `docs/evidence/visual-qa/` và xuất báo cáo nghiệm thu thị giác.
 
 ## Giai đoạn 8 — Kiểm Thử Hồi Quy Toàn Diện, Bảo Mật & Đóng Gói Phát Hành (T19)
 

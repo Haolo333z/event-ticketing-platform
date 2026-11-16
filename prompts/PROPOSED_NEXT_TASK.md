@@ -1,40 +1,43 @@
-# PROMPT — HƯỚNG DẪN THỰC THI TASK TIẾP THEO: HOÀN THIỆN GIAO DIỆN SẢN PHẨM & VISUAL QA ĐA THIẾT BỊ (TASK T18 - PHASE 7)
+# PROMPT — HƯỚNG DẪN THỰC THI TASK T19: KIỂM THỬ HỒI QUY TOÀN DIỆN, BẢO MẬT & SỬA LỖI CI ĐỂ HOÀN TẤT V2 (PHASE 8 - RELEASE PHASE)
 
-Bạn là **Principal UI/UX Architect & Senior Frontend Engineer** tiếp quản repository `event-ticketing-platform` để triển khai **Task T18 (Phase 7 — Hoàn Thiện Giao Diện Sản Phẩm, Design Tokens & Visual QA)** theo đúng Lộ trình Nâng cấp EventFlow V2.
+Bạn là **Principal Software Architect, Lead Security Engineer & Release Manager** tiếp quản repository `event-ticketing-platform` để triển khai **Task T19 (Phase 8 — Kiểm Thử Hồi Quy Toàn Diện, Bảo Mật, Sửa Lỗi CI & Đóng Gói Phát Hành V2)** theo đúng Lộ trình Nâng cấp EventFlow V2.
 
 ---
 
-## 1. MỤC TIÊU CỦA TASK T18
+## 1. MỤC TIÊU CỦA TASK T19
 
-Hoàn thiện toàn diện diện mạo (UI), trải nghiệm người dùng (UX), tính nhất quán thương hiệu (Design Tokens) và kiểm thử thị giác trên đa độ phân giải (Visual QA) cho toàn bộ 4 vai trò của nền tảng EventFlow V2:
+Hoàn tất giai đoạn cuối cùng và đóng gói phát hành EventFlow V2:
 
-1. **Chuẩn Hóa Hệ Thống Design Tokens & Component Library (T18.1):**
-   - Thống nhất bảng màu thương hiệu theo tiêu chuẩn doanh nghiệp (Sao Kim Branding palette: Primary Indigo `#4338ca` / `#6366f1`, Accent Sky `#0284c7`, Emerald Success `#059669`, Amber Warning `#d97706`, Rose Danger `#e11d48`, Dark Slate `#0f172a`).
-   - Chuẩn hóa typography, hierarchy font chữ, spacing system (`4px`, `8px`, `12px`, `16px`, `24px`, `32px`), bo góc chuẩn (`border-radius: 8px, 12px, 16px, 20px`) và hiệu ứng đổ bóng `box-shadow` nhiều lớp.
-   - Thống nhất các trạng thái tương tác: `hover`, `active`, `focus-visible`, `disabled`, `loading` (spinner / skeleton loader).
+1. **Khắc Phục 100% Các Lỗi Đang Bị Đỏ Trên GitHub Actions CI (`.github/workflows/ci.yml`):**
+   - **Sửa lỗi Job `secrets` (Gitleaks):**
+     - Tạo file `.gitleaksignore` tại thư mục gốc repository để whitelist chuỗi mock JWT secret dev `"EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise"` (hoặc hash/path tương ứng) để Gitleaks không báo lỗi giả.
+   - **Sửa lỗi Job `backend` (Live UI & DOM Integration Tests):**
+     - Cập nhật các kịch bản kiểm thử tích hợp cũ trong `frontend/tests/live-ui.ts`, `frontend/tests/live-seats.ts`, `frontend/tests/live-payments.ts`, `frontend/tests/live-admin.ts`, `frontend/tests/live-recovery.ts` và `tools/contracts/verify-live.mjs`:
+     - Bổ sung header xác thực `Authorization: Bearer demo-customer-token` / `demo-admin-token` tương thích với cơ chế 4 vai trò của V2 để các request tạo sự kiện, đặt vé không bị chặn 401/403.
+     - Đảm bảo CI chạy trên GitHub Actions chuyển sang **MÀU XANH LÁ CÂY 100%**.
 
-2. **Hoàn Thiện Giao Diện Khám Phá & Đặt Vé Sự Kiện (T18.2):**
-   - Trang Chủ (`/`): Mega-menu điều hướng doanh nghiệp, hero banner tốc độ cao, danh mục nổi bật, đối tác doanh nghiệp, floating action dock.
-   - Trang Sự Kiện & Đặt Vé (`/events` & `/dat-ve`): Danh sách thẻ sự kiện hiện đại, bộ lọc danh mục/địa điểm linh hoạt, tìm kiếm từ khóa realtime.
-   - Sơ Đồ Ghế Trực Quan (Interactive Seat Map): Hiển thị sân khấu Stage 3D, phân khu ghế VIP/Standard, ghế đã bán/đang giữ/trống với màu sắc rõ nét, tooltip thông tin ghế và giá vé tức thì.
+2. **Chạy Toàn Bộ Bộ Kiểm Thử Hồi Quy (Full Regression Suite) (T19.1):**
+   - Backend Unit & Integration Tests: Kiểm tra toàn bộ 234+ tests (Zero Oversell, Outbox/Inbox Kafka, Token Family Session, RBAC 4 vai trò, Staff Check-in Concurrency, Admin Platform).
+   - Frontend Unit Tests: Kiểm tra 71+ tests (`src/app/*.test.ts`, `src/api/*.test.ts`).
+   - OpenAPI Contract Verification: Kiểm tra 69/69 cases hợp đồng OpenAPI 3.1.
+   - Concurrency & Load Verification: Kiểm tra khả năng chịu tải đồng thời trên PostgreSQL 17 thật.
 
-3. **Tối Ưu Trải Nghiệm Khách Hàng & Ví Vé E-Ticket (T18.3):**
-   - Luồng Đặt Vé & Thanh Toán (`/checkout`): Countdown giữ vé 10 phút rõ ràng, tóm tắt đơn hàng sắc nét, lựa chọn phương thức thanh toán VNPAY Sandbox hoặc Mô phỏng nội bộ.
-   - Trang Kết Quả Thanh Toán (`/payment-return`): Thông báo kết quả giao dịch thanh toán trực quan, hỗ trợ quay lại ví vé hoặc thử lại.
-   - Trang Ví Vé Của Tôi (`/ve-cua-toi` & `/my-bookings`): Hiển thị thẻ vé sang trọng, mã QR Vector SVG ký số sắc nét, nút In Vé Điện Tử (`window.print()`) định dạng A4/vé nhiệt chuẩn.
+3. **Kiểm Tra Bảo Mật Chuyên Sâu (Security Hardening) (T19.2):**
+   - Chống Privilege Escalation & Self-Lockout (Admin demote/lock self).
+   - Chống IDOR (Insecure Direct Object Reference) trên vé, đơn hàng, phạm vi sự kiện Staff (`assertStaffAccess`).
+   - Chống làm giả chữ ký số QR Code HMAC-SHA256 và chữ ký số VNPAY HMAC-SHA512.
+   - Chống tấn công tái sử dụng Token Family (Refresh Token Reuse Detection).
+   - Chống tấn công CSV Formula Injection trên xuất báo cáo doanh thu Excel.
+   - Rà soát bí mật (Secret Scanning): Cam kết không có credential, password, token hay private key nhạy cảm nào bị đưa vào Git repo.
 
-4. **Tối Ưu Dashboard Chuyên Biệt Cho 4 Vai Trò (T18.4):**
-   - **Customer Portal**: Quản lý hồ sơ, lịch sử mua vé, vé điện tử có QR code.
-   - **Staff Portal (`/staff`)**: Bàn làm việc soát vé công nghệ cao, khung quét laser động, phản hồi màu sắc tức thì (Xanh/Đỏ/Vàng), âm thanh Web Audio API, thống kê check-in thời gian thực.
-   - **Organizer Portal (`/organizer`)**: Quản lý hồ sơ ban tổ chức, danh sách sự kiện DRAFT/PUBLISHED/CLOSED, tạo/sửa sự kiện, thiết lập loại vé GA/ghế ngồi, phân công nhân sự soát vé.
-   - **Admin Portal (`/admin`)**: 5 Tab nghiệp vụ động (Sự kiện & Kho vé, Người dùng & Phân quyền đa vai trò, Đơn hàng & Duyệt hoàn tiền, Báo cáo doanh thu KPI kèm Xuất CSV an toàn, Khách hàng Doanh nghiệp / Leads).
+4. **Tập Dượt Migration & Toàn Vẹn Cơ Sở Dữ Liệu (T19.3):**
+   - Kiểm tra tính tương thích của chuỗi 15 Flyway migrations (`V1` -> `V15`).
+   - Xác nhận cấu trúc schema `ticketing` trên PostgreSQL 17 với đủ 35 bảng nghiệp vụ.
 
-5. **Kiểm Thử Thị Giác Đa Thiết Bị (Visual QA) (T18.5):**
-   - Sử dụng Playwright / Chrome DevTools tự động chụp ảnh màn hình bằng chứng (Screenshots) tại 3 độ phân giải tiêu chuẩn:
-     - **Desktop Wide (1440 × 900)**
-     - **Laptop Standard (1366 × 768)**
-     - **Mobile Viewport (390 × 844 - iPhone standard)**
-   - Lưu trữ các artifact ảnh chụp vào thư mục `brain` hoặc `docs/evidence/` để phục vụ nghiệm thu thị giác.
+5. **Đóng Gói Phát Hành & Báo Cáo Đồ Án V2 (T19.4 & T19.5):**
+   - Cập nhật tài liệu kỹ thuật: `ARCHITECTURE.md`, `DATA_MODEL.md`, `API_CONTRACT.md`, `README.md`.
+   - Đánh dấu hoàn thành toàn bộ mục T19.1 đến T19.5 trong `docs/TASKS.md` và `docs/PROGRESS.md`.
+   - Sẵn sàng gắn Git Tag `v2.0.0-release` để chính thức bàn giao dự án.
 
 ---
 
@@ -42,20 +45,8 @@ Hoàn thiện toàn diện diện mạo (UI), trải nghiệm người dùng (UX
 
 1. **Kiểm tra trạng thái Git:**
    - Chạy lệnh: `git status --short --branch`, `git rev-parse HEAD`.
-   - Tuyệt đối **KHÔNG commit**, **KHÔNG push Git** trừ khi có chỉ thị rõ ràng từ chủ dự án.
+   - Giữ working tree sạch sẽ, không tự ý commit/push trừ khi có lệnh từ chủ dự án.
 2. **Đọc tài liệu dự án:**
    - Đọc kỹ `AGENTS.md`, `docs/RULES.md`, `docs/HANDOFF.md`, `docs/TASKS.md`, `docs/PROGRESS.md`.
-3. **Bảo toàn tính toàn vẹn hệ thống:**
-   - Không được làm gãy vỡ bất kỳ test suite nào trong số 234 test backend, 71 test frontend và 69 test contracts.
-   - Bảo toàn 100% cơ chế khóa hàng nguyên tử `SELECT FOR UPDATE`, chống bán lố vé Zero Oversell, và mô hình token family của hệ thống xác thực.
-
----
-
-## 3. CHECKLIST KIỂM CHỨNG BẮT BUỘC HOÀN THÀNH
-
-- [ ] Toàn bộ 4 dashboard (Customer, Staff, Organizer, Admin) hiển thị đầy đủ, không vỡ layout trên cả 3 kích thước màn hình.
-- [ ] Chạy `npm.cmd test --prefix frontend` -> PASS 100%.
-- [ ] Chạy `npm.cmd run build --prefix frontend` -> `tsc --noEmit && vite build` SUCCESS.
-- [ ] Chạy `& ./backend/mvnw.cmd -f backend/pom.xml test` -> 234 tests PASS 100%.
-- [ ] Chạy `npm.cmd test --prefix tools/contracts` -> 69 cases PASS 100%.
-- [ ] Cập nhật kết quả vào `docs/TASKS.md` và `docs/PROGRESS.md`.
+3. **Bảo toàn bất biến cốt lõi:**
+   - Giữ nguyên cam kết 0% bán lố vé (Zero Oversell Invariant), Transactional Outbox, và PostgreSQL ACID locks.

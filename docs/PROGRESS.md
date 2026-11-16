@@ -4,29 +4,71 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phase 6 — Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Task T17) (2026-11-16)
-- **Tiến độ:** Hoàn tất toàn diện Task T17: Xây dựng trọn vẹn phân hệ làm việc dành riêng cho Quản trị viên (ADMIN) và Vận hành nền tảng:
-  - Schema Migration V15 (`V15__admin_leads_and_notifications.sql`):
-    - Cập nhật `ticketing.contact_leads`: bổ sung `status` (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`), `notes`, `updated_at`.
-    - Tạo mới bảng `ticketing.email_notifications`: lưu vết nhật ký gửi email biên nhận vé điện tử, hóa đơn VAT.
-    - Tạo mới bảng `ticketing.audit_logs`: lưu vết kiểm toán các thao tác nhạy cảm của Admin (cấp quyền, tước quyền, khóa tài khoản, xử lý hoàn tiền, cập nhật leads).
-    - Thêm cột `status` (`ACTIVE`, `LOCKED`) cho bảng `ticketing.users`.
-    - PostgreSQL 17 schema `ticketing` hiện có đúng **35 bảng nghiệp vụ**.
-  - Backend Admin Services & Controllers:
-    - `AdminUserController`: Nâng cấp quản trị người dùng, phân trang/tìm kiếm/lọc vai trò; cấp/thu hồi vai trò chống Privilege Escalation và chống tự hạ quyền chính mình (`CANNOT_DEMOTE_SELF`); khóa/mở khóa tài khoản chống tự khóa chính mình (`CANNOT_LOCK_SELF`); tự động ghi nhật ký `audit_logs`.
-    - `AdminRefundService` & `AdminPlatformController`: Quản lý yêu cầu hoàn tiền (`/api/admin/refunds`), phê duyệt hoàn tiền (`APPROVE` -> `COMPLETED`) hoặc từ chối (`REJECT` -> `FAILED`), tự động ghi nhận vào `email_notifications` và `audit_logs`.
-    - `AdminReportService`: Thống kê tổng hợp toàn sàn (`PlatformSummaryDto`), báo cáo doanh thu theo sự kiện (`EventReportDto`), kết xuất file CSV có UTF-8 BOM chuẩn RFC 4180 và tự động escape Anti-CSV Formula Injection (`sanitizeCsvField`).
-    - `ContactLeadController` & `AdminLeadController`: Tiếp nhận leads doanh nghiệp public (`/api/contact/leads`), quản lý phân trang và cập nhật trạng thái leads (`/api/admin/leads`).
-  - Frontend Admin Dashboard (`AdminDashboard.ts`):
-    - Mở rộng giao diện điều khiển với 5 tab động: Sự kiện, Người dùng & Phân quyền, Đơn hàng & Duyệt hoàn tiền, Báo cáo & Xuất CSV an toàn, Khách hàng Doanh nghiệp / Leads (cùng 2 tab khôi phục kỹ thuật Outbox và Recovery).
-    - Bộ UI Kit thao tác tức thì: gán vai trò nhanh, khóa/mở khóa, duyệt hoàn tiền, dropdown đổi trạng thái lead, 5 thẻ chỉ số KPI và nút tải CSV an toàn.
-- **Task vừa hoàn tất:** `T17 — Phân Hệ Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Done, 2026-11-16)`
+- **Giai đoạn:** Phase 7 — Hoàn Thiện Giao Diện Sản Phẩm, Design Tokens & Visual QA (Task T18) (2026-11-17)
+- **Tiến độ:** Hoàn tất toàn diện Task T18: Nâng cấp và đồng bộ hóa toàn bộ hệ thống giao diện UI/UX thương mại chuẩn Sao Kim Branding, hệ thống Design Tokens, tối ưu 4 Dashboard cho cả 4 vai trò và hoàn thành bộ kiểm thử thị giác Visual QA tự động:
+  - Chuẩn hóa hệ thống Design Tokens (`styles.css`): Bảng màu thương hiệu Sao Kim Branding (`#4338ca`/`#6366f1` Indigo, `#0284c7` Sky, `#059669` Emerald, `#d97706` Amber, `#e11d48` Rose, `#0f172a` Slate), spacing 4/8/12/16/24/32px, bo góc 8/12/16/20px, bóng đổ đa lớp, utilities skeleton loader và spinner loader.
+  - Tối ưu trải nghiệm đặt vé & sơ đồ ghế: Khám phá sự kiện theo danh mục GA / Seated, tìm kiếm realtime, sân khấu Stage 3D trực quan, chú thích màu sắc trạng thái ghế rõ nét.
+  - Tối ưu luồng thương mại & E-Ticket: Countdown giữ vé 10 phút, tích hợp cổng VNPAY Sandbox song song mô phỏng 3 kịch bản, trang trả về thanh toán `/payment-return`, ví vé `/ve-cua-toi` dạng Boarding Pass cao cấp với mã QR SVG ký số HMAC-SHA256 và chế độ In Vé Điện Tử (@media print) bảo mật.
+  - Tối ưu 4 Dashboard vai trò: Customer Portal (Ví vé cá nhân), Staff Portal (`/staff` quét laser động & âm thanh Web Audio API), Organizer Portal (`/organizer` quản lý sự kiện & nhân sự), Admin Portal (`/admin` 5 tab quản trị toàn diện).
+  - Tự động hóa Visual QA: Chụp 30 ảnh màn hình bằng chứng qua Chrome headless trên 3 độ phân giải tiêu chuẩn (Desktop Wide 1440×900, Laptop Standard 1366×768, Mobile Viewport 390×844) cho toàn bộ 10 phân hệ và 4 dashboard. Lưu bằng chứng tại `docs/evidence/visual-qa/` và xuất báo cáo `visual-qa-report-t18.md`.
+- **Task vừa hoàn tất:** `T18 — Hoàn Thiện Giao Diện Sản Phẩm, Design Tokens & Visual QA (Done, 2026-11-17)`
 - **Kết quả kiểm chứng:**
-  - Database: Flyway Migration `V15__admin_leads_and_notifications.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có đúng **35 bảng nghiệp vụ**.
-  - Backend: 18 tests T17 mới PASS 100% (`AdminRefundServiceTest`, `AdminReportServiceTest`, `ContactLeadControllerTest`, `AdminUserControllerTest`, `V15MigrationVerificationTest`). Toàn bộ Maven test suite PASS **234/234 tests** (0 errors, 0 failures, 121 skipped an toàn).
-  - Frontend: **71/71 tests PASS** (bổ sung 4 unit tests mới cho `AdminDashboard.test.ts`), `npm run build` thành công trong 281ms.
-  - Contracts: `tools/contracts` PASS 69/69 ca kiểm thử OpenAPI 3.1.
-- **Giới hạn & Cam kết:** Toàn bộ mã nguồn và migrations được giữ nguyên trong working tree, không commit, không push Git; bảo toàn 100% các bất biến booking/inventory/outbox/mock token.
+  - Backend: **234/234 tests PASS 100%** (0 errors, 0 failures, 121 skipped an toàn).
+  - Frontend: **71/71 tests PASS 100%** (4 test suites, 71 cases).
+  - Production Build: `tsc --noEmit && vite build` **SUCCESS** (147ms).
+  - Contracts: `tools/contracts` **PASS 69/69 ca kiểm thử** OpenAPI 3.1.
+  - Visual QA: **30/30 screenshots captured & verified**, không vỡ layout trên cả 3 độ phân giải.
+- **Giới hạn & Cam kết:** Toàn bộ mã nguồn, tài liệu và ảnh bằng chứng được giữ nguyên trong working tree, không commit, không push Git; bảo toàn 100% các bất biến booking/inventory/outbox/mock token.
+
+## T18 — Hoàn Thiện Giao Diện Sản Phẩm, Design Tokens & Visual QA (Done, 2026-11-17)
+
+**Phạm vi và đầu vào:** Hoàn thiện toàn diện diện mạo (UI), trải nghiệm người dùng (UX), tính nhất quán thương hiệu (Design Tokens) và kiểm thử thị giác trên đa độ phân giải (Visual QA) cho toàn bộ 4 vai trò của nền tảng EventFlow V2.
+
+**Các hạng mục đã hoàn thành:**
+1. **Chuẩn Hóa Hệ Thống Design Tokens & Component Library (`frontend/src/styles.css`)**:
+   - Khai báo hệ thống biến CSS Design Tokens chuẩn Sao Kim Branding:
+     - Primary Indigo: `#4338ca` / `#6366f1`, soft: `#eef2ff`
+     - Accent Sky: `#0284c7`, light: `#38bdf8`, soft: `#f0f9ff`
+     - Emerald Success: `#059669`, soft: `#ecfdf5`
+     - Amber Warning: `#d97706`, soft: `#fffbeb`
+     - Rose Danger: `#e11d48`, soft: `#fff1f2`
+     - Dark Slate: `#0f172a`, light: `#1e293b`
+   - Spacing system: `--ef-space-1: 4px`, `--ef-space-2: 8px`, `--ef-space-3: 12px`, `--ef-space-4: 16px`, `--ef-space-6: 24px`, `--ef-space-8: 32px`.
+   - Radius system: `--ef-radius-sm: 8px`, `--ef-radius-md: 12px`, `--ef-radius-lg: 16px`, `--ef-radius-xl: 20px`, `--ef-radius-full: 9999px`.
+   - Shadow system: `--ef-shadow-sm`, `--ef-shadow-md`, `--ef-shadow-lg`, `--ef-shadow-xl`, `--ef-shadow-glow`.
+   - Component utilities: `.skeleton-pulse`, `.skeleton-box`, `.skeleton-text`, `.ef-spinner`, `.ef-spinner-primary`.
+   - Print stylesheet: Tối ưu `@media print` cho vé điện tử, tự động ẩn thanh điều hướng, footer và dock liên hệ để tạo bản in sạch sẽ.
+
+2. **Hoàn Thiện Giao Diện Khám Phá & Sơ Đồ Ghế Ngồi (`App.ts`)**:
+   - Trang Chủ: Mega-menu đa cấp điều hướng doanh nghiệp (Vận hành & Bán vé, Công nghệ & Bảo mật), đối tác doanh nghiệp, trust bar (100.000+ vé, 0% oversell, 99.99% availability, < 50ms latency), floating quick action dock (Hotline, Email, Zalo 24/7).
+   - Trang Sự Kiện & Đặt Vé: Bộ lọc danh mục (Tất cả, Vé GA, Ghế chỉ định), ô tìm kiếm realtime, thẻ sự kiện gắn poster và nhãn giá từ.
+   - Sơ Đồ Ghế Trực Quan: Sân khấu Stage 3D vòng cung, chú thích 4 trạng thái màu sắc (Trống, Đang chọn, Đang giữ, Đã bán), lưới ghế responsive co giãn thông minh, đếm số lượng ghế đã chọn với giới hạn 6 ghế/booking.
+
+3. **Tối Ưu Trải Nghiệm Khách Hàng & Vé Điện Tử (`Checkout.ts`, `MyBookingsPage.ts`)**:
+   - Luồng Đặt Vé & Thanh Toán: Countdown đếm ngược giữ vé, cổng thanh toán VNPAY Sandbox (ATM / QR Code) song song bộ nút mô phỏng 3 kịch bản kiểm thử.
+   - Trang Kết Quả Thanh Toán (`/payment-return`): Tiếp nhận mã phản hồi và trạng thái thanh toán từ VNPAY, hiển thị số tiền và nút quay lại ví vé.
+   - Trang Ví Vé Của Tôi (`/ve-cua-toi`): Thẻ vé Boarding Pass sang trọng với 2 vết cắt vé nghệ thuật, mã QR Vector SVG ký số HMAC-SHA256 từ backend, nút In Vé Điện Tử kích hoạt hộp thoại in trình duyệt chuẩn A4.
+
+4. **Tối Ưu Dashboard Chuyên Biệt Cho Cả 4 Vai Trò**:
+   - **Customer Portal**: Quản lý vé điện tử, lọc theo trạng thái (Tất cả, Đã xác nhận, Chờ thanh toán, Đã hủy).
+   - **Staff Portal (`/staff`)**: Bàn làm việc soát vé công nghệ cao với khung laser động, ô nhập mã vé thủ công tự focus, phản hồi thị giác 3 màu (Xanh/Đỏ/Vàng), hiệu ứng âm thanh Web Audio API (chime / buzzer), tiến độ check-in realtime và bảng nhật ký 50 lượt khách gần nhất.
+   - **Organizer Portal (`/organizer`)**: Quản lý hồ sơ đối tác, danh sách sự kiện với thống kê vé bán, form tạo/sửa sự kiện, chọn địa điểm chuẩn quốc gia (Venues), cấu hình loại vé GA/Seated, phân công nhân viên soát vé.
+   - **Admin Portal (`/admin`)**: 5 Tab nghiệp vụ động (Sự kiện & Kho vé, Người dùng & Phân quyền đa vai trò, Đơn hàng & Duyệt hoàn tiền, Báo cáo doanh thu KPI kèm Xuất CSV an toàn, Khách hàng Doanh nghiệp / Leads).
+
+5. **Kiểm Thử Thị Giác Đa Thiết Bị (Visual QA) (T18.5)**:
+   - Viết script tự động hóa `tools/capture-visual-qa-t18.ps1` sử dụng Chrome headless chụp toàn bộ màn hình thực tế từ Vite dev server & Spring Boot API đang chạy live:
+     - **Desktop Wide (1440 × 900)**: 10 screenshots
+     - **Laptop Standard (1366 × 768)**: 10 screenshots
+     - **Mobile Viewport (390 × 844 iPhone)**: 10 screenshots
+   - Tổng cộng **30/30 screenshots** chất lượng cao được lưu trữ tại `docs/evidence/visual-qa/` và đồng bộ vào thư mục artifacts `brain`.
+   - Xuất báo cáo nghiệm thu thị giác `visual-qa-report-t18.md` với carousel so sánh trực quan.
+
+6. **Kết Quả Kiểm Thử Kỹ Thuật Toàn Diện**:
+   - Backend test suite: **234/234 tests PASS 100%**.
+   - Frontend test suite: **71/71 tests PASS 100%**.
+   - Production Build: `tsc --noEmit && vite build` **SUCCESS** (147ms).
+   - OpenAPI Contract verification: **69/69 cases PASS**.
+   - Git: Không commit, không push Git (tuân thủ nghiêm ngặt chỉ thị).
 
 ## T17 — Phân Hệ Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Done, 2026-11-16)
 
