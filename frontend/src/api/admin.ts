@@ -23,6 +23,8 @@ export type AdminUser={
   email:string;
   phone?:string;
   role:string;
+  roles?:string[];
+  status?:'ACTIVE'|'LOCKED';
   createdAt:string;
 };
 
@@ -32,17 +34,65 @@ export type ContactLeadItem={
   email:string;
   phone:string;
   companyName:string;
-  eventScale:string;
+  eventScale?:string;
   message:string;
+  status?:'NEW'|'CONTACTED'|'CONVERTED'|'CLOSED';
+  notes?:string;
   createdAt:string;
+  updatedAt?:string;
+};
+
+export type AdminRefundItem={
+  id:string;
+  bookingId:string;
+  eventTitle:string;
+  customerName:string;
+  customerEmail:string;
+  amountVnd:number;
+  reason?:string;
+  status:'REQUESTED'|'PROCESSING'|'COMPLETED'|'FAILED';
+  createdAt:string;
+  settledAt?:string;
+};
+
+export type PlatformSummary={
+  totalRevenueVnd:number;
+  totalTicketsSold:number;
+  totalConfirmedBookings:number;
+  totalCheckIns:number;
+  averageOccupancyPercent:number;
+};
+
+export type EventReport={
+  eventId:string;
+  title:string;
+  venue:string;
+  startsAt:string|null;
+  status:string;
+  totalCapacity:number;
+  soldGa:number;
+  soldSeated:number;
+  totalSold:number;
+  revenueVnd:number;
+  occupancyPercent:number;
 };
 
 export interface AdminApi{
   events(page:number,size:number):Promise<Page<AdminEvent>>;inventory(id:string):Promise<AdminInventory>;
   create(body:CreateEvent):Promise<AdminEvent>;patch(id:string,body:PatchEvent):Promise<AdminEvent>;
   bookings(page:number,size:number,status?:Status):Promise<Page<Booking>>;booking(id:string):Promise<Booking>;
-  users?(page:number,size:number,search?:string):Promise<Page<AdminUser>>;
-  leads?(page:number,size:number):Promise<Page<ContactLeadItem>>;
+  users?(page:number,size:number,search?:string,role?:string):Promise<Page<AdminUser>>;
+  updateUserRole?(userId:string,role:string,action:'GRANT'|'REVOKE'):Promise<{id:string;roles:string[]}>;
+  updateUserStatus?(userId:string,status:'ACTIVE'|'LOCKED'):Promise<{id:string;status:string}>;
+  refunds?(status?:string):Promise<AdminRefundItem[]>;
+  processRefund?(refundId:string,decision:'APPROVE'|'REJECT',notes?:string):Promise<{refundId:string;status:string;message:string}>;
+  reports?:{
+    summary():Promise<PlatformSummary>;
+    events():Promise<EventReport[]>;
+    exportCsvUrl():string;
+  };
+  leads?(page:number,size:number,status?:string):Promise<Page<ContactLeadItem>>;
+  updateLeadStatus?(leadId:string,status:'NEW'|'CONTACTED'|'CONVERTED'|'CLOSED',notes?:string):Promise<ContactLeadItem>;
   outbox(page:number,size:number):Promise<Page<Outbox>>;
   recovery(page:number,size:number,status:RecoveryFilter):Promise<Page<RecoveryItem>>;
   recoveryEvent(id:string):Promise<RecoveryEvent>;
@@ -58,8 +108,18 @@ export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch
     patch:(id,body)=>call('/api/admin/events/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),
     bookings:(page,size,status)=>call('/api/admin/bookings?'+new URLSearchParams({page:String(page),size:String(size),...(status?{status}:{})})),
     booking:id=>call('/api/bookings/'+encodeURIComponent(id)),
-    users:(page,size,search)=>call('/api/admin/users?'+new URLSearchParams({page:String(page),size:String(size),...(search?{search}:{})})),
-    leads:(page,size)=>call('/api/admin/leads?'+new URLSearchParams({page:String(page),size:String(size)})),
+    users:(page,size,search,role)=>call('/api/admin/users?'+new URLSearchParams({page:String(page),size:String(size),...(search?{search}:{}),...(role?{role}:{})})),
+    updateUserRole:(userId,role,action)=>call('/api/admin/users/'+encodeURIComponent(userId)+'/roles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role,action})}),
+    updateUserStatus:(userId,status)=>call('/api/admin/users/'+encodeURIComponent(userId)+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}),
+    refunds:(status)=>call('/api/admin/refunds'+(status?'?status='+encodeURIComponent(status):'')),
+    processRefund:(refundId,decision,notes)=>call('/api/admin/refunds/'+encodeURIComponent(refundId)+'/process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision,notes})}),
+    reports:{
+      summary:()=>call('/api/admin/reports/summary'),
+      events:()=>call('/api/admin/reports/events'),
+      exportCsvUrl:()=>base+'/api/admin/reports/export-csv'
+    },
+    leads:(page,size,status)=>call('/api/admin/leads?'+new URLSearchParams({page:String(page),size:String(size),...(status&&status!=='ALL'?{status}:{})})),
+    updateLeadStatus:(leadId,status,notes)=>call('/api/admin/leads/'+encodeURIComponent(leadId)+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,notes})}),
     outbox:(page,size)=>call('/api/admin/operations/outbox?'+new URLSearchParams({page:String(page),size:String(size)})),
     recovery:(page,size,status)=>call('/api/admin/operations/recovery?'+new URLSearchParams({page:String(page),size:String(size),status})),
     recoveryEvent:id=>call('/api/admin/operations/events/'+encodeURIComponent(id)),

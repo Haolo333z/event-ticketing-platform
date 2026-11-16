@@ -4,19 +4,103 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phase 5 — Soát Vé Check-in & Vận Hành Sự Kiện (Staff Portal & Atomic Check-in) (Task T16) (2026-11-16)
-- **Tiến độ:** Hoàn tất toàn diện Task T16: Xây dựng trọn vẹn phân hệ làm việc và kiểm soát soát vé dành riêng cho Nhân viên sự kiện (STAFF) và Quản trị viên (ADMIN), bao gồm:
-  - Bảng `ticketing.ticket_check_ins` với ràng buộc duy nhất `CONSTRAINT uq_ticket_checked_in UNIQUE (ticket_id)` đảm bảo 100% chống quét trùng lặp vé (Anti Double Check-in).
-  - Backend Check-in Engine: Xác thực chữ ký số QR Token HMAC-SHA256 hoặc mã vé thủ công, xác thực phân công nhân sự (Event Scope Access Control chống IDOR), kiểm tra tính hợp lệ của vé và đơn hàng `CONFIRMED`, giao dịch nguyên tử chèn check-in.
-  - Bộ kiểm thử tải đồng thời (Concurrency Test): 10 luồng quét đồng thời cùng 1 vé trên PostgreSQL 17 thật -> đúng 1 luồng thành công (200 OK `CHECKED_IN`), 9 luồng còn lại nhận 409 Conflict (`TICKET_ALREADY_USED`) kèm thời gian và cổng quét lần đầu.
-  - Giao diện Cổng Vận Hành Soát Vé (`/staff` — `StaffCheckInPage.ts`): Bảng điều khiển công nghệ cao với khung quét laser động, ô nhập mã vé thủ công, phản hồi thị giác tức thì (Màn hình Xanh - Hợp Lệ, Màn hình Đỏ - Cảnh Báo Quét Trùng, Màn hình Vàng - Không Hợp Lệ), hiệu ứng âm thanh Web Audio API (chime / buzzer), thanh thống kê tỷ lệ check-in realtime và bảng nhật ký kiểm toán soát vé 50 lượt gần nhất.
-- **Task vừa hoàn tất:** `T16 — Phân Hệ Soát Vé Check-in & Vận Hành Sự Kiện Dành Cho Staff (Staff Portal & Atomic Check-in) (Done, 2026-11-16)`
+- **Giai đoạn:** Phase 6 — Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Task T17) (2026-11-16)
+- **Tiến độ:** Hoàn tất toàn diện Task T17: Xây dựng trọn vẹn phân hệ làm việc dành riêng cho Quản trị viên (ADMIN) và Vận hành nền tảng:
+  - Schema Migration V15 (`V15__admin_leads_and_notifications.sql`):
+    - Cập nhật `ticketing.contact_leads`: bổ sung `status` (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`), `notes`, `updated_at`.
+    - Tạo mới bảng `ticketing.email_notifications`: lưu vết nhật ký gửi email biên nhận vé điện tử, hóa đơn VAT.
+    - Tạo mới bảng `ticketing.audit_logs`: lưu vết kiểm toán các thao tác nhạy cảm của Admin (cấp quyền, tước quyền, khóa tài khoản, xử lý hoàn tiền, cập nhật leads).
+    - Thêm cột `status` (`ACTIVE`, `LOCKED`) cho bảng `ticketing.users`.
+    - PostgreSQL 17 schema `ticketing` hiện có đúng **35 bảng nghiệp vụ**.
+  - Backend Admin Services & Controllers:
+    - `AdminUserController`: Nâng cấp quản trị người dùng, phân trang/tìm kiếm/lọc vai trò; cấp/thu hồi vai trò chống Privilege Escalation và chống tự hạ quyền chính mình (`CANNOT_DEMOTE_SELF`); khóa/mở khóa tài khoản chống tự khóa chính mình (`CANNOT_LOCK_SELF`); tự động ghi nhật ký `audit_logs`.
+    - `AdminRefundService` & `AdminPlatformController`: Quản lý yêu cầu hoàn tiền (`/api/admin/refunds`), phê duyệt hoàn tiền (`APPROVE` -> `COMPLETED`) hoặc từ chối (`REJECT` -> `FAILED`), tự động ghi nhận vào `email_notifications` và `audit_logs`.
+    - `AdminReportService`: Thống kê tổng hợp toàn sàn (`PlatformSummaryDto`), báo cáo doanh thu theo sự kiện (`EventReportDto`), kết xuất file CSV có UTF-8 BOM chuẩn RFC 4180 và tự động escape Anti-CSV Formula Injection (`sanitizeCsvField`).
+    - `ContactLeadController` & `AdminLeadController`: Tiếp nhận leads doanh nghiệp public (`/api/contact/leads`), quản lý phân trang và cập nhật trạng thái leads (`/api/admin/leads`).
+  - Frontend Admin Dashboard (`AdminDashboard.ts`):
+    - Mở rộng giao diện điều khiển với 5 tab động: Sự kiện, Người dùng & Phân quyền, Đơn hàng & Duyệt hoàn tiền, Báo cáo & Xuất CSV an toàn, Khách hàng Doanh nghiệp / Leads (cùng 2 tab khôi phục kỹ thuật Outbox và Recovery).
+    - Bộ UI Kit thao tác tức thì: gán vai trò nhanh, khóa/mở khóa, duyệt hoàn tiền, dropdown đổi trạng thái lead, 5 thẻ chỉ số KPI và nút tải CSV an toàn.
+- **Task vừa hoàn tất:** `T17 — Phân Hệ Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Done, 2026-11-16)`
 - **Kết quả kiểm chứng:**
-  - Database: Flyway Migration `V14__ticket_check_ins.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có đúng **33 bảng nghiệp vụ**.
-  - Backend: 24 tests check-in mới PASS 100% (`StaffCheckInConcurrencyIntegrationTest`, `StaffCheckInControllerTest`, `StaffCheckInServiceTest`, `StaffScopeSecurityTest`, `V14MigrationVerificationTest`). Toàn bộ Maven test suite PASS **217/217 tests** (0 errors, 0 failures, 121 skipped an toàn).
-  - Frontend: **67/67 tests PASS** (bổ sung test suite `StaffCheckInPage.test.ts`), `npm run build` thành công trong 232ms.
+  - Database: Flyway Migration `V15__admin_leads_and_notifications.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có đúng **35 bảng nghiệp vụ**.
+  - Backend: 18 tests T17 mới PASS 100% (`AdminRefundServiceTest`, `AdminReportServiceTest`, `ContactLeadControllerTest`, `AdminUserControllerTest`, `V15MigrationVerificationTest`). Toàn bộ Maven test suite PASS **234/234 tests** (0 errors, 0 failures, 121 skipped an toàn).
+  - Frontend: **71/71 tests PASS** (bổ sung 4 unit tests mới cho `AdminDashboard.test.ts`), `npm run build` thành công trong 281ms.
   - Contracts: `tools/contracts` PASS 69/69 ca kiểm thử OpenAPI 3.1.
 - **Giới hạn & Cam kết:** Toàn bộ mã nguồn và migrations được giữ nguyên trong working tree, không commit, không push Git; bảo toàn 100% các bất biến booking/inventory/outbox/mock token.
+
+## T17 — Phân Hệ Quản Trị Hệ Thống Toàn Nền Tảng, Báo Cáo Doanh Thu & Tiếp Nhận Leads (Admin Portal & Platform Management) (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Triển khai phân hệ nghiệp vụ quản trị hệ thống toàn nền tảng dành cho Quản trị viên (`ADMIN`), bao gồm quản trị người dùng và phân quyền đa vai trò (RBAC), quản lý yêu cầu hoàn tiền và phê duyệt giao dịch, tổng hợp báo cáo tài chính toàn sàn kèm xuất file CSV chống tấn công Formula Injection, hệ thống nhật ký email outbox và tiếp nhận quản lý khách hàng doanh nghiệp (Leads).
+
+**Các hạng mục đã hoàn thành:**
+1. **Schema Migration V15 Additive (`V15__admin_leads_and_notifications.sql`)**:
+   - Cập nhật bảng `ticketing.contact_leads`: bổ sung cột `status` VARCHAR(32) DEFAULT 'NEW' (ràng buộc CHECK: `NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`), cột `notes` TEXT, và `updated_at` TIMESTAMPTZ DEFAULT clock_timestamp().
+   - Tạo mới bảng `ticketing.email_notifications`:
+     - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+     - `booking_id UUID REFERENCES ticketing.bookings(id) ON DELETE SET NULL`
+     - `recipient_email VARCHAR(255) NOT NULL`
+     - `subject VARCHAR(255) NOT NULL`
+     - `template_type VARCHAR(64) NOT NULL`
+     - `payload_json JSONB NOT NULL DEFAULT '{}'::jsonb`
+     - `status VARCHAR(32) NOT NULL DEFAULT 'SENT'` (CHECK: `PENDING`, `SENT`, `FAILED`)
+     - `sent_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()`
+   - Tạo mới bảng `ticketing.audit_logs`:
+     - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+     - `actor_id UUID NOT NULL REFERENCES ticketing.users(id) ON DELETE RESTRICT`
+     - `actor_role VARCHAR(32) NOT NULL`
+     - `action VARCHAR(64) NOT NULL`
+     - `target_type VARCHAR(64) NOT NULL`
+     - `target_id VARCHAR(128) NOT NULL`
+     - `payload_diff JSONB`
+     - `ip_address VARCHAR(45)`
+     - `created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()`
+   - Bổ sung cột `status` VARCHAR(32) DEFAULT 'ACTIVE' (CHECK: `ACTIVE`, `LOCKED`) cho bảng `ticketing.users`.
+   - Migration áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`), Flyway ghi nhận version 15 (SUCCESS). Schema `ticketing` hiện có đúng **35 bảng nghiệp vụ**.
+
+2. **Quản Trị Người Dùng & Phân Quyền (User Management & RBAC Admin)**:
+   - `AdminUserController`:
+     - `GET /api/admin/users`: phân trang (`page`, `size`), tìm kiếm theo từ khóa (`search`: họ tên, email, phone), lọc theo vai trò (`role`: `CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`). Trả về danh sách người dùng kèm mảng các vai trò `roles: [...]` và trạng thái `status`.
+     - `POST /api/admin/users/{id}/roles`: cấp (`GRANT`) hoặc thu hồi (`REVOKE`) vai trò trong bảng `ticketing.user_roles`. Chống Privilege Escalation & Self-Lockout: Admin tự thu hồi quyền `ADMIN` của chính mình bị chặn với HTTP 400 Bad Request `CANNOT_DEMOTE_SELF`. Caller không phải Admin bị chặn HTTP 403 Forbidden. Mọi thay đổi đều được ghi nhật ký vào `ticketing.audit_logs`.
+     - `PUT /api/admin/users/{id}/status`: khóa hoặc kích hoạt lại tài khoản (`ACTIVE`, `LOCKED`). Chặn Admin tự khóa tài khoản của chính mình với HTTP 400 Bad Request `CANNOT_LOCK_SELF`. Tự động ghi nhật ký vào `ticketing.audit_logs`.
+
+3. **Quản Lý Đơn Hàng & Duyệt Hoàn Tiền (Orders & Refund Management)**:
+   - `AdminRefundService` & `AdminPlatformController`:
+     - `GET /api/admin/refunds`: liệt kê danh sách yêu cầu hoàn tiền từ bảng `ticketing.refund_attempts`, liên kết thông tin sự kiện, tên khách hàng và số tiền (VNĐ).
+     - `POST /api/admin/refunds/{id}/process`: xử lý phê duyệt hoàn tiền (`APPROVE` -> cập nhật `COMPLETED`) hoặc từ chối hoàn tiền (`REJECT` -> cập nhật `FAILED`). Cập nhật `settled_at`, ghi log gửi thông báo vào `ticketing.email_notifications` và ghi nhật ký kiểm toán vào `ticketing.audit_logs`. Kiểm tra tính toàn vẹn: yêu cầu đã xử lý trước đó bị từ chối xử lý lại với HTTP 400 `ALREADY_COMPLETED`.
+
+4. **Báo Cáo Doanh Thu, Tỷ Lệ Lấp Đầy & Xuất Dữ Liệu CSV An Toàn (Safe CSV Export)**:
+   - `AdminReportService` & `AdminPlatformController`:
+     - `GET /api/admin/reports/summary`: tổng hợp 5 chỉ số tài chính toàn sàn: Tổng doanh thu (VNĐ), Tổng vé đã bán, Tổng đơn hàng thành công, Tổng lượt check-in soát vé, Tỷ lệ lấp đầy bình quân (%).
+     - `GET /api/admin/reports/events`: phân tích chi tiết từng sự kiện: sức chứa tổng, vé GA bán, vé Ghế bán, tổng vé bán, doanh thu (VNĐ), tỷ lệ lấp đầy (%).
+     - `GET /api/admin/reports/export-csv`: xuất file CSV `eventflow-revenue-report.csv` chuẩn RFC 4180 với UTF-8 BOM (`\uFEFF`) tương thích 100% với Microsoft Excel tiếng Việt.
+     - **Cơ chế Bảo mật Anti-CSV Formula Injection**: hàm `sanitizeCsvField` kiểm tra các tiền tố nguy hiểm (`=`, `+`, `-`, `@`, `\t`, `\r` hoặc chuỗi có khoảng trắng bắt đầu bằng các ký tự này) và tự động escape bằng tiền tố dấu nháy đơn `'` (ví dụ `="'=SUM(A1:A10)"`), ngăn chặn hoàn toàn tấn công Dynamic Data Exchange (DDE) và Macro Injection khi mở file bằng Excel / Calc.
+
+5. **Tiếp Nhận & Quản Lý Khách Hàng Doanh Nghiệp (Enterprise Leads)**:
+   - `ContactLeadController` (`POST /api/contact/leads`): public endpoint cho phép khách hàng doanh nghiệp gửi thông tin liên hệ và yêu cầu tư vấn, tự động lưu vào `ticketing.contact_leads` với trạng thái mặc định `NEW`.
+   - `AdminLeadController`:
+     - `GET /api/admin/leads`: phân trang và lọc theo trạng thái (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`).
+     - `PUT /api/admin/leads/{id}/status`: cập nhật trạng thái xử lý và ghi chú `notes`, tự động ghi nhật ký kiểm toán vào `ticketing.audit_logs`.
+
+6. **Giao Diện Admin Portal Toàn Diện (`AdminDashboard.ts`)**:
+   - Mở rộng thanh điều hướng với 5 tab nghiệp vụ động + 2 tab kỹ thuật:
+     1. 🎪 **Sự Kiện**: Danh sách sự kiện, trạng thái DRAFT/PUBLISHED/CLOSED, chỉnh sửa và tạo sự kiện mới.
+     2. 👥 **Người Dùng & Phân Quyền**: Tìm kiếm họ tên/email/phone, lọc vai trò, bảng người dùng với thẻ vai trò đa sắc, các nút cấp/thu hồi vai trò nhanh (`+ STAFF`, `+ ORGANIZER`, `+ ADMIN`, `- STAFF`), nút Khóa/Mở khóa tài khoản tức thì.
+     3. 💳 **Booking & Hoàn Tiền**: Quản lý danh sách booking theo trạng thái, bảng danh sách yêu cầu hoàn tiền kèm nút "Duyệt hoàn tiền" và "Từ chối" với phản hồi tức thì.
+     4. 📊 **Báo Cáo**: 5 thẻ chỉ số tài chính KPI toàn sàn, banner xuất báo cáo kèm nút tải "📥 Xuất Báo Cáo CSV (Excel-Safe)", bảng chi tiết doanh thu và tỷ lệ lấp đầy theo từng sự kiện.
+     5. 💼 **Yêu Cầu Doanh Nghiệp (Leads)**: Bảng tiếp nhận thông tin khách hàng doanh nghiệp, nhãn trạng thái trực quan, dropdown chuyển đổi trạng thái (`NEW`, `CONTACTED`, `CONVERTED`, `CLOSED`) và ghi chú tư vấn.
+     6. ⚙️ **Tồn Kho, Outbox & Khôi Phục**: Bảo toàn nguyên vẹn tính năng kiểm tra tồn kho GA/Seated và công cụ kiểm toán/replay sự kiện Outbox/Kafka.
+
+7. **Kết Quả Kiểm Thử Toàn Diện**:
+   - `AdminRefundServiceTest`: 4/4 tests PASS (Kiểm tra phê duyệt hoàn tiền, từ chối, ghi email notification & audit log, chặn xử lý lại đơn đã hoàn tất).
+   - `AdminReportServiceTest`: 3/3 tests PASS (Kiểm tra tính toán KPI tổng sàn, kiểm tra logic chống CSV Formula Injection với các payload `=, +, -, @, \t, \r`, kiểm tra định dạng UTF-8 BOM và headers).
+   - `ContactLeadControllerTest`: 4/4 tests PASS (Kiểm tra submit lead public, validation lỗi thiếu trường, truy vấn danh sách leads admin, cập nhật trạng thái lead và ghi audit log).
+   - `AdminUserControllerTest`: 6/6 tests PASS (Kiểm tra tìm kiếm và lọc user, cấp quyền, thu hồi quyền, chặn Admin tự tước quyền `CANNOT_DEMOTE_SELF`, chặn Admin tự khóa chính mình `CANNOT_LOCK_SELF`, ghi nhận audit log).
+   - `V15MigrationVerificationTest`: 1/1 test PASS (Xác minh bảng `contact_leads`, `email_notifications`, `audit_logs`, cột `status` trong `users` trên PostgreSQL 17 thật; xác nhận tổng số bảng đúng 35 bảng).
+   - Toàn bộ backend test suite: **234 tests PASS 100%** (0 errors, 0 failures, 121 skipped an toàn).
+   - Frontend test suite: **71 tests PASS 100%** (bổ sung 4 test cases cho `AdminDashboard.test.ts`).
+   - Frontend build: `tsc --noEmit && vite build` **SUCCESS (281ms)**.
+   - Contracts: 69/69 cases OpenAPI 3.1 PASS.
+   - Git: Không commit, không push Git (tuân thủ nghiêm ngặt chỉ thị).
 
 ## T16 — Phân Hệ Soát Vé Check-in & Vận Hành Sự Kiện Dành Cho Staff (Staff Portal & Atomic Check-in) (Done, 2026-11-16)
 

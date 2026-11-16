@@ -110,3 +110,162 @@ test('switching demo persona preserves pending customer key and never stores a t
   const el=document.createElement('div');document.body.append(el);const root=createRoot(el);roots.push(root);await settle(()=>root.render(createElement(DemoShell,{customer,admin:fixture(),store})));
   await settle(()=>button('Quản trị demo').click());await settle(()=>button('Khách hàng demo').click());assert.equal(posts,0);assert.deepEqual(readAttempt(store),attempt);assert(![...entries.values()].join('').includes('token'));await settle(()=>button('Thử lại cùng yêu cầu').click());assert.equal(posts,1);assert.deepEqual(readAttempt(store),attempt);
 });
+
+test('user management tab lists users with roles, supports role grant/revoke and account lock/unlock', async () => {
+  let roleChanges: any[] = [];
+  let statusChanges: any[] = [];
+  const testUser = {
+    id: 'user-uuid-1',
+    displayName: 'Nguyễn Văn A',
+    email: 'user1@example.com',
+    phone: '0901234567',
+    role: 'CUSTOMER',
+    roles: ['CUSTOMER'],
+    status: 'ACTIVE' as const,
+    createdAt: '2026-11-15T00:00:00Z'
+  };
+
+  await mount(fixture({
+    users: async (page, size, search, role) => ({
+      items: [testUser],
+      page,
+      size,
+      totalElements: 1
+    }),
+    updateUserRole: async (userId, role, action) => {
+      roleChanges.push({ userId, role, action });
+      return { id: userId, roles: ['CUSTOMER', role] };
+    },
+    updateUserStatus: async (userId, status) => {
+      statusChanges.push({ userId, status });
+      return { id: userId, status };
+    }
+  }));
+
+  await settle(() => button('Người dùng').click());
+  assert.match(document.body.textContent!, /Nguyễn Văn A/);
+  assert.match(document.body.textContent!, /user1@example.com/);
+  assert.match(document.body.textContent!, /🟢 HOẠT ĐỘNG/);
+
+  // Grant STAFF role
+  await settle(() => button('+ STAFF').click());
+  assert.deepEqual(roleChanges.at(-1), { userId: 'user-uuid-1', role: 'STAFF', action: 'GRANT' });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã cấp quyền STAFF/);
+
+  // Lock account
+  await settle(() => button('Khóa').click());
+  assert.deepEqual(statusChanges.at(-1), { userId: 'user-uuid-1', status: 'LOCKED' });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã khóa tài khoản/);
+});
+
+test('booking tab lists refunds with approve and reject actions', async () => {
+  let refundDecisions: any[] = [];
+  const refundItem = {
+    id: 'refund-uuid-1',
+    bookingId: 'booking-uuid-1',
+    eventTitle: 'Concert Test',
+    customerName: 'Trần Thị B',
+    customerEmail: 'b@example.com',
+    amountVnd: 500000,
+    reason: 'Trùng lịch',
+    status: 'REQUESTED' as const,
+    createdAt: '2026-11-16T10:00:00Z'
+  };
+
+  await mount(fixture({
+    bookings: async (page, size) => ({ items: [], page, size, totalElements: 0 }),
+    refunds: async () => [refundItem],
+    processRefund: async (refundId, decision) => {
+      refundDecisions.push({ refundId, decision });
+      return { refundId, status: decision === 'APPROVE' ? 'COMPLETED' : 'FAILED', message: 'Đã duyệt hoàn tiền' };
+    }
+  }));
+
+  await settle(() => button('Booking').click());
+  assert.match(document.body.textContent!, /Quản lý yêu cầu Hoàn tiền/);
+  assert.match(document.body.textContent!, /Trần Thị B/);
+  assert.match(document.body.textContent!, /500.000 ₫/);
+
+  await settle(() => button('Duyệt hoàn tiền').click());
+  assert.deepEqual(refundDecisions.at(-1), { refundId: 'refund-uuid-1', decision: 'APPROVE' });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã duyệt hoàn tiền/);
+});
+
+test('reports tab displays summary KPIs, event reports table, and safe CSV export link', async () => {
+  await mount(fixture({
+    reports: {
+      summary: async () => ({
+        totalRevenueVnd: 250000000,
+        totalTicketsSold: 500,
+        totalConfirmedBookings: 250,
+        totalCheckIns: 400,
+        averageOccupancyPercent: 80.0
+      }),
+      events: async () => [{
+        eventId: 'event-uuid-1',
+        title: 'Lễ Hội Âm Nhạc Hè',
+        venue: 'SVĐ Hàng Đẫy',
+        startsAt: '2026-12-01T19:00:00Z',
+        status: 'PUBLISHED',
+        totalCapacity: 600,
+        soldGa: 300,
+        soldSeated: 200,
+        totalSold: 500,
+        revenueVnd: 250000000,
+        occupancyPercent: 83.3
+      }],
+      exportCsvUrl: () => 'http://127.0.0.1:8080/api/admin/reports/export-csv'
+    }
+  }));
+
+  await settle(() => button('Báo cáo').click());
+  assert.match(document.body.textContent!, /250.000.000 ₫/);
+  assert.match(document.body.textContent!, /80%/);
+  assert.match(document.body.textContent!, /Lễ Hội Âm Nhạc Hè/);
+  assert.match(document.body.textContent!, /SVĐ Hàng Đẫy/);
+
+  const exportLink = document.querySelector<HTMLAnchorElement>('.btn-export-csv')!;
+  assert(exportLink, 'Missing export CSV button');
+  assert.equal(exportLink.getAttribute('href'), 'http://127.0.0.1:8080/api/admin/reports/export-csv');
+});
+
+test('leads tab displays enterprise leads and allows status updates', async () => {
+  let updatedStatus: any = null;
+  const lead = {
+    id: 'lead-uuid-1',
+    fullName: 'Lê Hoàng C',
+    email: 'c@enterprise.vn',
+    phone: '0987654321',
+    companyName: 'Công ty Cổ phần TechVN',
+    eventScale: '500-1000 khách',
+    message: 'Cần tư vấn giải pháp bán vé',
+    status: 'NEW' as const,
+    createdAt: '2026-11-16T12:00:00Z'
+  };
+
+  await mount(fixture({
+    leads: async (page, size) => ({ items: [lead], page, size, totalElements: 1 }),
+    updateLeadStatus: async (leadId, status) => {
+      updatedStatus = { leadId, status };
+      return { ...lead, status };
+    }
+  }));
+
+  await settle(() => button('Yêu cầu Doanh nghiệp').click());
+  assert.match(document.body.textContent!, /Lê Hoàng C/);
+  assert.match(document.body.textContent!, /Công ty Cổ phần TechVN/);
+  assert.match(document.body.textContent!, /Cần tư vấn giải pháp bán vé/);
+
+  const select = document.querySelector<HTMLSelectElement>('.select-lead-status')!;
+  assert(select, 'Missing lead status select');
+  assert.equal(select.value, 'NEW');
+
+  await settle(() => {
+    select.value = 'CONTACTED';
+    select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+
+  assert.deepEqual(updatedStatus, { leadId: 'lead-uuid-1', status: 'CONTACTED' });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã cập nhật trạng thái lead sang CONTACTED/);
+});
+

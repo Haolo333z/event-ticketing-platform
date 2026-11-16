@@ -331,11 +331,11 @@
 
 ## Giai đoạn 6 — Quản Trị Hệ Thống, Báo Cáo & Truyền Thông (Admin & Platform) (T17)
 
-- [ ] **T17.1 — Cổng Quản Trị Người Dùng, Cấp Quyền & Mời Nhân Sự:** Giao diện quản trị Admin xem danh sách, đổi vai trò người dùng, quản lý lời mời Staff/Organizer.
-- [ ] **T17.2 — Dashboard Quản Trị Đơn Hàng, Thanh Toán & Duyệt Hoàn Tiền:** Xem toàn bộ giao dịch thanh toán sandbox, phê duyệt và kích hoạt hoàn tiền.
-- [ ] **T17.3 — Báo Cáo Kinh Doanh & Doanh Thu Chi Tiết (Export CSV):** Tổng hợp doanh thu, tỷ lệ lấp đầy, số vé bán theo ngày và sự kiện, hỗ trợ xuất CSV an toàn.
-- [ ] **T17.4 — Hệ Thống Gửi Thông Báo & Hóa Đơn Điện Tử (Email Receipts):** Xử lý gửi email xác nhận đặt vé qua Outbox pattern và mail mock/service.
-- [ ] **T17.5 — Tiếp Nhận Yêu Cầu Hỗ Trợ & Leads Tư Vấn Doanh Nghiệp:** Quản lý danh sách contact leads và ticket hỗ trợ khách hàng từ PostgreSQL.
+- [x] **T17.1 — Cổng Quản Trị Người Dùng, Cấp Quyền & Mời Nhân Sự (Done, 2026-11-16):** Quản lý người dùng toàn hệ thống (`GET /api/admin/users`), phân trang, tìm kiếm họ tên/email/phone, lọc vai trò. Cấp/thu hồi vai trò (`POST /api/admin/users/{id}/roles`), khóa/mở khóa tài khoản (`PUT /api/admin/users/{id}/status`), chống privilege escalation và tự tước quyền/tự khóa (`CANNOT_DEMOTE_SELF`, `CANNOT_LOCK_SELF`), tự động ghi nhật ký kiểm toán vào `ticketing.audit_logs`.
+- [x] **T17.2 — Dashboard Quản Trị Đơn Hàng, Thanh Toán & Duyệt Hoàn Tiền (Done, 2026-11-16):** Quản trị đơn hàng toàn sàn (`GET /api/admin/bookings`), tiếp nhận danh sách yêu cầu hoàn tiền từ cổng thanh toán (`GET /api/admin/refunds`), phê duyệt hoàn tiền (`POST /api/admin/refunds/{id}/process` với `APPROVE` -> `COMPLETED`, `REJECT` -> `FAILED`), ghi nhận settled_at, tự động lưu vết biên nhận vào `ticketing.email_notifications` và `ticketing.audit_logs`.
+- [x] **T17.3 — Báo Cáo Kinh Doanh & Doanh Thu Chi Tiết (Export CSV) (Done, 2026-11-16):** Endpoint tổng hợp chỉ số kinh doanh toàn sàn (`GET /api/admin/reports/summary`), báo cáo doanh thu & tỷ lệ lấp đầy theo sự kiện (`GET /api/admin/reports/events`), xuất dữ liệu CSV chuẩn RFC 4180 có UTF-8 BOM (`GET /api/admin/reports/export-csv`), cơ chế `sanitizeCsvField` ngăn chặn triệt để tấn công CSV Formula Injection cho Excel và Calc.
+- [x] **T17.4 — Hệ Thống Gửi Thông Báo & Hóa Đơn Điện Tử (Email Receipts) (Done, 2026-11-16):** Bảng `ticketing.email_notifications` (nhật ký biên nhận hóa đơn điện tử / email outbox log) lưu vết `booking_id`, `recipient_email`, `subject`, `template_type`, `payload_json`, `status`, `sent_at`.
+- [x] **T17.5 — Tiếp Nhận Yêu Cầu Hỗ Trợ & Leads Tư Vấn Doanh Nghiệp (Done, 2026-11-16):** Endpoint nhận thông tin leads tư vấn doanh nghiệp public (`POST /api/contact/leads`), quản lý phân trang và lọc theo trạng thái (`GET /api/admin/leads`), cập nhật trạng thái (`PUT /api/admin/leads/{id}/status`) chuyển đổi giữa `NEW`, `CONTACTED`, `CONVERTED`, `CLOSED` kèm ghi chú và audit log. Giao diện Admin Portal 5 tab động kết nối API thật.
 
 ## Giai đoạn 7 — Hoàn Thiện Giao Diện Sản Phẩm & Visual QA (T18)
 
