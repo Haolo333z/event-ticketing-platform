@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -12,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @ConditionalOnWebApplication
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfiguration {
 
     @Bean
@@ -37,6 +39,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/me/bookings").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/bookings/*").hasAnyRole("CUSTOMER", "ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/staff/**").hasAnyRole("STAFF", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/organizer/venues", "/api/organizer/categories").permitAll()
+                .requestMatchers("/api/organizer/profile").authenticated()
+                .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .anyRequest().denyAll())
             .exceptionHandling(c -> c
                 .authenticationEntryPoint((req, res, ex) -> errors.write(req, res, 401, "UNAUTHENTICATED", "Cần đăng nhập"))

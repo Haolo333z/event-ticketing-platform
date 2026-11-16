@@ -276,3 +276,79 @@
 2. Outbox, retry, consumer idempotency và ít nhất một kịch bản recovery.
 3. Demo ghế/GA chạy được, concurrency evidence và báo cáo trung thực.
 4. Cắt giảm trước dashboard nâng cao, trang trí UI, realtime push và analytics sâu.
+
+---
+
+# LỘ TRÌNH NÂNG CẤP FULL-STACK PRODUCT V2 (T11 — T19)
+
+> Chi tiết định nghĩa phạm vi và yêu cầu xem tại [docs/upgrade-v2/PRODUCT_SCOPE_V2.md](upgrade-v2/PRODUCT_SCOPE_V2.md), [UPGRADE_REQUIREMENTS_V2.md](upgrade-v2/UPGRADE_REQUIREMENTS_V2.md) và [ROADMAP_V2.md](upgrade-v2/ROADMAP_V2.md).  
+> Giữ nguyên lịch sử nghiệm thu T1–T10 (45/45 tasks Done). Quản lý nghiêm ngặt: Mỗi thời điểm chỉ thực hiện một task chính, không tự ý commit khi chưa có chỉ thị.
+
+## Giai đoạn 0 — Re-baseline và Chốt Thiết kế (T11)
+
+- [x] **T11.1 — Re-baseline Source Code & Lập Gap Matrix Nâng Cấp V2 (Done, 2026-11-16):** Kiểm toán toàn diện Git, Database PostgreSQL (Flyway V1-V10, 19 bảng), OpenAPI (17 paths/18 operations), Backend (Java modular monolith), Frontend (React Multi-page routing). Lập [docs/upgrade-v2/SOURCE_REBASELINE.md](upgrade-v2/SOURCE_REBASELINE.md) và [docs/upgrade-v2/GAP_MATRIX.md](upgrade-v2/GAP_MATRIX.md) đối soát 79 yêu cầu (16 Implemented & Verified, 18 Partially Implemented, 45 Not Implemented). Kết quả test 134 backend test PASS, 54 frontend test PASS, 69 contract test PASS. Không can thiệp sửa đổi code logic hay migration DB trong task này.
+- [x] **T11.2 — Chốt ADR Thiết Kế Kiến Trúc & Kế Hoạch Cập Nhật Hợp Đồng API (Done, 2026-11-16):** Chốt ADR cho session/refresh token family, Google OIDC Authorization Code Flow, Four-role RBAC & Event Scope, Payment Provider & Idempotent Callback / Late Refund Arbitration; lập kế hoạch cập nhật OpenAPI và migration V11+.
+- [x] **T11.3 — Thiết Kế Migration V11+ & Đảm Bảo Tương Thích Ngược Test Fixtures (Done, 2026-11-16):** Thiết kế additive schema migration cho roles, external_identities, payment_attempts, check_ins; đảm bảo profile local/test và mock bearer tokens tiếp tục hoạt động cho test suite tự động.
+- [ ] **T11.4 — Chốt Nhà Cung Cấp Cổng Thanh Toán Sandbox & Xác Nhận Reachability:** Lựa chọn merchant sandbox (VNPAY/MoMo), thiết lập cấu hình biến môi trường ngoài Git repo, chuẩn bị giải pháp webhook/IPN tunneling (ngrok/Cloudflare Tunnel) cho local development.
+
+## Giai đoạn 1 — Identity, Xác Thực & Phân Quyền 4 Vai Trò (T12)
+
+- [x] **T12.1 — Schema & Persistence Cho Multi-Role & External Identities (Migration V11+) (Done, 2026-11-16):** Tạo Flyway migration `V11__four_role_rbac_and_external_identities.sql` gồm các bảng `roles`, `user_roles`, `external_identities`, `refresh_tokens`, `password_reset_tokens`. Seed 4 vai trò chuẩn, backfill dữ liệu người dùng cũ, nới lỏng CHECK constraint `demo_role`. Đã kiểm chứng migrate thành công trên PostgreSQL 17 thật (24 bảng trong schema `ticketing`).
+- [x] **T12.2 — Hoàn Thiện Email/Password Auth, Session Refresh & Profile Management (Done, 2026-11-16):** Triển khai `RefreshTokenService` với CSPRNG 32 bytes, mã hóa SHA-256 lưu DB, quản lý phiên Token Family. Phát hiện tấn công tái sử dụng (Reuse Detection: lập tức vô hiệu hóa toàn bộ Token Family). Endpoint `/api/auth/register` (BCrypt + role CUSTOMER), `/api/auth/login` (cấp JWT 15m + cookie HttpOnly 7d), `/api/auth/refresh` (rotation session), `/api/auth/logout` (thu hồi token, xóa cookie Max-Age=0), `/api/auth/me` (trả về danh sách roles). Frontend client tự động refresh khi gặp 401 và retry an toàn.
+- [ ] **T12.3 — Tích Hợp Đăng Nhập Google OIDC (Authorization Code Flow):** Backend OIDC client xác thực ID token Google (`sub`, `email`, `name`, `picture`), tự động tạo hoặc liên kết tài khoản an toàn.
+- [ ] **T12.4 — Quản Lý Liên Kết Tài Khoản (Link/Unlink) & Reset Mật Khẩu:** Quy trình liên kết tài khoản ngoài, bảo vệ không cho unlink phương thức duy nhất, quên/đặt lại mật khẩu qua email token.
+- [x] **T12.5 — Thực Thi Phân Quyền 4 Vai Trò (CUSTOMER, STAFF, ORGANIZER, ADMIN) & Event Scope (Done, 2026-11-16):** Cập nhật `DemoPrincipal` hỗ trợ đa vai trò (`roles()`, `hasRole(target)`), `MockBearerFilter` nạp danh sách `ROLE_<ROLE>` vào `GrantedAuthority` từ `user_roles`, bật `@EnableMethodSecurity(prePostEnabled = true)` trong `SecurityConfiguration`. Bảo toàn 100% khả năng tương thích ngược cho mock bearer tokens của test suite. Giao diện frontend hiển thị vai trò và điều hướng tương ứng cho cả 4 vai trò.
+
+## Giai đoạn 2 — Quản Lý Nhà Tổ Chức (Organizer), Nhân Sự (Staff) & Catalog Sự Kiện (T13)
+
+- [x] **T13.1 — Organizer Profile & Quyền Sở Hữu Sự Kiện (Event Ownership) (Done, 2026-11-16):** Xây dựng bảng `ticketing.organizer_profiles`, tự động cấp vai trò `ORGANIZER` khi lưu hồ sơ đối tác, liên kết `organizer_id` với `events`, cô lập quyền truy cập tuyệt đối giữa các Organizer (IDOR protection).
+- [x] **T13.2 — Chuẩn Hóa Quản Lý Địa Điểm (Venues), Danh Mục (Categories) & Media (Done, 2026-11-16):** Bảng `ticketing.venues` (seed sẵn 4 địa điểm biểu diễn tiêu chuẩn), `ticketing.event_categories` (seed 4 thể loại chính: CONCERT, THEATER, CONFERENCE, SPORTS), và bảng `ticketing.event_media`.
+- [x] **T13.3 — Vòng Đời Sự Kiện Của Organizer (Draft, Publish, Close, Cancel) (Done, 2026-11-16):** Quy trình tạo sự kiện ở trạng thái `DRAFT`, kiểm tra điều kiện mở bán (chặn xuất bản khi chưa có vé hoặc sức chứa = 0), xuất bản `PUBLISHED` đồng bộ lên Public Catalog (ẩn các sự kiện DRAFT).
+- [x] **T13.4 — Cấu Hình Loại Vé, Sức Chứa GA & Sơ Đồ Ghế Ngồi (Done, 2026-11-16):** Cấu hình linh hoạt loại vé GA (General Admission) gắn với `inventory_ga` hoặc vé ghế chỉ định (Seated) sinh danh sách ghế trong `seats`. Bảo toàn 100% bất biến chống bán lố vé.
+- [x] **T13.5 — Phân Bổ Nhân Sự (Staff Assignment) Theo Phạm Vi Sự Kiện (Done, 2026-11-16):** Bảng `ticketing.event_staff_assignments`, xác thực tài khoản có vai trò `STAFF`, gán nhân viên vào sự kiện cụ thể, hỗ trợ thu hồi quyền (`revoked_at`). Giao diện Organizer Dashboard (`/organizer`) trực quan kết nối API thật.
+
+## Giai đoạn 3 — Trải Nghiệm Khách Hàng (Customer Commerce Journey) (T14)
+
+- [ ] **T14.1 — Trang Chủ, Khám Phá & Bộ Lọc Tìm Kiếm Sự Kiện:** Tích hợp giao diện khám phá sự kiện thực tế, bộ lọc danh mục/địa điểm, phân trang dữ liệu từ SQL.
+- [ ] **T14.2 — Luồng Đặt Vé Khách Hàng Gắn Với Danh Tính Thực:** Quy trình đặt vé yêu cầu đăng nhập, liên kết `account_id` thật, bảo vệ giao dịch ACID PostgreSQL.
+- [ ] **T14.3 — Trang "Vé Của Tôi" & Lịch Sử Giao Dịch Từ PostgreSQL:** Hiển thị danh sách đơn hàng và vé điện tử của tài khoản đăng nhập, tra cứu chi tiết và trạng thái thanh toán.
+- [ ] **T14.4 — Tạo Mã Vé Điện Tử E-Ticket QR & Tải Vé:** Mã QR SVG/PNG chứa token bảo mật opaque, hỗ trợ xem và in vé điện tử.
+
+## Giai đoạn 4 — Cổng Thanh Toán Sandbox Bên Ngoài (Payment Gateway) (T15)
+
+- [ ] **T15.1 — Thiết Kế Cổng Kết Nối Payment Gateway Port & Bảng Giao Dịch Thanh Toán:** Thiết kế `PaymentGatewayPort`, bảng `payment_attempts`, `payment_notifications`, `refund_attempts`.
+- [ ] **T15.2 — Luồng Khởi Tạo Giao Dịch & Chuyển Hướng Sandbox Checkout:** Tạo mã giao dịch, ký checksum bảo mật, chuyển hướng trình duyệt sang cổng thanh toán sandbox.
+- [ ] **T15.3 — Tiếp Nhận Kết Quả Trả Về (Return URL) & Xử Lý Server Callback (IPN):** Xác thực chữ ký số webhook, đảm bảo tính idempotent và an toàn tuyệt đối khi mạng gián đoạn.
+- [ ] **T15.4 — Đối Soát Giao Dịch, Phục Hồi Lỗi & Xử Lý Thanh Toán Muộn (Late Payment Arbitration):** Quản lý trạng thái không rõ ràng, xử lý booking quá hạn hết hold chuyển sang nghĩa vụ hoàn tiền (`REFUND_REQUIRED`).
+- [ ] **T15.5 — Điều Phối & Xử Lý Hoàn Tiền (Refund Orchestration):** Luồng hoàn tiền tự động hoặc bán tự động cho các giao dịch quá hạn hoặc hủy sự kiện.
+
+## Giai đoạn 5 — Soát Vé Check-in & Vận Hành Sự Kiện (Staff Portal) (T16)
+
+- [ ] **T16.1 — Cổng Vận Hành Sự Kiện Dành Cho Staff (Staff Dashboard):** Màn hình làm việc cho nhân viên sự kiện, chỉ hiển thị các sự kiện được phân công.
+- [ ] **T16.2 — Quét & Xác Thực Vé Điện Tử (QR Scanner / Manual Entry):** Kiểm tra tính hợp lệ của vé, sự kiện tương ứng và trạng thái CONFIRMED.
+- [ ] **T16.3 — Xử Lý Soát Vé Nguyên Tử (Atomic Check-in Transaction):** Khóa dòng bảng `ticket_check_ins`, ngăn chặn tuyệt đối tình trạng quét trùng lặp vé (anti double check-in).
+- [ ] **T16.4 — Danh Sách Khách Tham Dự & Nhật Ký Kiểm Toán Soát Vé:** Thống kê tỷ lệ check-in realtime, ghi nhật ký thời gian và nhân viên soát vé.
+
+## Giai đoạn 6 — Quản Trị Hệ Thống, Báo Cáo & Truyền Thông (Admin & Platform) (T17)
+
+- [ ] **T17.1 — Cổng Quản Trị Người Dùng, Cấp Quyền & Mời Nhân Sự:** Giao diện quản trị Admin xem danh sách, đổi vai trò người dùng, quản lý lời mời Staff/Organizer.
+- [ ] **T17.2 — Dashboard Quản Trị Đơn Hàng, Thanh Toán & Duyệt Hoàn Tiền:** Xem toàn bộ giao dịch thanh toán sandbox, phê duyệt và kích hoạt hoàn tiền.
+- [ ] **T17.3 — Báo Cáo Kinh Doanh & Doanh Thu Chi Tiết (Export CSV):** Tổng hợp doanh thu, tỷ lệ lấp đầy, số vé bán theo ngày và sự kiện, hỗ trợ xuất CSV an toàn.
+- [ ] **T17.4 — Hệ Thống Gửi Thông Báo & Hóa Đơn Điện Tử (Email Receipts):** Xử lý gửi email xác nhận đặt vé qua Outbox pattern và mail mock/service.
+- [ ] **T17.5 — Tiếp Nhận Yêu Cầu Hỗ Trợ & Leads Tư Vấn Doanh Nghiệp:** Quản lý danh sách contact leads và ticket hỗ trợ khách hàng từ PostgreSQL.
+
+## Giai đoạn 7 — Hoàn Thiện Giao Diện Sản Phẩm & Visual QA (T18)
+
+- [ ] **T18.1 — Chuẩn Hóa Hệ Thống Design Tokens & Components:** Bộ UI kit thương mại chuẩn doanh nghiệp, thống nhất màu sắc, typography và tương tác.
+- [ ] **T18.2 — Hoàn Thiện Giao Diện Khám Phá & Chi Tiết Sự Kiện:** Tinh chỉnh trải nghiệm người dùng trên Desktop, Laptop và Mobile.
+- [ ] **T18.3 — Tối Ưu UX Luồng Xác Thực, Đặt Vé, Thanh Toán & Vé Điện Tử:** Xử lý đầy đủ các trạng thái loading, lỗi mạng, hết vé, giữ chỗ thành công.
+- [ ] **T18.4 — Hoàn Thiện Dashboard Cho Cả 4 Vai Trò:** Tối ưu không gian làm việc cho Customer, Staff, Organizer và Admin.
+- [ ] **T18.5 — Kiểm Thử Giao Diện Đa Thiết Bị (Visual QA & Accessibility):** Chụp ảnh bằng chứng 1440x900, 1366x768, 390x844 cho toàn bộ các màn hình chính.
+
+## Giai đoạn 8 — Kiểm Thử Hồi Quy Toàn Diện, Bảo Mật & Đóng Gói Phát Hành (T19)
+
+- [ ] **T19.1 — Full Regression Suite:** Chạy toàn bộ test suite backend, frontend, contract, integration và concurrency.
+- [ ] **T19.2 — Kiểm Tra Bảo Mật Xác Thực & Thanh Toán:** Kiểm tra OAuth state manipulation, token replay, callback forgery, privilege escalation.
+- [ ] **T19.3 — Tập Dượt Migration & Khôi Phục Dữ Liệu:** Thử nghiệm migration V11+ trên DB sạch và DB có dữ liệu baseline, kiểm tra tính toàn vẹn.
+- [ ] **T19.4 — Cấu Hình Môi Trường Triển Khai Staging/Demo:** Đảm bảo HTTPS reachability cho callback webhook, cấu hình secrets an toàn.
+- [ ] **T19.5 — Tổng Kết Báo Cáo, Cập Nhật Tài Liệu Kỹ Thuật & Đóng Gói Phát Hành V2:** Hoàn thiện toàn bộ tài liệu kỹ thuật, bằng chứng nghiệm thu và phát hành tag V2.

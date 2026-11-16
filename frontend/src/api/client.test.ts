@@ -39,3 +39,102 @@ test('payment storage preserves only the command and ignores invalid sessions',(
   let value:string|null=null;const storage={getItem:()=>value,setItem:(_key:string,v:string)=>{value=v;},removeItem:()=>{value=null;}};
   const payment={bookingId:attempt.payload.eventId,requestId:attempt.key,scenario:'DELAY_TIMEOUT' as const};savePaymentAttempt(storage,payment);assert.deepEqual(readPaymentAttempt(storage),payment);assert(!value!.includes('token'));value=JSON.stringify({...payment,scenario:'fake'});assert.equal(readPaymentAttempt(storage),null);
 });
+
+test('auth methods refresh and logout send correct endpoint and credentials: include',async()=>{
+  const calls:{url:string;init:RequestInit}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),init:init!});
+    if(String(url).endsWith('/refresh')){
+      return new Response(JSON.stringify({token:'new-access-jwt',user:{id:'u1',displayName:'Tester',email:'t@test.com',role:'CUSTOMER',roles:['CUSTOMER']}}),{status:200});
+    }
+    if(String(url).endsWith('/logout')){
+      return new Response(JSON.stringify({success:true,message:'Đã đăng xuất'}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+  const refreshRes=await api.auth!.refresh();
+  assert.equal(refreshRes.token,'new-access-jwt');
+  assert.equal(calls[0].url,'http://api.test/api/auth/refresh');
+  assert.equal(calls[0].init.credentials,'include');
+
+  const logoutRes=await api.auth!.logout();
+  assert.equal(logoutRes.success,true);
+  assert.equal(calls[1].url,'http://api.test/api/auth/logout');
+  assert.equal(calls[1].init.credentials,'include');
+});
+
+test('401 interceptor automatically refreshes token and retries original request',async()=>{
+  let callCount=0;
+  const calls:{url:string;auth?:string}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    callCount++;
+    const headers=new Headers(init?.headers);
+    calls.push({url:String(url),auth:headers.get('Authorization')??undefined});
+
+    if(String(url).endsWith('/api/me/bookings?size=100')){
+      if(callCount===1){
+        return new Response(JSON.stringify({code:'EXPIRED_TOKEN',message:'Token expired'}),{status:401});
+      }
+      return new Response(JSON.stringify({items:[]}),{status:200});
+    }
+    if(String(url).endsWith('/api/auth/refresh')){
+      return new Response(JSON.stringify({
+        token:'refreshed-token-xyz',
+        user:{id:'user-1',displayName:'User One',email:'u1@test.com',role:'CUSTOMER',roles:['CUSTOMER']}
+      }),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const res=await api.mine();
+  assert.deepEqual(res,{items:[]});
+  assert.equal(calls.length,3); // 1: original GET /mine (401), 2: POST /refresh, 3: retried GET /mine with new token
+  assert.equal(calls[0].url,'http://api.test/api/me/bookings?size=100');
+  assert.equal(calls[1].url,'http://api.test/api/auth/refresh');
+  assert.equal(calls[2].url,'http://api.test/api/me/bookings?size=100');
+  assert.equal(calls[2].auth,'Bearer refreshed-token-xyz');
+});
+
+test('organizer api adapter dispatches correct paths and payloads',async()=>{
+  const calls:{url:string;method:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method||'GET',body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).endsWith('/api/organizer/profile')){
+      return new Response(JSON.stringify({id:'p1',organizationName:'Org Test',contactEmail:'org@test.com',phone:'0901',status:'ACTIVE'}),{status:200});
+    }
+    if(String(url).endsWith('/api/organizer/venues')){
+      return new Response(JSON.stringify([{id:'v1',name:'Nhà hát Lớn',capacity:600}]),{status:200});
+    }
+    if(String(url).endsWith('/api/organizer/categories')){
+      return new Response(JSON.stringify([{id:'CONCERT',name:'Concert'}]),{status:200});
+    }
+    if(String(url).endsWith('/api/organizer/events')){
+      return new Response(JSON.stringify([{id:'e1',title:'Event 1',status:'DRAFT'}]),{status:200});
+    }
+    if(String(url).endsWith('/publish')){
+      return new Response(JSON.stringify({id:'e1',title:'Event 1',status:'PUBLISHED'}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const p=await api.organizer!.getProfile();
+  assert.equal(p?.organizationName,'Org Test');
+  assert.equal(calls[0].url,'http://api.test/api/organizer/profile');
+
+  const venues=await api.organizer!.venues();
+  assert.equal(venues.length,1);
+  assert.equal(venues[0].name,'Nhà hát Lớn');
+
+  const categories=await api.organizer!.categories();
+  assert.equal(categories.length,1);
+  assert.equal(categories[0].id,'CONCERT');
+
+  const evts=await api.organizer!.events();
+  assert.equal(evts.length,1);
+  assert.equal(evts[0].status,'DRAFT');
+
+  const pub=await api.organizer!.publishEvent('e1');
+  assert.equal(pub.status,'PUBLISHED');
+  assert.equal(calls[4].method,'POST');
+  assert.equal(calls[4].url,'http://api.test/api/organizer/events/e1/publish');
+});

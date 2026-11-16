@@ -54,8 +54,33 @@ final class MockBearerFilter extends OncePerRequestFilter {
                     return;
                 }
                 var user = users.getFirst();
+
+                // Fetch multi-roles from user_roles
+                List<String> roles = Collections.emptyList();
+                try {
+                    roles = jdbc.query(
+                        "SELECT role_id FROM ticketing.user_roles WHERE user_id = ? ORDER BY role_id",
+                        (r, n) -> r.getString(1),
+                        user.accountId()
+                    );
+                } catch (Exception ignored) {
+                    // fallback if migration not yet applied
+                }
+                if (roles.isEmpty()) {
+                    roles = claims.roles();
+                }
+                if (roles.isEmpty() && user.role() != null) {
+                    roles = List.of(user.role());
+                }
+                String primaryRole = user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER");
+                var principalWithRoles = new DemoPrincipal(user.accountId(), primaryRole, roles);
+
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                    .toList();
+
                 SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(user, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.role())))
+                    new UsernamePasswordAuthenticationToken(principalWithRoles, null, authorities)
                 );
                 chain.doFilter(req, res);
                 return;
@@ -87,8 +112,30 @@ final class MockBearerFilter extends OncePerRequestFilter {
                 return;
             }
             var user = users.getFirst();
+
+            // Fetch multi-roles for mock token
+            List<String> roles = Collections.emptyList();
+            try {
+                roles = jdbc.query(
+                    "SELECT role_id FROM ticketing.user_roles WHERE user_id = ? ORDER BY role_id",
+                    (r, n) -> r.getString(1),
+                    user.accountId()
+                );
+            } catch (Exception ignored) {
+                // fallback
+            }
+            if (roles.isEmpty() && user.role() != null) {
+                roles = List.of(user.role());
+            }
+            String primaryRole = user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER");
+            var principalWithRoles = new DemoPrincipal(user.accountId(), primaryRole, roles);
+
+            List<SimpleGrantedAuthority> authorities = roles.stream()
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                .toList();
+
             SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(user, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.role())))
+                new UsernamePasswordAuthenticationToken(principalWithRoles, null, authorities)
             );
         }
         chain.doFilter(req, res);

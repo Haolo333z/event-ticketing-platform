@@ -1,6 +1,6 @@
 # PRD — Hệ thống đặt vé sự kiện đa hình thức
 
-> Phiên bản: 0.4 · Trạng thái: yêu cầu baseline; triển khai đến T8.4, kiểm chứng thực tế tại PROGRESS · Chủ dự án: Lê Hữu Hào
+> Phiên bản: 0.4 (Baseline) → 2.0 (Full-stack Product V2) · Trạng thái: Đã hoàn tất nghiệm thu 45/45 tasks baseline v0.4; đang triển khai Full-stack V2 theo [docs/upgrade-v2/PRODUCT_SCOPE_V2.md](upgrade-v2/PRODUCT_SCOPE_V2.md) · Chủ dự án: Lê Hữu Hào
 
 ## 1. Tóm tắt
 
@@ -29,12 +29,16 @@ Xây dựng hệ thống đặt vé hỗ trợ ghế ngồi chỉ định và v�
 7. Xác thực demo bằng mock bearer token gắn với tài khoản customer/admin đã seed, chỉ ở profile local/test.
 8. OpenAPI, health check, log/metrics cơ bản, Docker Compose, hướng dẫn chạy và báo cáo.
 
-### Ngoài MVP
+### Ngoài MVP (Baseline v0.4)
 
 - Cổng thanh toán/hoàn tiền thật, dữ liệu thẻ hoặc tiền thật.
 - Đa nhà tổ chức, QR production, chuyển nhượng vé, định giá động, flash-sale Internet scale.
 - Microservices riêng theo miền, Kubernetes, multi-region, phân vùng dữ liệu.
 - Cam kết exactly-once xuyên PostgreSQL và broker; dùng at-least-once với xử lý lặp an toàn.
+
+> [!NOTE]
+> **Chuyển tiếp sang Full-stack Product V2:**
+> Các hạng mục trước đây nằm "Ngoài MVP" như Xác thực tài khoản người dùng thật (Email/Mật khẩu + Google OIDC), Phân quyền 4 vai trò (CUSTOMER, STAFF, ORGANIZER, ADMIN), Cổng thanh toán bên ngoài (Sandbox) và Hệ thống soát vé Check-in QR đã được đưa vào phạm vi nâng cấp chính thức trong [docs/upgrade-v2/PRODUCT_SCOPE_V2.md](upgrade-v2/PRODUCT_SCOPE_V2.md) và [UPGRADE_REQUIREMENTS_V2.md](upgrade-v2/UPGRADE_REQUIREMENTS_V2.md). Lộ trình triển khai được quy định tại [ROADMAP_V2.md](upgrade-v2/ROADMAP_V2.md).
 
 ## 4. Luồng nghiệp vụ
 

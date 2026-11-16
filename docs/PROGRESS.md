@@ -4,15 +4,255 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Nâng cấp Nền tảng Thương mại Đẳng cấp Doanh nghiệp — EventFlow Commercial Platform (2026-11-16)
-- **Tiến độ:** **45/45 tasks Done (100%)** — Toàn bộ nghiệp vụ kỹ thuật đã nghiệm thu; hoàn tất gói `COMMERCIAL-01`, `PHASE-P0`, `PHASE-P1` và Nâng cấp Toàn diện Diện mạo Chuẩn Sao Kim Branding (`saokim.com.vn`).
-- **Task vừa hoàn tất:** `SAOKIM-BRANDING — Nâng cấp Toàn diện Giao diện Chuẩn Doanh nghiệp Sao Kim Branding`.
-- **Kết quả kiểm chứng:** 
-  - Backend: `backend/mvnw.cmd -f backend/pom.xml test` PASS 134 tests (0 failures, 0 errors, 121 skipped).
-  - Frontend: `npm.cmd test --prefix frontend` PASS 54/54 tests (1.74s), build PASS (182ms).
-  - Contract: `npm.cmd test --prefix tools/contracts` PASS 69/69 cases.
-  - Visual QA: Chrome headless screenshots 1440x900 tại `docs/evidence/visual-qa/` (`saokim-hero-1440.png`, `saokim-mega-menu-solutions-1440.png`, `saokim-mega-menu-industries-1440.png`, `saokim-floating-dock-1440.png`).
-- **Giới hạn:** Giữ nguyên 100% hợp đồng API, cơ chế bảo vệ booking/concurrency PostgreSQL ACID, xác thực JWT/BCrypt, và khả năng tương thích ngược mock bearer tokens cho test harness. Chưa commit Git theo quy tắc.
+- **Giai đoạn:** Phase 2 — Quản Lý Nhà Tổ Chức, Địa Điểm & Phân Bổ Nhân Sự (Task T13) (2026-11-16)
+- **Tiến độ:** Hoàn tất toàn diện Task T13: Triển khai phân hệ quản trị dành riêng cho Nhà tổ chức sự kiện (ORGANIZER), bao gồm: hồ sơ đối tác (`organizer_profiles`), quản lý vòng đời sự kiện (DRAFT -> PUBLISHED), danh mục địa điểm chuẩn (`venues`), thể loại sự kiện (`event_categories`), cấu hình vé GA/Seated, phân công nhân sự soát vé (`event_staff_assignments`), và cô lập an toàn phạm vi sự kiện (Event Scope Access Control chống IDOR).
+- **Task vừa hoàn tất:** `T13 — Phân Hệ Quản Trị Nhà Tổ Chức (Organizer Management, Venues & Staff Assignments) (Done, 2026-11-16)`
+- **Kết quả kiểm chứng:**
+  - Database: Flyway Migration `V12__organizer_venues_and_staff_assignments.sql` đã áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có **29 bảng nghiệp vụ**.
+  - Backend: 9 tests organizer mới PASS 100% (`V12MigrationVerificationTest`, `OrganizerIntegrationTest`, `OrganizerEventControllerTest`). Toàn bộ Maven test suite PASS 162/162 tests (0 errors, 0 failures).
+  - Frontend: 57/57 tests PASS (`client.test.ts`, `App.test.ts`, `AdminDashboard.test.ts`), `npm run build` thành công trong 251ms.
+  - Contracts: `tools/contracts` PASS 69/69 ca kiểm thử OpenAPI 3.1.
+  - Runtime verification: Backend Spring Boot, Frontend Vite dev, PostgreSQL container, Kafka container đều UP và hoạt động ổn định.
+- **Giới hạn & Cam kết:** Toàn bộ mã nguồn và migrations được giữ nguyên trong working tree, không commit, không push Git; bảo toàn 100% các bất biến booking/inventory/outbox/mock token.
+
+## T13 — Phân Hệ Quản Trị Nhà Tổ Chức (Organizer Management, Venues & Staff Assignments) (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Triển khai phân hệ nghiệp vụ hoàn chỉnh cho Nhà tổ chức sự kiện (`ORGANIZER`), quản lý vòng đời sự kiện, cấu hình vé, phân công nhân sự soát vé và kiểm soát phạm vi sự kiện (Event Scope Access Control).
+
+**Các hạng mục đã hoàn thành:**
+1. **Schema Migration V12 Additive (`V12__organizer_venues_and_staff_assignments.sql`)**:
+   - `ticketing.organizer_profiles` (id, user_id UNIQUE FK users, organization_name, contact_email, phone, tax_code, status).
+   - Bổ sung `organizer_id` FK `organizer_profiles`, `category_id` FK `event_categories`, `venue_id` FK `venues` vào `ticketing.events`.
+   - `ticketing.venues` (id, name, address, city, country, capacity, seating_layout_json). Seed sẵn 4 địa điểm biểu diễn chuẩn quốc gia: Nhà hát Lớn Hà Nội (600), Trung tâm Hội nghị Quốc gia (3800), Nhà hát TP. Hồ Chí Minh (500), Sân vận động Quốc gia Mỹ Đình (40000).
+   - `ticketing.event_categories` (id, name, description, icon_url). Seed sẵn 4 thể loại chính: `CONCERT`, `THEATER`, `CONFERENCE`, `SPORTS`.
+   - `ticketing.event_media` (id, event_id, media_type, file_path, file_url, mime_type, file_size_bytes, sort_order).
+   - `ticketing.event_staff_assignments` (id, event_id, staff_user_id, assigned_by, assigned_at, revoked_at) với index unique conditional `(event_id, staff_user_id) WHERE revoked_at IS NULL`.
+   - Đã migrate thành công trên PostgreSQL 17 thật (`ticketing_demo`), schema `ticketing` hiện có **29 bảng nghiệp vụ**, Flyway ghi nhận `version = 12` (SUCCESS).
+
+2. **Backend Domain & Bảo Mật Phạm Vi Sự Kiện (Event Scope Isolation)**:
+   - `EventSecurityService`:
+     - Xác thực quyền sở hữu sự kiện (`isEventOwner`, `assertEventOwner`).
+     - Ngăn chặn triệt để lỗ hổng IDOR: Organizer B tuyệt đối không được đọc hoặc sửa sự kiện của Organizer A (trả HTTP 403 FORBIDDEN).
+     - Cho phép tài khoản `ADMIN` có quyền toàn diện (super-user bypass).
+   - `OrganizerService`:
+     - Khởi tạo & cập nhật hồ sơ đối tác (`saveProfile`), tự động cấp vai trò `ORGANIZER` vào `ticketing.user_roles`.
+     - Vòng đời sự kiện: Tạo sự kiện ở trạng thái `DRAFT`, cập nhật thông tin sự kiện.
+     - Kiểm tra điều kiện mở bán nghiêm ngặt trước khi xuất bản: Chặn 400 nếu chưa cấu hình vé hoặc tổng sức chứa = 0; xuất bản sang `PUBLISHED` đồng bộ ngay lên Public Catalog (ẩn các sự kiện DRAFT).
+     - Cấu hình loại vé: Hạng vé GA (General Admission) tích hợp bảng tồn kho `inventory_ga`; hạng vé ghế chỉ định (Seated) tự động sinh danh sách ghế trong `seats` với trạng thái `AVAILABLE`.
+     - Phân công nhân sự: Kiểm tra tài khoản đích bắt buộc có vai trò `STAFF` (chặn 400 nếu gán tài khoản CUSTOMER); hỗ trợ gán và thu hồi (`revoked_at`).
+
+3. **REST API Cho Nhà Tổ Chức (`OrganizerEventController`)**:
+   - `GET /api/organizer/profile`, `POST /api/organizer/profile`
+   - `GET /api/organizer/venues`, `GET /api/organizer/categories`
+   - `GET /api/organizer/events`, `POST /api/organizer/events`
+   - `GET /api/organizer/events/{id}`, `PUT /api/organizer/events/{id}`
+   - `POST /api/organizer/events/{id}/publish`
+   - `POST /api/organizer/events/{id}/ticket-types`
+   - `GET /api/organizer/events/{id}/staff`, `POST /api/organizer/events/{id}/staff`, `DELETE /api/organizer/events/{id}/staff/{staffUserId}`
+   - `GET /api/organizer/staff-candidates`
+   - Tích hợp bảo mật Spring Security với `@PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")`.
+
+4. **Giao Diện Frontend Bàn Làm Việc Nhà Tổ Chức (`OrganizerDashboard.ts`)**:
+   - Route `/organizer` chuyên biệt cho vai trò `ORGANIZER` và `ADMIN`.
+   - Nút điều hướng "🎪 Khu vực Tổ chức" trên Corporate Navbar và User Profile widget.
+   - Thống kê chỉ số: Tổng số sự kiện, Đang mở bán, Bản nháp, Tổng vé phát hành, Vé đã bán.
+   - Bảng quản lý sự kiện với badge trạng thái (`PUBLISHED` xanh lá, `DRAFT` vàng cam), sức chứa vé.
+   - Modal tạo & chỉnh sửa sự kiện: Tích hợp chọn Thể loại (categories) và Địa điểm chuẩn (venues).
+   - Modal cấu hình vé: Thêm loại vé GA với sức chứa hoặc vé ghế chỉ định (Seated).
+   - Modal phân công nhân sự: Hiển thị danh sách Staff đang phụ trách, form gán Staff theo email, nút thu hồi quyền soát vé.
+   - Modal cập nhật hồ sơ doanh nghiệp / đối tác tổ chức.
+
+5. **Kết Quả Kiểm Thử Toàn Diện**:
+   - `V12MigrationVerificationTest`: 1/1 test PASS (12 migrations Flyway thành công trên PostgreSQL 17 thật).
+   - `OrganizerIntegrationTest`: 4/4 tests PASS (hồ sơ đối tác & auto-role, vòng đời sự kiện DRAFT -> PUBLISHED, Event Scope 403 IDOR isolation, phân công & thu hồi Staff).
+   - `OrganizerEventControllerTest`: 4/4 tests PASS (profile, venues/categories, events CRUD & publish, staff assignments).
+   - Tổng cộng 9/9 tests organizer mới PASS 100%!
+   - Toàn bộ backend test suite: **162 tests PASS 100%** (0 errors, 0 failures, 121 integration tests skipped an toàn).
+   - Frontend test suite: **57/57 tests PASS**.
+   - Frontend build: `tsc --noEmit && vite build` **SUCCESS (251ms)**.
+   - Contracts: 69/69 cases OpenAPI 3.1 PASS.
+   - Git: Không commit, không push Git (tuân thủ chỉ thị).
+
+## T12 — Phân Hệ Định Danh 4 Vai Trò (4-Role RBAC) & Phiên Token Family An Toàn (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Triển khai nền tảng định danh chuẩn hóa 4 vai trò (`CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`) và cơ chế quản lý phiên làm việc an toàn qua HttpOnly Refresh Cookie (Token Family Reuse Detection) lưu trữ bền vững trong PostgreSQL 17, mở khóa toàn bộ các phân hệ Customer Commerce, Organizer Management, Staff Mobile Check-in và Admin Portal tiếp theo.
+
+**Các hạng mục đã hoàn thành:**
+1. **Schema Migration V11 Additive (`V11__four_role_rbac_and_external_identities.sql`)**:
+   - Bảng `ticketing.roles` (code, name, description). Seed 4 vai trò chuẩn: `CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`.
+   - Bảng `ticketing.user_roles` (user_id FK users, role_id FK roles, PRIMARY KEY (user_id, role_id)).
+   - Backfill tự động: ánh xạ tất cả người dùng hiện tại từ `users.demo_role` vào `user_roles`.
+   - Nới lỏng CHECK constraint: DROP `users_demo_role_check`, thêm CHECK `demo_role IN ('CUSTOMER', 'STAFF', 'ORGANIZER', 'ADMIN')` cho phép cả 4 vai trò.
+   - Bảng `ticketing.external_identities` (provider, provider_user_id, user_id, email, metadata) cho Google OIDC sắp tới.
+   - Bảng `ticketing.refresh_tokens` (token_hash SHA-256, user_id, family_id, replaced_by, revoked, expires_at).
+   - Bảng `ticketing.password_reset_tokens` (token_hash SHA-256, user_id, used, expires_at).
+   - Đã migrate thành công trên PostgreSQL 17 thật (`ticketing_demo`), Flyway ghi nhận version 11 success, tổng cộng 24 bảng trong schema `ticketing`.
+
+2. **Dịch Vụ Quản Lý Phiên `RefreshTokenService` & Token Family Reuse Detection**:
+   - CSPRNG 32 bytes hex raw token (256-bit entropy).
+   - Hash SHA-256 lưu DB `token_hash`, không lưu plain-text refresh token trong database.
+   - Quản lý phiên theo `family_id` (UUID). Khi xoay vòng token hợp lệ: sinh token mới trong cùng family, cập nhật `replaced_by = new_hash`, `revoked = true`.
+   - Cơ chế Reuse Detection: Nếu client gửi một token đã bị `revoked = true`, lập tức thu hồi toàn bộ token cùng `family_id` (`UPDATE ... revoked = true WHERE family_id = ?`), ném ngoại lệ 401 `REUSE_DETECTED` để bảo vệ tài khoản khỏi kẻ gian đánh cắp token.
+   - Hàm `revokeByRawToken` phục vụ logout và `revokeAllForUser` phục vụ đổi mật khẩu.
+
+3. **Mở Rộng `AuthController` & Spring Security RBAC**:
+   - `POST /api/auth/register`: Băm BCrypt, gán mặc định role `CUSTOMER` vào `user_roles`, phát hành JWT Access Token (15m) + Cookie HttpOnly `eventflow_refresh` (7d).
+   - `POST /api/auth/login`: Xác thực BCrypt, lấy danh sách `user_roles`, phát hành JWT Access Token + Cookie HttpOnly `eventflow_refresh`.
+   - `POST /api/auth/refresh`: Đọc cookie HttpOnly, xoay vòng session family qua `RefreshTokenService.rotateRefreshToken()`, phát hành JWT mới + Cookie mới.
+   - `POST /api/auth/logout`: Thu hồi raw token trong DB, xóa cookie bằng `Max-Age=0`.
+   - `GET /api/auth/me`: Trả về `UserDto` đầy đủ thông tin kèm danh sách `roles`.
+   - Kích hoạt `@EnableMethodSecurity(prePostEnabled = true)` trong `SecurityConfiguration`.
+   - Cập nhật `MockBearerFilter` đọc `user_roles` từ DB, cấp phát `ROLE_CUSTOMER`, `ROLE_STAFF`, `ROLE_ORGANIZER`, `ROLE_ADMIN` vào `SecurityContextHolder`.
+   - Bảo toàn 100% backward compatibility cho mock token profile trong test harness.
+
+4. **Cập Nhật Frontend Client & DemoShell**:
+   - `frontend/src/api/client.ts`:
+     - Cập nhật `User` type hỗ trợ `Role = 'CUSTOMER' | 'STAFF' | 'ORGANIZER' | 'ADMIN'` và mảng `roles?: Role[]`.
+     - Cấu hình `credentials: 'include'` trên mọi request `fetch` để tự động đính kèm cookie HttpOnly `eventflow_refresh`.
+     - Bổ sung `api.auth.refresh()` và `api.auth.logout()`.
+     - Cài đặt 401 Interceptor: khi nhận 401, tự động gọi `/api/auth/refresh` (có deduplication promise chống race condition vi phạm reuse detection) và retry lại request với token mới; nếu refresh thất bại thì xóa `localStorage`.
+   - `frontend/src/app/DemoShell.ts`:
+     - Menu tài khoản hiển thị vai trò động (`user.roles`), badge tương ứng (`role-admin`, `role-customer`, `role-staff`, `role-organizer`).
+     - Tùy biến thanh điều hướng theo vai trò (Customer: "🎟️ Vé của tôi", Admin: "Bảng Quản Trị", Staff: "📱 Soát vé", Organizer: "🎪 Tổ chức").
+     - Nút "Đăng xuất" gọi `api.auth.logout()` xóa cookie HttpOnly ở backend trước khi dọn dẹp local state.
+
+5. **Bộ Test Suite Tự Động Toàn Diện & Minh Chứng Kiểm Chứng**:
+   - `RefreshTokenServiceTest.java`: 6/6 tests PASS (sinh token, hash, rotation, reuse detection thu hồi cả family, expired token, missing token).
+   - `AuthControllerTest.java`: 7/7 tests PASS (register role CUSTOMER + cookie, password validation, login admin + roles, wrong pass 401, refresh token rotation + cookie, logout clear cookie, me endpoint multi-roles).
+   - `FourRoleSecurityTest.java`: 5/5 tests PASS (CUSTOMER role mapping, ADMIN role mapping, STAFF role mapping, Multi-role mapping chứa cả ROLE_CUSTOMER và ROLE_ORGANIZER, backward compatibility cho mock token).
+   - `V11MigrationVerificationTest.java`: 1/1 test PASS (kết nối PostgreSQL 17 thật, xác minh 11 migration Flyway thành công, schema public và ticketing up-to-date).
+   - `JwtServiceTest.java`: 3/3 tests PASS.
+   - `AdminUserControllerTest.java`: 1/1 test PASS.
+   - **Backend tổng thể**: `backend/mvnw.cmd test` -> PASS 153 tests (0 failures, 0 errors, 121 integration tests skipped an toàn).
+   - **Frontend tests**: `npm.cmd test --prefix frontend` -> PASS 56/56 tests (bao gồm các test mới cho refresh, logout, 401 interceptor).
+   - **Frontend build**: `npm.cmd run build --prefix frontend` -> BUILD SUCCESS (tsc noEmit + vite build 141ms).
+   - **Contract tests**: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+   - Bất biến cốt lõi: 100% giữ nguyên inventory GA/seats, row-lock `FOR UPDATE`, hold TTL 600s, Transactional Outbox.
+   - Git: Không commit, không push Git (tuân thủ chỉ thị).
+
+**Giới hạn:** Task T12 tập trung hoàn thiện hạ tầng xác thực nền tảng (4-Role RBAC & Token Family). Các tính năng tiếp theo như Google OIDC client (T12.3) và Quên/Đặt lại mật khẩu (T12.4) sẽ tiếp tục triển khai theo kế hoạch của Phase 1.
+
+## T11.2 — Thiết Kế Kiến Trúc & Triển Khai EventFlow V2 (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Thiết kế kiến trúc tổng thể, mô hình dữ liệu V11+, đặc tả API contract, mô hình bảo mật 4 vai trò, giải pháp tích hợp cổng thanh toán Sandbox và chiến lược kiểm thử đa tầng dựa trên kết quả thực tế của `GAP_MATRIX.md` và `SOURCE_REBASELINE.md`.
+
+**Các hạng mục đã hoàn thành:**
+1. **Chuẩn hóa GAP Matrix ([docs/upgrade-v2/GAP_MATRIX.md](upgrade-v2/GAP_MATRIX.md))**:
+   - Rà soát toàn bộ 79 yêu cầu; áp dụng nghiêm ngặt quy tắc phân loại trạng thái kiểm thử.
+   - Hiệu chỉnh `RBAC-001` (Gán role CUSTOMER mặc định) và `BKG-001` (Gắn booking với authenticated account) từ `IMPLEMENTED_AND_VERIFIED` sang `IMPLEMENTED_BUT_NOT_VERIFIED` vì mới chỉ kiểm chứng qua thao tác thủ công curl/Postman, chưa có automated integration test trong Maven test suite.
+   - Thống kê chuẩn xác: **14 Implemented & Verified (17.7%)**, **2 Implemented But Not Verified (2.5%)**, **18 Partially Implemented (22.8%)**, **45 Not Implemented (56.9%)**.
+2. **Thiết kế Kiến trúc Tổng thể ([docs/upgrade-v2/ARCHITECTURE_V2.md](upgrade-v2/ARCHITECTURE_V2.md))**:
+   - Xác định rõ mô hình **Modular Monolith** trong một Spring Boot application duy nhất (Java 25 LTS + Spring Boot 4.1.2 + PostgreSQL 17 + Kafka 4.2.2).
+   - Phân rã 9 module miền: `identity`, `events/catalog`, `organizer`, `inventory`, `bookings`, `payments`, `checkin`, `admin`, `messaging/operations`.
+   - Bảo toàn 100% các bất biến cốt lõi: Zero Oversell, All-or-Nothing multi-seat, Hold Expiration 600s, Transactional Outbox, Bounded Replay max 3.
+3. **Thiết kế Mô hình Dữ liệu & Migrations V11+ ([docs/upgrade-v2/DATA_MODEL_V2.md](upgrade-v2/DATA_MODEL_V2.md))**:
+   - Thiết kế sơ đồ ERD hoàn chỉnh; giữ nguyên tắc bất biến Flyway V1–V10.
+   - Đặc tả chi tiết 15 bảng mới từ migration V11+: `roles`, `user_roles`, `external_identities`, `refresh_tokens`, `password_reset_tokens`, `organizer_profiles`, `venues`, `event_categories`, `event_media`, `event_staff_assignments`, `payment_attempts`, `payment_notifications`, `refund_attempts`, `ticket_check_ins`, `audit_logs`.
+4. **Đặc tả Hợp đồng Giao diện Lập trình ([docs/upgrade-v2/API_CONTRACT_V2.md](upgrade-v2/API_CONTRACT_V2.md))**:
+   - Lập danh mục chi tiết toàn bộ API theo module, phân định rành mạch giữa `[EXISTING]`, `[EXISTING_UNDOCUMENTED]` (P0/P1) và `[PROPOSED_V2]`.
+   - Xác định đầy đủ HTTP method, endpoint, vai trò yêu cầu, kiểm tra Event Scope, request body, response codes và idempotency.
+5. **Mô hình Bảo mật & Phân quyền ([docs/upgrade-v2/SECURITY_MODEL_V2.md](upgrade-v2/SECURITY_MODEL_V2.md))**:
+   - Phân quyền 4 vai trò: `CUSTOMER`, `STAFF`, `ORGANIZER`, `ADMIN`.
+   - Bảo vệ phạm vi sự kiện (Event Scope / Object-level Security): Chặn truy cập chéo giữa các Organizer; Staff chỉ soát vé sự kiện được phân công.
+   - Quản lý phiên: Access Token (15m) + Refresh Token (7d) lưu trong **HttpOnly, Secure, SameSite=Strict Cookie** với cơ chế **Token Family Reuse Detection**.
+   - Tích hợp Google OIDC: Authorization Code Flow với PKCE; liên kết qua `sub`; chính sách **Explicit Account Linking** (chống Silent Auto-Merge chiếm quyền).
+   - Mã QR vé điện tử: Chuỗi ký số an toàn HMAC-SHA256 không chứa PII; chống quét trùng lặp vé 100% bằng khóa `UNIQUE(ticket_id)`.
+6. **Phương án Cổng Thanh toán ([docs/upgrade-v2/PAYMENT_GATEWAY_DECISION.md](upgrade-v2/PAYMENT_GATEWAY_DECISION.md))**:
+   - Kiến trúc Ports and Adapters (`PaymentGatewayPort`); giữ nguyên `PaymentSimulatorAdapter` cho bộ test tự động CI/CD.
+   - Bảng so sánh chi tiết 4 cổng thanh toán tại Việt Nam (VNPAY, MoMo, ZaloPay, PayOS); đề xuất VNPAY Sandbox là lựa chọn số 1.
+   - 7 nguyên tắc an toàn tài chính: Số tiền lấy từ snapshot đơn hàng; Return URL chỉ hiển thị; Webhook IPN là nguồn sự thật; callback idempotent; callback sai thứ tự không đảo ngược trạng thái terminal; thanh toán muộn chuyển sang `REFUND_REQUIRED`, không tái cấp vé.
+   - Giải pháp tiếp nhận Webhook IPN trên môi trường local development qua Cloudflare Tunnel (`cloudflared`).
+7. **Chiến lược Kiểm thử Toàn diện ([docs/upgrade-v2/TEST_STRATEGY_V2.md](upgrade-v2/TEST_STRATEGY_V2.md))**:
+   - Phân tích chuyên sâu 121 skipped integration tests; khẳng định đây là cơ chế an toàn có chủ đích từ baseline để bảo vệ DB demo. Minh chứng toàn bộ 121 tests này chạy PASS 100% trong CI.
+   - Hướng dẫn quy trình chạy toàn bộ integration tests trên máy trạm với database test cách ly.
+   - Lập chiến lược kiểm thử đa tầng (Unit, Integration, Contract, E2E, Visual QA 3 độ phân giải) và Release Gate G8.
+8. **Biên bản Quyết định Kiến trúc ([docs/upgrade-v2/T11.2_DECISIONS.md](upgrade-v2/T11.2_DECISIONS.md))**:
+   - Tổng hợp 10 quyết định kiến trúc trọng yếu (Decision Log DEC-001 đến DEC-010).
+   - Checklist điều kiện tiên quyết trước khi bước vào Phase 1 (T12).
+
+**Minh chứng kiểm chứng thực tế:**
+- `git status --short --branch`: Nhánh `main...origin/main [ahead 3]`, bảo toàn toàn bộ mã nguồn và visual QA hiện có.
+- `backend/mvnw.cmd test`: PASS 134 tests (0 failures, 0 errors, 121 skipped).
+- `npm.cmd test --prefix frontend`: PASS 54/54 tests.
+- `npm.cmd test --prefix tools/contracts`: PASS 69/69 cases.
+
+**Giới hạn:** Tuân thủ nghiêm ngặt chỉ thị: Chỉ thực hiện công tác thiết kế kiến trúc và lập tài liệu kỹ thuật; không can thiệp code nghiệp vụ backend/frontend, không tạo migration database hay cài đặt dependency. Chờ Tech Lead và Chủ dự án phê duyệt trước khi chuyển sang Phase 1 (Task T12).
+
+
+## T11.1 — Re-baseline Source Code & Lập Gap Matrix Nâng Cấp V2 (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Tiếp nhận mục tiêu nâng cấp EventFlow Full-stack Product V2 từ Chủ dự án. Thực hiện kiểm toán toàn diện mã nguồn thực tế đối chiếu với bộ tài liệu baseline v0.4 và yêu cầu V2, lập ma trận Gap Matrix cho toàn bộ 79 yêu cầu, không can thiệp code nghiệp vụ mới.
+
+**Các hạng mục đã hoàn thành:**
+1. **Kiểm toán snapshot Git & Môi trường runtime**:
+   - HEAD: `dd2ceadea18bca524c855fa08df1b44f634b5104` (nhánh `main...origin/main [ahead 3]`).
+   - Container Docker: `event-ticketing-local-postgres-1` (port 5432) và `event-ticketing-local-kafka-1` (port 9092) UP và healthy.
+   - Database schema: Đã áp dụng 10 migration Flyway V1–V10 (gồm cả `V10__user_authentication.sql`), 19 bảng nghiệp vụ trong schema `ticketing` (bao gồm `ticketing.contact_leads`).
+   - OpenAPI Contract: Hiện có 17 paths, 18 operations (chưa phản ánh các endpoint P0: `/api/auth/*`, `/api/admin/users`, `/api/contact/leads`).
+2. **Biên soạn tài liệu [docs/upgrade-v2/SOURCE_REBASELINE.md](upgrade-v2/SOURCE_REBASELINE.md)**:
+   - Làm rõ sự khác biệt giữa tài liệu baseline cũ (ghi nhận v0.4 với V1–V9, mock bearer tokens, 2 personas) và mã nguồn thực tế (đã có Flyway V10, email/password BCrypt, JWT HMAC-SHA256, Admin User Management, và kiến trúc React Multi-Page Routing 7 trang chuẩn Doanh nghiệp).
+   - Xác định bất biến kỹ thuật: Cột `demo_role` trong `ticketing.users` đang có CHECK constraint `demo_role IN ('CUSTOMER', 'ADMIN')`, cần migration V11+ để nới lỏng/chuẩn hóa bảng `roles` và `user_roles`.
+3. **Biên soạn tài liệu [docs/upgrade-v2/GAP_MATRIX.md](upgrade-v2/GAP_MATRIX.md)**:
+   - Đối soát chi tiết từng yêu cầu trong 79 yêu cầu thuộc 7 nhóm tính năng (`UPGRADE_REQUIREMENTS_V2.md`) với 4 trạng thái chuẩn: `IMPLEMENTED_AND_VERIFIED`, `IMPLEMENTED_BUT_NOT_VERIFIED`, `PARTIALLY_IMPLEMENTED`, `NOT_IMPLEMENTED`.
+   - Kết quả tổng hợp:
+     - `IMPLEMENTED_AND_VERIFIED`: **16/79 (20.3%)** — Toàn bộ invariants đặt vé GA/SEATED, khóa dòng ACID PostgreSQL, outbox/inbox messaging, replay outbox bounded, mock auth profile.
+     - `IMPLEMENTED_BUT_NOT_VERIFIED`: **0/79 (0.0%)**.
+     - `PARTIALLY_IMPLEMENTED`: **18/79 (22.8%)** — Nền tảng xác thực email/password P0, JWT, catalog, admin bookings/users, multi-page routing.
+     - `NOT_IMPLEMENTED`: **45/79 (56.9%)** — Các tính năng mới cốt lõi của V2: Google OIDC, RBAC 4 vai trò (STAFF/ORGANIZER), cổng thanh toán Sandbox (VNPAY), cơ chế soát vé Check-in QR, Organizer Portal.
+4. **Cập nhật liên kết tài liệu**:
+   - Cập nhật [docs/upgrade-v2/README.md](upgrade-v2/README.md) bổ sung liên kết đến `SOURCE_REBASELINE.md` và `GAP_MATRIX.md`.
+   - Cập nhật [docs/PRD.md](PRD.md) dẫn chiếu tới [docs/upgrade-v2/PRODUCT_SCOPE_V2.md](upgrade-v2/PRODUCT_SCOPE_V2.md).
+   - Cập nhật [docs/TASKS.md](TASKS.md) bổ sung lộ trình V2 (Phase 11–19, T11–T19), giữ nguyên toàn bộ lịch sử T1–T10.
+
+**Minh chứng kiểm chứng thực tế:**
+- Lệnh test backend: `backend/mvnw.cmd -f backend/pom.xml test` -> PASS 134 tests (0 failures, 0 errors, 121 skipped).
+- Lệnh test frontend: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (2.11s).
+- Lệnh build frontend: `npm.cmd run build --prefix frontend` -> BUILD SUCCESS (227ms, 28 modules).
+- Lệnh test contract: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- Lệnh kiểm tra PostgreSQL: `docker exec event-ticketing-local-postgres-1 psql -U ticketing_user -d event_ticketing -c "SELECT version, installed_on, state FROM flyway_schema_history ORDER BY installed_rank;"` -> 10 migrations V1–V10 trạng thái `SUCCESS`.
+
+**Giới hạn:** Task T11.1 tuân thủ nghiêm ngặt chỉ thị: chỉ thực hiện re-baseline và lập tài liệu ma trận khoảng trống; không thay đổi schema database, không thêm logic auth/gateway, không tạo commit Git. Chờ Tech Lead/Chủ dự án nghiệm thu để kích hoạt Task T11.2.
+
+
+## MULTIPAGE-ROUTING — Nâng Cấp Hệ Thống Đa Trang Chuẩn Doanh Nghiệp Sao Kim Branding (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Chuyển đổi EventFlow từ kiến trúc Single-Page cuộn anchor thành Hệ thống Đa Trang thực tế (Multi-Page Architecture). Khi người dùng nhấp vào bất kỳ mục nào trên thanh điều hướng hoặc Mega-Menu, trang web điều hướng (navigate) sang Trang riêng biệt với URL tương ứng.
+
+**Các hạng mục đã hoàn thành:**
+1. **Bộ định tuyến URL Client-Side (Client-Side Router)**:
+   - Cơ chế điều hướng URL chuẩn HTML5 (`window.location.pathname` kết hợp `history.pushState` và sự kiện `popstate`).
+   - Tự động cuộn mượt lên đầu trang khi chuyển trang (`window.scrollTo(0, 0)`).
+   - Thanh Navbar & Mega-Menu luôn hiển thị đồng bộ ở trên cùng của mọi trang, thể hiện rõ trang hiện tại đang được chọn (Active indicator với dải màu gradient cam/coral).
+   - Danh sách 7 routes độc lập:
+     - `/` hoặc `/home`: **Trang Chủ** (Hero banner Deep Royal Blue, 4 trụ cột công nghệ, sự kiện mở bán nổi bật, quy trình, FAQ, banner CTA).
+     - `/dat-ve` hoặc `/events`: **Trang Đặt Vé & Sơ Đồ Ghế Khán Phòng** (Không gian làm việc chuyên biệt cho tìm kiếm, bộ lọc thể loại, sơ đồ rạp hát Sân khấu `🎭 SÂN KHẤU CHÍNH`, chọn ghế ngồi hoặc vé GA, giữ chỗ PostgreSQL ACID, thanh toán mô phỏng và vé điện tử E-Ticket QR SVG).
+     - `/giai-phap`: **Trang Chi Tiết Giải Pháp Doanh Nghiệp** (Chuẩn phong cách Sao Kim: Banner lớn, hình ảnh chuyên gia phòng họp kính và sân khấu, 3 phân khúc chuyên sâu: Concert chịu tải 50.000 vé/phút, Nhà hát phân tầng độc quyền 100%, Hội nghị soát vé QR đa cổng VIP).
+     - `/bang-gia`: **Trang Bảng Giá & So Sánh Gói Dịch Vụ** (3 gói Starter 4.5%, Pro 3.2%, Enterprise tùy chỉnh; Bảng ma trận so sánh chi tiết 12 tiêu chí tính năng; Cam kết SLA).
+     - `/ve-cua-toi`: **Trang Quản Lý Vé Điện Tử Cá Nhân** (Toàn màn hình danh sách vé từ `/api/me/bookings`, thẻ vé Boarding Pass sắc nét kèm mã QR SVG, nút in vé / xuất trình tại cổng).
+     - `/lien-he`: **Trang Liên Hệ & Đặt Lịch Tư Vấn** (Thông tin trụ sở HN & TP. HCM, hotline 1900 6868, email, form tư vấn doanh nghiệp kết nối trực tiếp PostgreSQL `ticketing.contact_leads`).
+     - `/admin`: **Cổng Quản Trị Viên (Admin Portal)** (`AdminDashboard`).
+2. **Xây dựng các Module Trang Chuyên Biệt**:
+   - `frontend/src/app/SolutionsPage.ts`: Module trang Giải pháp doanh nghiệp.
+   - `frontend/src/app/PricingPage.ts`: Module trang Bảng giá & Ma trận so sánh tính năng.
+   - `frontend/src/app/ContactPage.ts`: Module trang Liên hệ & Đặt lịch tư vấn.
+   - `frontend/src/app/MyBookingsPage.ts`: Module trang Quản lý vé cá nhân toàn màn hình.
+   - `frontend/src/app/DemoShell.ts`: Quản lý router trung tâm, điều hướng URL và active menu indicators.
+   - `frontend/src/app/App.ts`: Hỗ trợ router props `currentPath` và `onNavigate`, hiển thị banner chuyên biệt khi ở `/dat-ve` và `/`.
+   - `frontend/src/styles.css`: Bổ sung toàn bộ hệ thống CSS cho 7 trang, bảng ma trận so sánh tính năng, breadcrumb, active indicators và responsive.
+
+**Minh chứng kiểm chứng thực tế:**
+- Lệnh build: `npm.cmd run build --prefix frontend` -> BUILD SUCCESS trong 227ms (28 modules).
+- Lệnh test frontend: `npm.cmd test --prefix frontend` -> PASS 54/54 tests (2.11s).
+- Lệnh test contract: `npm.cmd test --prefix tools/contracts` -> PASS 69/69 cases.
+- Lệnh test backend: `backend/mvnw.cmd -f backend/pom.xml test` -> PASS 134 tests (0 failures, 0 errors).
+- Visual QA (Chrome headless 1440x900):
+  - `docs/evidence/visual-qa/multipage-home-1440.png` (651 KB): Trang Chủ với Hero Banner và Navbar.
+  - `docs/evidence/visual-qa/multipage-dat-ve-1440.png` (499 KB): Trang Đặt Vé & Sơ Đồ Ghế Khán Phòng.
+  - `docs/evidence/visual-qa/multipage-giai-phap-1440.png` (893 KB): Trang Chi Tiết Giải Pháp Doanh Nghiệp.
+  - `docs/evidence/visual-qa/multipage-bang-gia-1440.png` (451 KB): Trang Bảng Giá & Ma Trận So Sánh Tính Năng.
+  - `docs/evidence/visual-qa/multipage-ve-cua-toi-1440.png` (433 KB): Trang Quản Lý Vé Cá Nhân Toàn Màn Hình.
+  - `docs/evidence/visual-qa/multipage-lien-he-1440.png` (398 KB): Trang Liên Hệ & Đặt Lịch Tư Vấn.
+  - `docs/evidence/visual-qa/multipage-admin-1440.png` (110 KB): Cổng Quản Trị Viên (Admin Portal).
 
 ## SAOKIM-BRANDING — Nâng cấp Toàn diện Giao diện Chuẩn Doanh nghiệp Sao Kim Branding (Done, 2026-11-16)
 

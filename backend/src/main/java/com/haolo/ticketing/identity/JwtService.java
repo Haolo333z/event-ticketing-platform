@@ -18,15 +18,19 @@ public class JwtService {
 
     public JwtService(
         @Value("${demo.jwt.secret:EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise}") String secret,
-        @Value("${demo.jwt.expiration-hours:24}") long expirationHours,
+        @Value("${demo.jwt.expiration-seconds:900}") long expirationSeconds,
         ObjectMapper mapper
     ) {
         this.secretKeyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        this.expirationSeconds = expirationHours * 3600;
+        this.expirationSeconds = expirationSeconds;
         this.mapper = mapper;
     }
 
     public String generateToken(UUID userId, String email, String role, String displayName) {
+        return generateToken(userId, email, role, role != null ? List.of(role) : List.of("CUSTOMER"), displayName);
+    }
+
+    public String generateToken(UUID userId, String email, String primaryRole, List<String> roles, String displayName) {
         try {
             long now = Instant.now().getEpochSecond();
             long exp = now + expirationSeconds;
@@ -35,7 +39,8 @@ public class JwtService {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("sub", userId.toString());
             payload.put("email", email != null ? email : "");
-            payload.put("role", role);
+            payload.put("role", primaryRole != null ? primaryRole : "CUSTOMER");
+            payload.put("roles", roles != null && !roles.isEmpty() ? roles : List.of(primaryRole != null ? primaryRole : "CUSTOMER"));
             payload.put("name", displayName != null ? displayName : "");
             payload.put("iat", now);
             payload.put("exp", exp);
@@ -74,7 +79,19 @@ public class JwtService {
             String email = (String) map.get("email");
             String role = (String) map.get("role");
             String name = (String) map.get("name");
-            return Optional.of(new JwtClaims(userId, email, role, name));
+
+            List<String> roles = new ArrayList<>();
+            Object rolesObj = map.get("roles");
+            if (rolesObj instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item != null) roles.add(item.toString());
+                }
+            }
+            if (roles.isEmpty() && role != null) {
+                roles.add(role);
+            }
+
+            return Optional.of(new JwtClaims(userId, email, role, roles, name));
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -87,5 +104,9 @@ public class JwtService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
     }
 
-    public record JwtClaims(UUID userId, String email, String role, String displayName) {}
+    public record JwtClaims(UUID userId, String email, String role, List<String> roles, String displayName) {
+        public JwtClaims(UUID userId, String email, String role, String displayName) {
+            this(userId, email, role, role != null ? List.of(role) : List.of("CUSTOMER"), displayName);
+        }
+    }
 }
