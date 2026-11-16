@@ -4,16 +4,90 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** Phase 2 — Quản Lý Nhà Tổ Chức, Địa Điểm & Phân Bổ Nhân Sự (Task T13) (2026-11-16)
-- **Tiến độ:** Hoàn tất toàn diện Task T13: Triển khai phân hệ quản trị dành riêng cho Nhà tổ chức sự kiện (ORGANIZER), bao gồm: hồ sơ đối tác (`organizer_profiles`), quản lý vòng đời sự kiện (DRAFT -> PUBLISHED), danh mục địa điểm chuẩn (`venues`), thể loại sự kiện (`event_categories`), cấu hình vé GA/Seated, phân công nhân sự soát vé (`event_staff_assignments`), và cô lập an toàn phạm vi sự kiện (Event Scope Access Control chống IDOR).
-- **Task vừa hoàn tất:** `T13 — Phân Hệ Quản Trị Nhà Tổ Chức (Organizer Management, Venues & Staff Assignments) (Done, 2026-11-16)`
+- **Giai đoạn:** Phase 5 — Soát Vé Check-in & Vận Hành Sự Kiện (Staff Portal & Atomic Check-in) (Task T16) (2026-11-16)
+- **Tiến độ:** Hoàn tất toàn diện Task T16: Xây dựng trọn vẹn phân hệ làm việc và kiểm soát soát vé dành riêng cho Nhân viên sự kiện (STAFF) và Quản trị viên (ADMIN), bao gồm:
+  - Bảng `ticketing.ticket_check_ins` với ràng buộc duy nhất `CONSTRAINT uq_ticket_checked_in UNIQUE (ticket_id)` đảm bảo 100% chống quét trùng lặp vé (Anti Double Check-in).
+  - Backend Check-in Engine: Xác thực chữ ký số QR Token HMAC-SHA256 hoặc mã vé thủ công, xác thực phân công nhân sự (Event Scope Access Control chống IDOR), kiểm tra tính hợp lệ của vé và đơn hàng `CONFIRMED`, giao dịch nguyên tử chèn check-in.
+  - Bộ kiểm thử tải đồng thời (Concurrency Test): 10 luồng quét đồng thời cùng 1 vé trên PostgreSQL 17 thật -> đúng 1 luồng thành công (200 OK `CHECKED_IN`), 9 luồng còn lại nhận 409 Conflict (`TICKET_ALREADY_USED`) kèm thời gian và cổng quét lần đầu.
+  - Giao diện Cổng Vận Hành Soát Vé (`/staff` — `StaffCheckInPage.ts`): Bảng điều khiển công nghệ cao với khung quét laser động, ô nhập mã vé thủ công, phản hồi thị giác tức thì (Màn hình Xanh - Hợp Lệ, Màn hình Đỏ - Cảnh Báo Quét Trùng, Màn hình Vàng - Không Hợp Lệ), hiệu ứng âm thanh Web Audio API (chime / buzzer), thanh thống kê tỷ lệ check-in realtime và bảng nhật ký kiểm toán soát vé 50 lượt gần nhất.
+- **Task vừa hoàn tất:** `T16 — Phân Hệ Soát Vé Check-in & Vận Hành Sự Kiện Dành Cho Staff (Staff Portal & Atomic Check-in) (Done, 2026-11-16)`
 - **Kết quả kiểm chứng:**
-  - Database: Flyway Migration `V12__organizer_venues_and_staff_assignments.sql` đã áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có **29 bảng nghiệp vụ**.
-  - Backend: 9 tests organizer mới PASS 100% (`V12MigrationVerificationTest`, `OrganizerIntegrationTest`, `OrganizerEventControllerTest`). Toàn bộ Maven test suite PASS 162/162 tests (0 errors, 0 failures).
-  - Frontend: 57/57 tests PASS (`client.test.ts`, `App.test.ts`, `AdminDashboard.test.ts`), `npm run build` thành công trong 251ms.
+  - Database: Flyway Migration `V14__ticket_check_ins.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`); schema `ticketing` hiện có đúng **33 bảng nghiệp vụ**.
+  - Backend: 24 tests check-in mới PASS 100% (`StaffCheckInConcurrencyIntegrationTest`, `StaffCheckInControllerTest`, `StaffCheckInServiceTest`, `StaffScopeSecurityTest`, `V14MigrationVerificationTest`). Toàn bộ Maven test suite PASS **217/217 tests** (0 errors, 0 failures, 121 skipped an toàn).
+  - Frontend: **67/67 tests PASS** (bổ sung test suite `StaffCheckInPage.test.ts`), `npm run build` thành công trong 232ms.
   - Contracts: `tools/contracts` PASS 69/69 ca kiểm thử OpenAPI 3.1.
-  - Runtime verification: Backend Spring Boot, Frontend Vite dev, PostgreSQL container, Kafka container đều UP và hoạt động ổn định.
 - **Giới hạn & Cam kết:** Toàn bộ mã nguồn và migrations được giữ nguyên trong working tree, không commit, không push Git; bảo toàn 100% các bất biến booking/inventory/outbox/mock token.
+
+## T16 — Phân Hệ Soát Vé Check-in & Vận Hành Sự Kiện Dành Cho Staff (Staff Portal & Atomic Check-in) (Done, 2026-11-16)
+
+**Phạm vi và đầu vào:** Triển khai phân hệ nghiệp vụ soát vé tại cổng dành cho nhân viên sự kiện (`STAFF`), cơ chế giao dịch nguyên tử chống quét trùng lặp vé (Anti Double Check-in), xác thực chữ ký số HMAC-SHA256, phân quyền theo phạm vi sự kiện được phân công (Event Scope Isolation), thống kê tiến độ check-in realtime và giao diện bảng điều khiển Staff Dashboard.
+
+**Các hạng mục đã hoàn thành:**
+1. **Schema Migration V14 Additive (`V14__ticket_check_ins.sql`)**:
+   - Tạo bảng `ticketing.ticket_check_ins`:
+     - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+     - `ticket_id UUID NOT NULL REFERENCES ticketing.tickets(id) ON DELETE RESTRICT`
+     - `event_id UUID NOT NULL REFERENCES ticketing.events(id) ON DELETE RESTRICT`
+     - `staff_user_id UUID NOT NULL REFERENCES ticketing.users(id) ON DELETE RESTRICT`
+     - `gate_name VARCHAR(64) NOT NULL DEFAULT 'MAIN_GATE'`
+     - `device_info TEXT`
+     - `checked_in_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()`
+     - `CONSTRAINT uq_ticket_checked_in UNIQUE (ticket_id)`: Ràng buộc duy nhất cấp độ database đảm bảo tuyệt đối không một vé nào có thể được check-in 2 lần.
+   - Các chỉ mục tối ưu truy vấn: `idx_check_ins_event (event_id, checked_in_at)`, `idx_check_ins_staff (staff_user_id, checked_in_at)`.
+   - Migration thành công trên PostgreSQL 17 thật (`ticketing_demo`), schema `ticketing` hiện có đúng **33 bảng nghiệp vụ**, Flyway ghi nhận `version = 14` (SUCCESS).
+
+2. **Backend Domain & Bảo Mật Phạm Vi Sự Kiện (Staff Check-in Engine)**:
+   - `CheckInModels`:
+     - `CheckInRequest`: hỗ trợ cả `qrToken` (Signed Token) và `ticketCode` (Mã thủ công), `gateName`, `deviceInfo`.
+     - `CheckInResult`: `status`, `ticketId`, `ticketCode`, `attendeeName`, `ticketType`, `seatLabel`, `checkedInAt`, `gate`, `message`.
+     - `CheckInStats`: `totalSold`, `checkedInCount`, `remainingCount`, `checkInRatePercent`.
+     - `CheckInHistoryItem`: `checkInId`, `ticketId`, `ticketCode`, `attendeeName`, `ticketType`, `seatLabel`, `gateName`, `checkedInAt`, `staffName`.
+     - `AssignedEventDto`: `eventId`, `title`, `venue`, `startsAt`, `endsAt`, `status`, `assignedAt`.
+   - `StaffCheckInService`:
+     - `getAssignedEvents`: Nhân viên `STAFF` chỉ thấy danh sách sự kiện mình được phân công (`event_staff_assignments.revoked_at IS NULL`); vai trò `ADMIN` được xem toàn bộ sự kiện.
+     - `assertStaffAccess`: Kiểm tra chặt chẽ quyền của nhân viên trên sự kiện, ném HTTP 403 `EVENT_SCOPE_DENIED` nếu chưa được phân công; chặn 403 `FORBIDDEN` đối với tài khoản `CUSTOMER` hoặc `ORGANIZER`.
+     - `checkIn`:
+       - Tiếp nhận mã QR: Xác thực chữ ký số HMAC-SHA256 qua `TicketQrService.verifyQrToken()`. Nếu chữ ký bị can thiệp ném 400 `INVALID_QR_TOKEN`. Kiểm tra đối chiếu mã sự kiện trên vé với sự kiện đang chọn (ném 400 `EVENT_MISMATCH` nếu sai sự kiện).
+       - Tiếp nhận mã vé thủ công: Tra cứu thông tin vé, người mua, hạng vé và vị trí ghế từ PostgreSQL.
+       - Kiểm tra trạng thái đơn hàng: Bắt buộc đơn hàng phải ở trạng thái `CONFIRMED` (ném 400 `TICKET_NOT_CONFIRMED` nếu chưa thanh toán).
+       - Giao dịch nguyên tử: Chèn bản ghi vào `ticketing.ticket_check_ins`. Khi xảy ra vi phạm ràng buộc duy nhất `uq_ticket_checked_in`, service bắt `DataIntegrityViolationException`, tự động truy vấn thông tin lần quét đầu tiên (thời gian, cổng soát vé, tên nhân viên) và trả về HTTP 409 Conflict (`TICKET_ALREADY_USED`) kèm thông báo cảnh báo chi tiết.
+     - `getStats`: Thống kê tổng vé bán, số lượng đã check-in, số lượng còn lại và tỷ lệ lấp đầy (%) theo sự kiện.
+     - `getRecentHistory`: Truy vấn danh sách 50 lượt soát vé gần nhất tại sự kiện.
+   - `StaffCheckInController`:
+     - Phân quyền nghiêm ngặt Spring Security `@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")`.
+     - `GET /api/staff/events`
+     - `POST /api/staff/events/{eventId}/check-in`
+     - `GET /api/staff/events/{eventId}/stats`
+     - `GET /api/staff/events/{eventId}/history`
+
+3. **Giao Diện Bảng Điều Khiển Soát Vé Staff Terminal (`/staff` — `StaffCheckInPage.ts`)**:
+   - Màn hình Auth Gate: Nhắc nhở đăng nhập hoặc thông báo từ chối truy cập nếu vai trò không phù hợp.
+   - Header điều khiển: Chọn cổng soát vé (`MAIN_GATE`, `GATE_A_VIP`, `GATE_B_GA`, `GATE_C`, v.v.), thông tin tài khoản nhân viên trực tuyến.
+   - Bộ chọn sự kiện: Dropdown chọn sự kiện được phân công, hiển thị địa điểm và thời gian khởi hành.
+   - Thống kê tiến độ trực quan: 4 thẻ số liệu (Tổng vé, Đã check-in, Chưa vào, Tỷ lệ lấp đầy) cùng thanh tiến độ động.
+   - Bàn làm việc quét vé:
+     - Tab 1: Quét mã QR với khung laser công nghệ cao (laser scanning frame animation), ô dán mã token hoặc nhận diện scanner.
+     - Tab 2: Nhập mã vé thủ công với ô nhập cỡ lớn và tự động focus sau mỗi lần quét.
+   - Thẻ phản hồi thị giác tức thì (Instant Feedback Cards):
+     - **Thành Công (Xanh lá)**: Hiển thị "HỢP LỆ — MỜI VÀO", họ tên khách hàng, hạng vé, số ghế nổi bật (vàng neon), mã vé và thời gian.
+     - **Cảnh Báo Quét Trùng (Đỏ cảnh báo rung lắc)**: Hiển thị "CẢNH BÁO: QUÉT TRÙNG VÉ!", thời gian quét lần đầu, cổng vào và cảnh báo an ninh cấm vào.
+     - **Không Hợp Lệ (Vàng cam)**: Hiển thị lý do vé không hợp lệ (sai sự kiện, chưa thanh toán, mã không tồn tại).
+   - Hiệu ứng âm thanh phản hồi: Tích hợp Web Audio API phát tiếng bíp thanh cao (880Hz) khi hợp lệ và tiếng còi cảnh báo trầm (220Hz saw) khi quét trùng hoặc lỗi.
+   - Bảng nhật ký soát vé gần đây: Bảng theo dõi realtime 50 lượt khách qua cổng với nhãn ghế, cổng và nhân viên phụ trách.
+
+4. **Kết Quả Kiểm Thử Toàn Diện**:
+   - `StaffCheckInConcurrencyIntegrationTest`: 2/2 tests PASS (Kiểm thử tải đồng thời 10 luồng quét cùng 1 vé trên PostgreSQL 17 thật: đúng 1 luồng thành công 200 OK, 9 luồng nhận 409 Conflict; kiểm thử cô lập Event Scope).
+   - `StaffCheckInControllerTest`: 4/4 tests PASS (MockMvc kiểm tra các endpoint HTTP, DTO và mapping tham số).
+   - `StaffCheckInServiceTest`: 11/11 tests PASS (Kiểm tra xác thực, RBAC, kiểm tra QR token signature, kiểm tra event mismatch, kiểm tra booking status, xử lý duplicate key, thống kê stats).
+   - `StaffScopeSecurityTest`: 6/6 tests PASS (Kiểm tra nhân viên chỉ được soát vé sự kiện được gán; tài khoản CUSTOMER/ORGANIZER bị từ chối 403; ADMIN được bypass).
+   - `V14MigrationVerificationTest`: 1/1 test PASS (Xác minh bảng `ticket_check_ins`, các cột và ràng buộc duy nhất trên PostgreSQL 17 thật; tổng 33 bảng).
+   - Toàn bộ backend test suite: **217 tests PASS 100%** (0 errors, 0 failures, 121 skipped an toàn).
+   - Frontend test suite: **67 tests PASS 100%** (4/4 test suites, bao gồm `StaffCheckInPage.test.ts`).
+   - Frontend build: `tsc --noEmit && vite build` **SUCCESS (232ms)**.
+   - Contracts: 69/69 cases OpenAPI 3.1 PASS.
+   - Git: Không commit, không push Git (tuân thủ chỉ thị).
+
+
 
 ## T13 — Phân Hệ Quản Trị Nhà Tổ Chức (Organizer Management, Venues & Staff Assignments) (Done, 2026-11-16)
 

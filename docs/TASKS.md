@@ -324,10 +324,10 @@
 
 ## Giai đoạn 5 — Soát Vé Check-in & Vận Hành Sự Kiện (Staff Portal) (T16)
 
-- [ ] **T16.1 — Cổng Vận Hành Sự Kiện Dành Cho Staff (Staff Dashboard):** Màn hình làm việc cho nhân viên sự kiện, chỉ hiển thị các sự kiện được phân công.
-- [ ] **T16.2 — Quét & Xác Thực Vé Điện Tử (QR Scanner / Manual Entry):** Kiểm tra tính hợp lệ của vé, sự kiện tương ứng và trạng thái CONFIRMED.
-- [ ] **T16.3 — Xử Lý Soát Vé Nguyên Tử (Atomic Check-in Transaction):** Khóa dòng bảng `ticket_check_ins`, ngăn chặn tuyệt đối tình trạng quét trùng lặp vé (anti double check-in).
-- [ ] **T16.4 — Danh Sách Khách Tham Dự & Nhật Ký Kiểm Toán Soát Vé:** Thống kê tỷ lệ check-in realtime, ghi nhật ký thời gian và nhân viên soát vé.
+- [x] **T16.1 — Cổng Vận Hành Sự Kiện Dành Cho Staff (Staff Dashboard) (Done, 2026-11-16):** Màn hình làm việc chuyên biệt `/staff` cho nhân viên soát vé, tích hợp bộ chọn sự kiện được phân công (`GET /api/staff/events`), chọn cổng soát vé linh hoạt và thống kê trực quan.
+- [x] **T16.2 — Quét & Xác Thực Vé Điện Tử (QR Scanner / Manual Entry) (Done, 2026-11-16):** Hỗ trợ cả 2 chế độ: quét mã QR Token ký số HMAC-SHA256 hoặc nhập mã vé thủ công, xác minh chữ ký số, kiểm tra khớp sự kiện (`EVENT_MISMATCH`), trạng thái đơn `CONFIRMED`.
+- [x] **T16.3 — Xử Lý Soát Vé Nguyên Tử (Atomic Check-in Transaction) (Done, 2026-11-16):** Giao dịch nguyên tử chèn vào `ticketing.ticket_check_ins`, kiểm soát ràng buộc duy nhất `CONSTRAINT uq_ticket_checked_in UNIQUE (ticket_id)`, ngăn chặn 100% tình trạng quét trùng vé (anti double check-in, trả 409 Conflict kèm thời gian và cổng quét lần đầu).
+- [x] **T16.4 — Danh Sách Khách Tham Dự & Nhật Ký Kiểm Toán Soát Vé (Done, 2026-11-16):** Thống kê tỷ lệ check-in realtime (`GET /api/staff/events/{id}/stats`), nhật ký 50 lượt soát vé gần nhất (`GET /api/staff/events/{id}/history`), phản hồi thị giác (màn hình Xanh/Đỏ/Vàng) và âm thanh Web Audio API.
 
 ## Giai đoạn 6 — Quản Trị Hệ Thống, Báo Cáo & Truyền Thông (Admin & Platform) (T17)
 

@@ -67,10 +67,10 @@ class V13MigrationVerificationTest {
                     "refund_attempts must contain required columns, got: " + cols);
             }
 
-            // 5. Verify total tables in ticketing schema is 32
+            // 5. Verify total tables in ticketing schema is at least 32
             try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'ticketing'")) {
                 assertTrue(rs.next());
-                assertEquals(32, rs.getInt(1), "Ticketing schema must contain exactly 32 tables after V13");
+                assertTrue(rs.getInt(1) >= 32, "Ticketing schema must contain at least 32 tables after V13");
             }
         }
     }

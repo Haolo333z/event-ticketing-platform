@@ -9,6 +9,7 @@ import { ContactPage } from './ContactPage.ts';
 import { MyBookingsPage } from './MyBookingsPage.ts';
 import { PaymentReturnPage } from './PaymentReturnPage.ts';
 import { OrganizerDashboard } from './OrganizerDashboard.ts';
+import { StaffCheckInPage } from './StaffCheckInPage.ts';
 import type { Api, Store, User } from '../api/client.ts';
 import { getStoredUser, clearStoredAuth } from '../api/client.ts';
 import type { AdminApi } from '../api/admin.ts';
@@ -27,6 +28,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     if (path === '/ve-cua-toi') return '/ve-cua-toi';
     if (path === '/payment-return') return '/payment-return';
     if (path === '/organizer') return '/organizer';
+    if (path === '/staff') return '/staff';
     if (path === '/lien-he') return '/lien-he';
     if (path === '/dat-ve' || path === '/events') return '/dat-ve';
     return '/';
@@ -312,7 +314,12 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           href: '/organizer',
           className: 'nav-link' + (currentPath === '/organizer' ? ' active' : ''),
           onClick: (e) => { e.preventDefault(); navigate('/organizer'); }
-        }, '🎪 Khu vực Tổ chức') : null
+        }, '🎪 Khu vực Tổ chức') : null,
+        (user && (user.roles?.includes('STAFF') || user.roles?.includes('ADMIN') || user.role === 'STAFF' || user.role === 'ADMIN')) ? h('a', {
+          href: '/staff',
+          className: 'nav-link' + (currentPath === '/staff' ? ' active' : ''),
+          onClick: (e) => { e.preventDefault(); navigate('/staff'); }
+        }, '📱 Soát Vé') : null
       ),
 
       h('div', { className: 'topbar-actions' },
@@ -347,9 +354,11 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
               onClick: () => navigate('/ve-cua-toi'),
               title: 'Xem vé đã mua của bạn'
             }, '🎟️ Vé của tôi') : null,
-            hasStaff && !hasAdmin ? h('span', {
-              className: 'badge-staff-indicator',
-              title: 'Phân hệ Nhân viên soát vé'
+            (hasStaff || hasAdmin) ? h('button', {
+              type: 'button',
+              className: 'btn-staff-view' + (currentPath === '/staff' ? ' active' : ''),
+              onClick: () => navigate('/staff'),
+              title: 'Vào Cổng Soát Vé Nhân Viên'
             }, '📱 Soát vé') : null,
             (hasOrganizer || hasAdmin) ? h('button', {
               type: 'button',
@@ -442,6 +451,13 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         h(ContactPage, { api: customer, onNavigate: navigate })
       ) : currentPath === '/organizer' ? (
         h(OrganizerDashboard, {
+          api: customer,
+          user,
+          onNavigate: navigate,
+          onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        })
+      ) : currentPath === '/staff' ? (
+        h(StaffCheckInPage, {
           api: customer,
           user,
           onNavigate: navigate,

@@ -125,6 +125,54 @@ export type StaffCandidate={
   phone?:string;
 };
 
+export type AssignedEvent={
+  eventId:string;
+  title:string;
+  venue:string;
+  startsAt:string|null;
+  endsAt:string|null;
+  status:string;
+  assignedAt:string|null;
+};
+
+export type CheckInRequest={
+  qrToken?:string;
+  ticketCode?:string;
+  gateName?:string;
+  deviceInfo?:string;
+};
+
+export type CheckInResult={
+  status:string;
+  ticketId:string;
+  ticketCode:string;
+  attendeeName:string;
+  ticketType:string;
+  seatLabel:string;
+  checkedInAt:string;
+  gate:string;
+  message:string;
+};
+
+export type CheckInStats={
+  totalSold:number;
+  checkedInCount:number;
+  remainingCount:number;
+  checkInRatePercent:number;
+};
+
+export type CheckInHistoryItem={
+  checkInId:string;
+  ticketId:string;
+  ticketCode:string;
+  attendeeName:string;
+  ticketType:string;
+  seatLabel:string;
+  gateName:string;
+  checkedInAt:string;
+  staffName:string;
+};
+
 export type AuthResponse={
   token:string;
   user:User;
@@ -208,6 +256,12 @@ export interface Api{
     assignStaff(id:string,data:{staffUserId?:string;staffEmail?:string}):Promise<StaffAssignment>;
     revokeStaff(id:string,staffUserId:string):Promise<void>;
     staffCandidates(q?:string):Promise<StaffCandidate[]>;
+  };
+  staff?:{
+    events():Promise<AssignedEvent[]>;
+    checkIn(eventId:string,data:CheckInRequest):Promise<CheckInResult>;
+    stats(eventId:string):Promise<CheckInStats>;
+    history(eventId:string,limit?:number):Promise<CheckInHistoryItem[]>;
   };
 }
 
@@ -326,6 +380,16 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         const qs=new URLSearchParams(params).toString();
         return call('/api/payments/vnpay/return?'+qs);
       }
+    },
+    staff:{
+      events:()=>call('/api/staff/events'),
+      checkIn:(eventId,data)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/check-in',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      }),
+      stats:(eventId)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/stats'),
+      history:(eventId,limit=50)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/history?limit='+limit)
     }
   };
 }
