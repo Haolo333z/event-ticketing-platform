@@ -138,3 +138,23 @@ test('organizer api adapter dispatches correct paths and payloads',async()=>{
   assert.equal(calls[4].method,'POST');
   assert.equal(calls[4].url,'http://api.test/api/organizer/events/e1/publish');
 });
+
+
+test('v3 api adapter builds best-seats, stream, calendar and discovery URLs accurately',async()=>{
+  const calls:string[]=[];
+  const api=createApi('http://api.test',async(url)=>{
+    calls.push(String(url));
+    if(String(url).includes('/best-available')){
+      return new Response(JSON.stringify({eventId:'e1',ticketTypeId:'t1',quantity:2,contiguous:true,rowLabel:'A',centerDistance:0,seats:[{id:'s1',label:'A5',rowLabel:'A',seatNumber:5},{id:'s2',label:'A6',rowLabel:'A',seatNumber:6}],explanation:'OK'}),{status:200});
+    }
+    return new Response(JSON.stringify({items:[],totalElements:0}),{status:200});
+  });
+  const best=await api.v3!.bestSeats('e1','t1',2);
+  assert.equal(best.contiguous,true);
+  assert.equal(best.seats.length,2);
+  assert.equal(calls[0],'http://api.test/api/events/e1/seats/best-available?ticketTypeId=t1&quantity=2');
+  assert.equal(api.v3!.streamUrl('e1'),'http://api.test/api/events/e1/stream');
+  assert.equal(api.v3!.calendarUrl('e1'),'http://api.test/api/events/e1/calendar.ics');
+  await api.v3!.discoverEvents({format:'ONLINE',minPrice:100000,maxPrice:500000,q:'AI'});
+  assert.equal(calls[1],'http://api.test/api/v3/events?q=AI&format=ONLINE&minPrice=100000&maxPrice=500000');
+});

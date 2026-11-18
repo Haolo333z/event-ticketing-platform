@@ -336,6 +336,11 @@ export function MyBookingsPage({
                     className: 'print-pass-btn',
                     onClick: () => window.print()
                   }, '🖨️ In Vé Điện Tử (Print Pass)'),
+                  selectedBooking.status === 'CONFIRMED' && eventDetail && api.v3?.calendarUrl && h('a', {
+                    href: api.v3.calendarUrl(eventDetail.id),
+                    download: 'eventflow-' + eventDetail.id.slice(0, 8) + '.ics',
+                    className: 'order-more-btn ics-download-btn'
+                  }, '📅 Thêm vào Lịch (.ics)'),
                   h('button', {
                     type: 'button',
                     className: 'order-more-btn',

@@ -59,7 +59,14 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   // Client-side search and category filtering
   const[searchQuery,setSearchQuery]=useState('');
   const[categoryFilter,setCategoryFilter]=useState('ALL');
+  const[priceFilter,setPriceFilter]=useState<'ALL'|'UNDER_500K'|'MID'|'OVER_1500K'>('ALL');
   const[faqOpen,setFaqOpen]=useState<number|null>(null);
+
+  // V3 Real-time SSE & Best Contiguous Seats
+  const[sseLive,setSseLive]=useState(false);
+  const[bestSeatQty,setBestSeatQty]=useState(2);
+  const[bestSeatBusy,setBestSeatBusy]=useState(false);
+  const[bestSeatNote,setBestSeatNote]=useState('');
 
   // Commercial Consultation Form State
   const[contactForm,setContactForm]=useState({fullName:'',orgName:'',email:'',phone:'',eventType:'CONCERT',message:''});
@@ -85,6 +92,35 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
     const timer=setInterval(()=>{api.availability(selected).then(value=>{if(active){setAvailability(value);setAvailabilityStale(false);}}).catch(()=>{if(active)setAvailabilityStale(true);});},3000);
     return()=>{active=false;clearInterval(timer);};
   },[api,selected]);
+  useEffect(()=>{
+    setSseLive(false);setBestSeatNote('');
+    if(!selected||typeof EventSource==='undefined'||!api.v3?.streamUrl)return;
+    let active=true;
+    let es:EventSource|null=null;
+    try{
+      es=new EventSource(api.v3.streamUrl(selected));
+      es.addEventListener('connected',()=>{if(active)setSseLive(true);});
+      es.addEventListener('inventory-updated',()=>{
+        if(!active)return;
+        api.availability(selected).then(value=>{if(active){setAvailability(value);setAvailabilityStale(false);}}).catch(()=>{});
+      });
+      es.onerror=()=>{if(active)setSseLive(false);};
+    }catch{/* SSE optional in non-browser/test environments */}
+    return()=>{active=false;setSseLive(false);if(es)es.close();};
+  },[api,selected]);
+  async function pickBestContiguousSeats(){
+    if(!selected||!typeId||!api.v3?.bestSeats||bestSeatBusy)return;
+    setBestSeatBusy(true);setBestSeatNote('');setError(null);
+    try{
+      const res=await api.v3.bestSeats(selected,typeId,bestSeatQty);
+      setSeatIds(res.seats.map(s=>s.id));
+      setBestSeatNote(res.explanation);
+    }catch(value){
+      fail(value);
+    }finally{
+      setBestSeatBusy(false);
+    }
+  }
   useEffect(()=>{
     if(!booking||!['PENDING_PAYMENT','EXPIRED'].includes(booking.status))return;let active=true;const id=booking.bookingId;
     const started=Date.now(),budget=booking.status==='EXPIRED'?90000:Math.max(90000,Date.parse(booking.expiresAt)-started+90000);
@@ -140,7 +176,12 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   const filteredEvents=events.filter(e=>{
     const matchesSearch=!searchQuery||e.title.toLowerCase().includes(searchQuery.toLowerCase())||e.venue.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory=categoryFilter==='ALL'||(categoryFilter==='GA'&&e.ticketTypes.some(t=>t.mode==='GA'))||(categoryFilter==='SEATED'&&e.ticketTypes.some(t=>t.mode==='SEATED'));
-    return matchesSearch&&matchesCategory;
+    const minP=e.ticketTypes.length?Math.min(...e.ticketTypes.map(t=>t.priceVnd)):0;
+    const matchesPrice=priceFilter==='ALL'
+      ||(priceFilter==='UNDER_500K'&&minP<500000)
+      ||(priceFilter==='MID'&&minP>=500000&&minP<=1500000)
+      ||(priceFilter==='OVER_1500K'&&minP>1500000);
+    return matchesSearch&&matchesCategory&&matchesPrice;
   });
 
   return h('div',{className:'shell eventflow-consumer-root'},
@@ -263,7 +304,18 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
                 type:'button',
                 className:'tab-btn'+(categoryFilter==='SEATED'?' active':''),
                 onClick:()=>setCategoryFilter('SEATED')
-              },'💺 Ghế chỉ định')
+              },'💺 Ghế chỉ định'),
+              h('select',{
+                'aria-label':'Lọc theo khoảng giá',
+                className:'tab-btn price-select',
+                value:priceFilter,
+                onChange:(e:ChangeEvent<HTMLSelectElement>)=>setPriceFilter(e.target.value as 'ALL'|'UNDER_500K'|'MID'|'OVER_1500K')
+              },
+                h('option',{value:'ALL'},'💰 Mọi mức giá'),
+                h('option',{value:'UNDER_500K'},'Dưới 500.000đ'),
+                h('option',{value:'MID'},'500.000đ – 1.500.000đ'),
+                h('option',{value:'OVER_1500K'},'Trên 1.500.000đ')
+              )
             )
           ),
 
@@ -311,7 +363,10 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
           detail&&h('p',{className:'muted'},detail.description),
           detailLoading&&h('p',{role:'status'},'Đang tải chi tiết và tồn kho…'),
           detailFailed&&h('p',null,'Chưa tải được chi tiết. Chọn lại hoặc tải lại sự kiện.'),
-          availability&&h('p',{className:'snapshot-note'},'Tồn kho tham khảo lúc '+date(availability.asOf)),
+          availability&&h('p',{className:'snapshot-note'},
+            'Tồn kho tham khảo lúc '+date(availability.asOf),
+            sseLive&&h('span',{className:'sse-live-badge'},' · 🟢 Đồng bộ trực tiếp (SSE)')
+          ),
           availabilityStale&&h('p',{role:'status',className:'alert pending'},'Chưa cập nhật được tồn kho. Snapshot có thể đã cũ; máy chủ sẽ kiểm tra lại khi đặt.'),
           detail&&detail.ticketTypes.every(t=>!t.active)&&h('p',{className:'empty-state'},'Sự kiện chưa có loại vé đang mở.'),
           h('form',{onSubmit:submit},
@@ -337,6 +392,25 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
                 h('span',{className:'legend-item'},h('span',{className:'dot dot-held'}),'🟡 Đang giữ'),
                 h('span',{className:'legend-item'},h('span',{className:'dot dot-sold'}),'⚪ Đã bán')
               ),
+              api.v3?.bestSeats&&h('div',{className:'best-seats-bar'},
+                h('span',{className:'best-seats-label'},'✨ Gợi ý cụm ghế liền kề:'),
+                h('select',{
+                  'aria-label':'Số ghế liền kề muốn gợi ý',
+                  className:'best-seats-select',
+                  value:String(bestSeatQty),
+                  disabled:busy||!!pending||bestSeatBusy,
+                  onChange:(e:ChangeEvent<HTMLSelectElement>)=>setBestSeatQty(Number(e.target.value))
+                },
+                  ...[2,3,4,5,6].map(n=>h('option',{key:n,value:String(n)},n+' ghế cạnh nhau'))
+                ),
+                h('button',{
+                  type:'button',
+                  className:'best-seats-btn',
+                  disabled:busy||!!pending||bestSeatBusy,
+                  onClick:()=>void pickBestContiguousSeats()
+                },bestSeatBusy?'Đang tìm…':'Chọn cụm tốt nhất')
+              ),
+              bestSeatNote&&h('p',{role:'status',className:'best-seats-note'},'💡 ',bestSeatNote),
               h('div',{className:'seat-map','aria-label':'Sơ đồ ghế'},...seatMap.map(seat=>h('button',{
                 key:seat.id,
                 type:'button',

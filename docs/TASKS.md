@@ -352,3 +352,28 @@
 - [x] **T19.3 — Tập Dượt Migration & Khôi Phục Dữ Liệu (Done, 2026-11-17):** Chuỗi 15 Flyway migrations (`V1` đến `V15`) áp dụng tự động thành công và sạch sẽ trên PostgreSQL 17, schema `ticketing` đạt đủ đúng 35 bảng nghiệp vụ.
 - [x] **T19.4 — Cấu Hình Môi Trường Triển Khai Staging/Demo & An Toàn Bí Mật (Done, 2026-11-17):** Whitelist mock JWT dev secret bằng `.gitleaksignore` và `regexes` trong `.gitleaks.toml`, đảm bảo job `secrets` của CI xanh 100%. Rà soát không có secret thực tế, khóa bí mật hay credential trong Git repository.
 - [x] **T19.5 — Tổng Kết Báo Cáo, Cập Nhật Tài Liệu Kỹ Thuật & Đóng Gói Phát Hành V2 (Done, 2026-11-17):** Cập nhật đồng bộ toàn bộ tài liệu kỹ thuật cốt lõi: `ARCHITECTURE.md` (kiến trúc 4 vai trò, Hexagonal Payment Ports & Adapters, Staff Check-in, Admin Platform), `DATA_MODEL.md` (35 bảng nghiệp vụ V1-V15), `API_CONTRACT.md` (danh mục đầy đủ endpoints RESTful V2), `README.md` (hướng dẫn vận hành 4 vai trò và các cổng giao diện). Sẵn sàng gắn Git Tag `v2.0.0-release` để chính thức bàn giao sản phẩm EventFlow V2.
+
+---
+
+# LỘ TRÌNH NÂNG CẤP EVENTFLOW V3 — ĐA HÌNH THỨC, THỜI GIAN THỰC & HỆ SINH THÁI TRỢ LÝ AI (T20 – T22)
+
+## Giai đoạn 9 — Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (T20)
+
+- [x] **T20.1 — Flyway Migration V16 (`V16__event_format_online_and_seat_grid.sql`) (Done, 2026-11-18):** Bổ sung cột `event_format` (`OFFLINE_SEATED`, `OFFLINE_GA`, `ONLINE`) và `online_join_url` vào `ticketing.events`; bổ sung `row_label`, `seat_number` vào `ticketing.seats` (tự động backfill từ nhãn ghế hiện có). Bảo toàn 100% migrations `V1–V15` và hợp đồng OpenAPI V2.
+- [x] **T20.2 — Thuật Toán Gợi Ý Cụm Ghế Liền Kề Tốt Nhất (Best Available Contiguous Seats) (Done, 2026-11-18):** Dịch vụ `BestSeatsService` & API `GET /api/events/{eventId}/seats/best-available` quét ma trận ghế theo từng hàng để chọn cụm N ghế liền kề đang `AVAILABLE` có góc nhìn trung tâm sân khấu nhất (kèm fallback khi không còn cụm liền kề); tích hợp thanh chọn nhanh trên Sơ đồ ghế 3D trong `App.ts`.
+- [x] **T20.3 — Đồng Bộ Màu Ghế Thời Gian Thực Qua Server-Sent Events (SSE) (Done, 2026-11-18):** Dịch vụ `EventStreamService` & endpoint `GET /api/events/{eventId}/stream` (`text/event-stream`), phát `InventoryChangedEvent` qua `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` từ `BookingCommandService` và `BookingLifecycle`, tự động cập nhật sơ đồ ghế trực tiếp trên trình duyệt qua `EventSource`.
+- [x] **T20.4 — Sự Kiện Online, Bộ Lọc Đa Tiêu Chí, Tạo Ma Trận Ghế & File Lịch `.ics` (Done, 2026-11-18):** API discovery `GET /api/v3/events` lọc theo hình thức (`OFFLINE_SEATED`/`OFFLINE_GA`/`ONLINE`), khoảng giá và từ khóa; API tải file lịch RFC 5545 `GET /api/events/{id}/calendar.ics` tích hợp nút "Thêm vào Lịch (.ics)" trong `/ve-cua-toi`; API Organizer `POST /api/organizer/events/{id}/format` và `POST /api/organizer/events/{id}/seat-matrix` sinh nhanh ma trận hàng/cột ghế.
+
+## Giai đoạn 10 — Hàng Đợi Ảo Giờ Cao Điểm & Danh Sách Chờ Thông Minh Qua Kafka (T21)
+
+- [ ] **T21.1 — Flyway Migration V17 (`V17__smart_waitlist_and_waiting_room.sql`):** Tạo bảng `ticketing.event_waitlists` và cấu hình phòng chờ ảo.
+- [ ] **T21.2 — Smart Waitlist Engine Qua Kafka:** Đăng ký danh sách chờ khi sự kiện hết vé; tự động ưu tiên thông báo FIFO cho khách xếp hàng qua Kafka Consumer mỗi khi `Expiry Worker` hoặc hủy đơn nhả vé.
+- [ ] **T21.3 — Hàng Đợi Ảo Giờ Cao Điểm (Virtual Waiting Room):** Điều tiết lưu lượng truy cập giờ Flash Sale, hiển thị số thứ tự xếp hàng và cấp token thông hành vào phòng chọn ghế.
+
+## Giai đoạn 11 — Hệ Sinh Thái Trợ Lý AI Thông Minh & Load Test V3 (T22)
+
+- [ ] **T22.1 — Flyway Migration V18 & Kiến Trúc Hexagonal `AiAssistantPort`:** Lưu lịch sử hội thoại AI (`ai_conversations`, `ai_messages` có Anti-IDOR); cài đặt `GeminiAiAdapter` (đọc API key từ `.env`) và `LocalFallbackAiAdapter` chạy 100% offline/local.
+- [ ] **T22.2 — AI Ticketing Concierge (Khách Hàng):** Chat ngôn ngữ tự nhiên với Function Calling đọc PostgreSQL thật, tìm cụm ghế liền kề kèm nút **"Giữ cụm ghế này ngay"** gọi luồng ACID; tra cứu đơn & giải thích tiến độ hoàn tiền (Anti-IDOR).
+- [ ] **T22.3 — AI Organizer Copilot (Nhà Tổ Chức):** Tự động sinh mô tả SEO, lịch trình Agenda, cơ cấu hạng vé và JSON ma trận sơ đồ ghế trong Organizer Portal.
+- [ ] **T22.4 — AI Ops Diagnostics (Admin):** Phân tích sự kiện lỗi trong `outbox_events`/DLQ và đơn `REFUND_REQUIRED`, tóm tắt nguyên nhân tiếng Việt và khuyến nghị hành động (Replay / Hoàn tiền).
+- [ ] **T22.5 — Script Load Test k6, Kiểm Thử Hồi Quy V3 & Đóng Gói `v3.0.0-release`:** Bổ sung script k6, chạy PASS 100% toàn bộ test suite, cập nhật tài liệu kỹ thuật và gắn tag phát hành V3.

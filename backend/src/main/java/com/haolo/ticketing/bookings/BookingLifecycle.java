@@ -2,11 +2,13 @@ package com.haolo.ticketing.bookings;
 
 import java.sql.Timestamp;
 import java.util.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.*;
 import com.haolo.ticketing.inventory.InventoryRelease;
 import com.haolo.ticketing.messaging.OutboxWriter;
+import com.haolo.ticketing.realtime.InventoryChangedEvent;
 import com.haolo.ticketing.shared.ApiException;
 
 /** Internal transaction contract: booking lock precedes inventory locks and state/history/outbox. */
@@ -15,9 +17,10 @@ public class BookingLifecycle {
     private final JdbcTemplate jdbc;
     private final InventoryRelease inventory;
     private final OutboxWriter outbox;
+    private final ApplicationEventPublisher events;
     private static final Map<String,String> EVENTS=Map.of("CONFIRMED","BookingConfirmed","PAYMENT_FAILED","BookingPaymentFailed","CANCELLED","BookingCancelled","EXPIRED","BookingExpired","REFUND_REQUIRED","BookingRefundRequired");
     private static final Map<String,String> TIMES=Map.of("CONFIRMED","confirmedAt","PAYMENT_FAILED","failedAt","CANCELLED","cancelledAt","EXPIRED","expiredAt");
-    public BookingLifecycle(JdbcTemplate jdbc,InventoryRelease inventory,OutboxWriter outbox){this.jdbc=jdbc;this.inventory=inventory;this.outbox=outbox;}
+    public BookingLifecycle(JdbcTemplate jdbc,InventoryRelease inventory,OutboxWriter outbox,ApplicationEventPublisher events){this.jdbc=jdbc;this.inventory=inventory;this.outbox=outbox;this.events=events;}
     public Map<String,Object> lock(UUID id){
         var rows=jdbc.queryForList("SELECT *,expires_at<=clock_timestamp() AS due FROM ticketing.bookings WHERE id=? FOR UPDATE",id);
         if(rows.isEmpty())throw ApiException.missing();return rows.getFirst();
@@ -33,5 +36,6 @@ public class BookingLifecycle {
         if(TIMES.containsKey(target))payload.put(TIMES.get(target),now.toInstant().toString());
         var event=outbox.append(id,version,EVENTS.get(target),correlation,payload);
         jdbc.update("INSERT INTO ticketing.booking_status_history(id,booking_id,from_status,to_status,occurred_at,cause_event_id) VALUES (?,?,?,?,?,?)",UUID.randomUUID(),id,from,target,now,event.eventId());
+        events.publishEvent(new InventoryChangedEvent((UUID)booking.get("event_id"),"BOOKING_"+target,id,now.toInstant()));
     }
 }

@@ -5946,3 +5946,67 @@ legend {
 }
 
 
+
+
+/* === EventFlow V3: Real-time SSE Badge, Best Contiguous Seats & Calendar === */
+.sse-live-badge {
+  color: #059669;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+.best-seats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 10px 0 12px;
+  background: linear-gradient(135deg, #eef2ff 0%, #f0f9ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+}
+.best-seats-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3730a3;
+}
+.best-seats-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #a5b4fc;
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: #1e293b;
+}
+.best-seats-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #4338ca;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.best-seats-btn:hover:not(:disabled) {
+  background: #3730a3;
+}
+.best-seats-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.best-seats-note {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.85rem;
+}
+.ics-download-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

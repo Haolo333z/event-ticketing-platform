@@ -31,6 +31,7 @@ public class SecurityConfiguration {
                 .requestMatchers("/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/error").permitAll()
                 .requestMatchers(HttpMethod.GET, "/actuator/metrics", "/actuator/metrics/**").access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(settings.safeProfile && authentication.get().getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))))
                 .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v3/events", "/api/v3/events/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/contact/leads").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/bookings").hasRole("CUSTOMER")

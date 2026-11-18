@@ -4,6 +4,31 @@
 
 ## Trạng thái hiện tại
 
+- **Giai đoạn:** EventFlow V3 — Giai đoạn 9: Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (Task T20) (2026-11-18)
+- **Tiến độ:** Hoàn tất toàn diện Task T20 mà không phá vỡ bất kỳ bất biến hay hợp đồng OpenAPI nào của V2:
+  - Flyway Migration `V16__event_format_online_and_seat_grid.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`): bổ sung `events.event_format` (`OFFLINE_SEATED`/`OFFLINE_GA`/`ONLINE`), `events.online_join_url`, `seats.row_label`, `seats.seat_number` (tự backfill tọa độ ghế).
+  - Thuật toán Gợi ý Cụm Ghế Liền Kề Tốt Nhất (`BestSeatsService` + `GET /api/events/{id}/seats/best-available`): chọn cụm N ghế liền kề gần trung tâm hàng gần sân khấu nhất, kèm fallback khi không còn cụm liền kề; tích hợp trực tiếp trên Sơ đồ ghế 3D (`App.ts`).
+  - Đồng bộ màu ghế thời gian thực SSE (`EventStreamService` + `GET /api/events/{id}/stream`): phát `InventoryChangedEvent` chỉ sau khi DB commit (`TransactionPhase.AFTER_COMMIT`) từ `BookingCommandService` và `BookingLifecycle`, cập nhật trực tiếp giao diện qua `EventSource`.
+  - File lịch `.ics` chuẩn RFC 5545 (`CalendarIcsService` + `GET /api/events/{id}/calendar.ics`) tích hợp trên thẻ Boarding Pass (`MyBookingsPage.ts`), bộ lọc khoảng giá, API discovery `/api/v3/events` và API Organizer tạo ma trận ghế (`POST /api/organizer/events/{id}/seat-matrix`).
+- **Task vừa hoàn tất:** `T20 — Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (Done, 2026-11-18)`
+- **Kết quả kiểm chứng thực tế:**
+  - `.\backend\mvnw.cmd -f backend/pom.xml test`: **242/242 tests PASS** (0 failures, 0 errors, 121 IT skipped an toàn; bao gồm 8 tests mới của T20: `V16MigrationVerificationTest`, `BestSeatsServiceTest`, `EventStreamServiceTest`, `CalendarIcsServiceTest`).
+  - `cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`: **72/72 tests PASS**, `tsc --noEmit && vite build` **SUCCESS (247ms)**.
+  - `cmd /c "npm test --prefix tools/contracts"`: **69/69 ca kiểm thử OpenAPI 3.1 PASS**.
+- **Giới hạn kiểm chứng:** Chưa chạy kiểm thử E2E hai trình duyệt mở SSE song song với backend đang build mới (mới kiểm chứng bằng unit test `EventStreamServiceTest` và biên dịch `EventSource` client); bước tiếp theo triển khai **Task T21 (Smart Waitlist qua Kafka & Virtual Waiting Room)**.
+
+## T20 — Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (Done, 2026-11-18)
+
+**Tóm tắt triển khai:**
+1. Migration `V16__event_format_online_and_seat_grid.sql`: thêm `event_format`, `online_join_url` vào `ticketing.events` và `row_label`, `seat_number` vào `ticketing.seats`.
+2. Backend package `com.haolo.ticketing.realtime`: `InventoryChangedEvent`, `EventStreamService` (SSE + `AFTER_COMMIT`), `BestSeatsService`, `CalendarIcsService`, `EventV3Service`, `EventV3Controller`; gắn sự kiện `ApplicationEventPublisher` trong `BookingCommandService` và `BookingLifecycle`.
+3. Frontend: mở rộng `client.ts` (`api.v3`), tích hợp `EventSource` đồng bộ màu ghế trực tiếp, thanh chọn cụm ghế liền kề tốt nhất, lọc khoảng giá trên `App.ts`, nút tải file lịch `.ics` trên `MyBookingsPage.ts`.
+4. Kiểm chứng: Backend 242/242 PASS, Frontend 72/72 PASS, Vite build 247ms, OpenAPI contracts 69/69 PASS.
+
+---
+
+## Trạng thái trước đó (EventFlow V2 Release)
+
 - **Giai đoạn:** Phase 8 — Kiểm Thử Hồi Quy Toàn Diện, Bảo Mật, Sửa Lỗi CI & Đóng Gói Phát Hành V2 (Task T19) (2026-11-17) — **TOÀN BỘ 8 GIAI ĐOẠN ĐÃ HOÀN TẤT 100%**
 - **Tiến độ:** Hoàn tất trọn vẹn toàn bộ các mục tiêu của Lộ trình Nâng cấp EventFlow V2 (Phase 0 đến Phase 8):
   - Khắc phục 100% lỗi CI trên GitHub Actions: Whitelist mock JWT dev secret bằng `.gitleaksignore` và `.gitleaks.toml` cho Job `secrets`; sửa lỗi Job `backend` bằng cách tối ưu hóa `demoTransport`, lưu giữ state `App` khi switch persona trong `DemoShell`, tự động nhận diện tài khoản demo test.

@@ -1,9 +1,12 @@
 package com.haolo.ticketing.bookings;
 
+import java.time.Instant;
 import java.util.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.haolo.ticketing.identity.DemoPrincipal;
+import com.haolo.ticketing.realtime.InventoryChangedEvent;
 import com.haolo.ticketing.shared.ApiException;
 import com.haolo.ticketing.events.CatalogBookingAccess;
 import com.haolo.ticketing.inventory.GaInventory;
@@ -16,9 +19,9 @@ public class BookingCommandService {
     public record Result(UUID bookingId,String body,UUID eventId){}
     private final JdbcTemplate jdbc;private final BookingTransactions transactions;private final BookingPolicy policy;
     private final CatalogBookingAccess catalog;private final GaInventory inventory;private final OutboxWriter outbox;private final ObjectMapper mapper;
-    private final SeatInventory seats;
-    public BookingCommandService(JdbcTemplate jdbc,BookingTransactions transactions,BookingPolicy policy,CatalogBookingAccess catalog,GaInventory inventory,SeatInventory seats,OutboxWriter outbox,ObjectMapper mapper){
-        this.jdbc=jdbc;this.transactions=transactions;this.policy=policy;this.catalog=catalog;this.inventory=inventory;this.seats=seats;this.outbox=outbox;this.mapper=mapper;
+    private final SeatInventory seats;private final ApplicationEventPublisher events;
+    public BookingCommandService(JdbcTemplate jdbc,BookingTransactions transactions,BookingPolicy policy,CatalogBookingAccess catalog,GaInventory inventory,SeatInventory seats,OutboxWriter outbox,ObjectMapper mapper,ApplicationEventPublisher events){
+        this.jdbc=jdbc;this.transactions=transactions;this.policy=policy;this.catalog=catalog;this.inventory=inventory;this.seats=seats;this.outbox=outbox;this.mapper=mapper;this.events=events;
     }
     public Result create(DemoPrincipal principal,String key,BookingRequest request,UUID correlationId){
         if(principal==null||!principal.hasRole("CUSTOMER"))throw new ApiException(403,"FORBIDDEN","Chỉ khách hàng được tạo booking");
@@ -50,6 +53,7 @@ public class BookingCommandService {
         jdbc.update("INSERT INTO ticketing.booking_status_history(id,booking_id,from_status,to_status,occurred_at,cause_event_id) VALUES (?,?,NULL,'PENDING_PAYMENT',?,?)",UUID.randomUUID(),booking,times.get("created_at"),event.eventId());
         String body=mapper.writeValueAsString(Map.of("bookingId",booking,"status","PENDING_PAYMENT","expiresAt",expires,"totalAmountVnd",total));
         String saved=jdbc.queryForObject("UPDATE ticketing.idempotency_keys SET booking_id=?,response_status=202,response_body=CAST(? AS jsonb) WHERE account_id=? AND operation='CREATE_BOOKING' AND key=? RETURNING response_body::text",String.class,booking,body,account,key);
+        events.publishEvent(new InventoryChangedEvent(request.eventId(),"BOOKING_HELD",booking,Instant.now()));
         return new Result(booking,saved,event.eventId());
     }
 }

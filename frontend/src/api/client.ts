@@ -173,6 +173,26 @@ export type CheckInHistoryItem={
   staffName:string;
 };
 
+export type BestSeatPick={id:string;label:string;rowLabel:string;seatNumber:number};
+export type BestSeatsResult={
+  eventId:string;
+  ticketTypeId:string;
+  quantity:number;
+  contiguous:boolean;
+  rowLabel:string;
+  centerDistance:number;
+  seats:BestSeatPick[];
+  explanation:string;
+};
+
+export type EventV3Item=Event&{
+  categoryId?:string;
+  eventFormat:'OFFLINE_SEATED'|'OFFLINE_GA'|'ONLINE';
+  onlineJoinUrl?:string;
+  minPriceVnd:number;
+  maxPriceVnd:number;
+};
+
 export type AuthResponse={
   token:string;
   user:User;
@@ -262,6 +282,14 @@ export interface Api{
     checkIn(eventId:string,data:CheckInRequest):Promise<CheckInResult>;
     stats(eventId:string):Promise<CheckInStats>;
     history(eventId:string,limit?:number):Promise<CheckInHistoryItem[]>;
+  };
+  v3?:{
+    discoverEvents(params?:{q?:string;format?:string;categoryId?:string;minPrice?:number;maxPrice?:number}):Promise<{items:EventV3Item[];totalElements:number}>;
+    bestSeats(eventId:string,ticketTypeId:string,quantity:number):Promise<BestSeatsResult>;
+    streamUrl(eventId:string):string;
+    calendarUrl(eventId:string):string;
+    updateEventFormat(eventId:string,data:{eventFormat:'OFFLINE_SEATED'|'OFFLINE_GA'|'ONLINE';onlineJoinUrl?:string}):Promise<{eventId:string;eventFormat:string;onlineJoinUrl:string}>;
+    generateSeatMatrix(eventId:string,data:{ticketTypeId:string;rows:string[];seatsPerRow:number}):Promise<{eventId:string;ticketTypeId:string;createdCount:number;sampleLabels:string[]}>;
   };
 }
 
@@ -390,6 +418,31 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
       }),
       stats:(eventId)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/stats'),
       history:(eventId,limit=50)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/history?limit='+limit)
+    },
+    v3:{
+      discoverEvents:(params={})=>{
+        const sp=new URLSearchParams();
+        if(params.q)sp.set('q',params.q);
+        if(params.format)sp.set('format',params.format);
+        if(params.categoryId)sp.set('categoryId',params.categoryId);
+        if(params.minPrice!=null)sp.set('minPrice',String(params.minPrice));
+        if(params.maxPrice!=null)sp.set('maxPrice',String(params.maxPrice));
+        const qs=sp.toString();
+        return call('/api/v3/events'+(qs?'?'+qs:''));
+      },
+      bestSeats:(eventId,ticketTypeId,quantity)=>call('/api/events/'+encodeURIComponent(eventId)+'/seats/best-available?ticketTypeId='+encodeURIComponent(ticketTypeId)+'&quantity='+quantity),
+      streamUrl:(eventId)=>base+'/api/events/'+encodeURIComponent(eventId)+'/stream',
+      calendarUrl:(eventId)=>base+'/api/events/'+encodeURIComponent(eventId)+'/calendar.ics',
+      updateEventFormat:(eventId,data)=>call('/api/organizer/events/'+encodeURIComponent(eventId)+'/format',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      }),
+      generateSeatMatrix:(eventId,data)=>call('/api/organizer/events/'+encodeURIComponent(eventId)+'/seat-matrix',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      })
     }
   };
 }
