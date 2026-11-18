@@ -1,4 +1,4 @@
-import { createElement as h, useState } from 'react';
+import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../api/client.ts';
 import type { Api, AiSeatSuggestion, User } from '../api/client.ts';
@@ -29,6 +29,7 @@ export function AiConciergeWidget({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [holdingKey, setHoldingKey] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatBubble[]>([
     {
       id: 'welcome',
@@ -37,6 +38,12 @@ export function AiConciergeWidget({
       adapter: 'HEXAGONAL_AI'
     }
   ]);
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [messages, open]);
 
   async function sendPrompt(text: string) {
     const trimmed = text.trim();
@@ -131,7 +138,7 @@ export function AiConciergeWidget({
         h('button', { type: 'button', onClick: () => void sendPrompt('Kiểm tra đơn hàng và hoàn tiền của tôi') }, '📦 Tra cứu đơn & hoàn tiền')
       ),
 
-      h('div', { className: 'ai-messages-list' },
+      h('div', { ref: listRef, className: 'ai-messages-list' },
         ...messages.map(m => h('div', { key: m.id, className: 'ai-bubble ' + (m.sender === 'USER' ? 'user' : 'assistant') },
           h('p', { className: 'ai-bubble-text' }, m.text),
           m.adapter && h('span', { className: 'ai-adapter-tag' }, 'Adapter: ' + m.adapter),
@@ -149,7 +156,7 @@ export function AiConciergeWidget({
                   className: 'ai-hold-now-btn',
                   disabled: holdingKey !== null,
                   onClick: () => void holdSuggestedSeats(card)
-                }, holdingKey === key ? 'Đang khóa chỗ ACID…' : '⚡ Giữ cụm ghế này ngay')
+                }, holdingKey === key ? 'Đang khóa chỗ ACID…' : (card.mode === 'SEATED' ? '⚡ Giữ cụm ghế này ngay' : '⚡ Giữ ' + card.quantity + ' vé GA này ngay'))
               );
             })
           )

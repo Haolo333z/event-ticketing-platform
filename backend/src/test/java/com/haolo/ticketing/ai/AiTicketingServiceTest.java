@@ -83,4 +83,18 @@ class AiTicketingServiceTest {
         assertTrue(res.reply().contains("Anti-IDOR") || res.reply().contains("đăng nhập"));
         assertTrue(res.bookingSummaries().isEmpty());
     }
+
+    @Test
+    void conciergeAnswersGreetingAndHelpNaturally() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        BestSeatsService bestSeats = mock(BestSeatsService.class);
+        GeminiAiAdapter gemini = new GeminiAiAdapter("", "gemini-2.0-flash", new ObjectMapper());
+        LocalFallbackAiAdapter fallback = new LocalFallbackAiAdapter();
+        AiTicketingService service = new AiTicketingService(jdbc, bestSeats, gemini, fallback);
+
+        ConciergeChatResponse res = service.chatConcierge(null, new ConciergeChatRequest(null, "bạn có thể giúp gì cho tôi"));
+        assertEquals("LOCAL_FALLBACK", res.adapterUsed());
+        assertTrue(res.reply().contains("EventFlow AI Concierge"));
+        assertTrue(res.suggestions().isEmpty());
+    }
 }

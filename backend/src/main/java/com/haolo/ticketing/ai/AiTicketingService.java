@@ -65,12 +65,22 @@ public class AiTicketingService {
         String lower = message.toLowerCase(Locale.ROOT);
         boolean wantsOrderLookup = lower.contains("đơn") || lower.contains("don hang") || lower.contains("hoàn tiền")
             || lower.contains("hoan tien") || lower.contains("hết hạn") || lower.contains("het han") || lower.contains("trạng thái");
+        boolean wantsHelpOrGreeting = !wantsOrderLookup && (
+            lower.contains("giúp gì") || lower.contains("giup gi") || lower.contains("làm được gì") || lower.contains("lam duoc gi")
+            || lower.contains("chức năng") || lower.contains("hướng dẫn") || lower.matches("^(xin chào|chào|hello|hi|hey|alo)[!?.\\s]*$")
+        );
 
         List<Map<String, Object>> bookingSummaries = new ArrayList<>();
         List<SeatSuggestionCard> suggestions = new ArrayList<>();
         StringBuilder draft = new StringBuilder();
 
-        if (wantsOrderLookup) {
+        if (wantsHelpOrGreeting) {
+            draft.append("Chào bạn! Mình là EventFlow AI Concierge, mình có thể hỗ trợ trực tiếp 3 việc sau trên dữ liệu thật của hệ thống:\n")
+                .append("1. 💺 Tìm & gợi ý cụm ghế liền kề đẹp nhất theo ngân sách (VD: \"Tìm 2 ghế liền kề dưới 1 triệu\").\n")
+                .append("2. ⚡ Giữ chỗ tức thì bằng giao dịch ACID chống bán lố vé ngay trong khung chat.\n")
+                .append("3. 📦 Tra cứu tình trạng đơn hàng, hạn giữ chỗ 10 phút & tiến độ hoàn tiền của bạn (VD: \"Kiểm tra đơn hàng của tôi\").\n")
+                .append("Bạn hãy bấm một gợi ý nhanh bên trên hoặc gõ nhu cầu vé của bạn nhé!");
+        } else if (wantsOrderLookup) {
             if (userId == null) {
                 draft.append("Để tra cứu đơn hàng và tiến độ hoàn tiền (bảo vệ Anti-IDOR), bạn vui lòng đăng nhập tài khoản khách hàng trước nhé!");
             } else {
