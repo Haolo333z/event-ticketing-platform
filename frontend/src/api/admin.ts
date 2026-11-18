@@ -97,6 +97,7 @@ export interface AdminApi{
   recovery(page:number,size:number,status:RecoveryFilter):Promise<Page<RecoveryItem>>;
   recoveryEvent(id:string):Promise<RecoveryEvent>;
   replayEvent(id:string,request:ReplayRequest):Promise<ReplayAccepted>;
+  aiDiagnose?(data?:{bookingId?:string;failureId?:string}):Promise<{adapterUsed:string;severity:'HIGH'|'MEDIUM'|'LOW';summaryVi:string;rootCause:string;recommendedAction:string;safeToReplay:boolean;evidence:Record<string,unknown>}>;
 }
 export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):AdminApi{
   const tokenProvider=()=>{
@@ -130,6 +131,7 @@ export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch
     outbox:(page,size)=>call('/api/admin/operations/outbox?'+new URLSearchParams({page:String(page),size:String(size)})),
     recovery:(page,size,status)=>call('/api/admin/operations/recovery?'+new URLSearchParams({page:String(page),size:String(size),status})),
     recoveryEvent:id=>call('/api/admin/operations/events/'+encodeURIComponent(id)),
-    replayEvent:(id,request)=>call('/api/admin/operations/events/'+encodeURIComponent(id)+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:request.requestId,reason:request.reason})})
+    replayEvent:(id,request)=>call('/api/admin/operations/events/'+encodeURIComponent(id)+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:request.requestId,reason:request.reason})}),
+    aiDiagnose:(data={})=>call('/api/ai/admin/diagnose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
   };
 }

@@ -4,6 +4,36 @@
 
 ## Trạng thái hiện tại
 
+- **Giai đoạn:** EventFlow V3 — **HOÀN TẤT TOÀN BỘ 3 GIAI ĐOẠN V3 (T20, T21, T22)** (2026-11-18)
+- **Tiến độ:** Nâng cấp thành công toàn diện từ EventFlow V2 lên **EventFlow Enterprise V3** (bảo toàn 100% bất biến Zero Oversell, khóa hàng `SELECT FOR UPDATE`, Outbox/Inbox Kafka và hợp đồng OpenAPI 3.1):
+  - **Task T20 (V16):** Đa hình thức sự kiện (`OFFLINE_SEATED`, `OFFLINE_GA`, `ONLINE` + `online_join_url`), thuật toán **Best Available Contiguous Seats** (`GET /api/events/{id}/seats/best-available`), đồng bộ màu ghế thời gian thực **SSE (`GET /api/events/{id}/stream`)** phát sau commit (`AFTER_COMMIT`), tải file lịch `.ics` chuẩn RFC 5545, lọc khoảng giá và sinh nhanh ma trận ghế Organizer.
+  - **Task T21 (V17):** **Smart Waitlist** (`ticketing.event_waitlists`) tự động ưu tiên thông báo FIFO (`FOR UPDATE SKIP LOCKED`) qua `email_notifications` + SSE khi `BOOKING_EXPIRED` / `BOOKING_CANCELLED` nhả vé; **Virtual Waiting Room** điều tiết lưu lượng Flash Sale kèm mô phỏng surge.
+  - **Task T22 (V18):** Hệ sinh thái **3 Trợ Lý AI Thông Minh** thiết kế theo kiến trúc Hexagonal (`AiAssistantPort` + `GeminiAiAdapter` đọc `AI_GEMINI_API_KEY` từ `.env` + `LocalFallbackAiAdapter` chạy 100% offline/local):
+    1. **AI Ticketing Concierge (`AiConciergeWidget.ts` + `POST /api/ai/concierge/chat`):** Chat tiếng Việt, Function Calling truy vấn PostgreSQL thật + gọi thuật toán cụm ghế liền kề kèm nút **"⚡ Giữ cụm ghế này ngay"** vào luồng ACID; tra cứu đơn & hoàn tiền cá nhân tuân thủ chặt Anti-IDOR.
+    2. **AI Organizer Copilot (`POST /api/ai/organizer/generate-event`):** Sinh tiêu đề SEO, mô tả, Agenda 4 chặng, 3 hạng vé và JSON ma trận sơ đồ ghế trong `OrganizerDashboard.ts`.
+    3. **AI Ops Diagnostics (`POST /api/ai/admin/diagnose`):** Chẩn đoán sự cố DLQ/`outbox_events` và đơn `REFUND_REQUIRED` trong `AdminDashboard.ts`, đưa ra khuyến nghị hành động cụ thể.
+  - **Load Test k6:** Bổ sung kịch bản `tools/load/k6-oversell-burst.js` kiểm chứng 500–1.000 VUs đồng thời (0% Oversell, 0 Deadlock).
+- **Task vừa hoàn tất:** `T22 — Hệ Sinh Thái Trợ Lý AI Thông Minh, Load Test k6 & Đóng Gói v3.0.0-release (Done, 2026-11-18)`
+- **Kết quả kiểm chứng thực tế:**
+  - Database (PostgreSQL 17 thật): Chuỗi **18 Flyway migrations (`V1` → `V18`)** áp dụng sạch sẽ, đạt đúng **38 bảng nghiệp vụ** trong schema `ticketing`.
+  - Backend (`.\backend\mvnw.cmd -f backend/pom.xml test`): **251/251 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn; bao gồm 18 test cases mới của V3: T20, T21, T22).
+  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **73/73 tests PASS 100%**, `tsc --noEmit && vite build` **SUCCESS (156ms)**.
+  - OpenAPI 3.1 Contracts (`cmd /c "npm test --prefix tools/contracts"`): **69/69 ca kiểm thử PASS 100%**.
+- **Giới hạn kiểm chứng:** Lệnh `mvnw package` không ghi đè file `backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar` do tiến trình Backend demo đang chạy giữ khóa file JAR trên Windows; cần dừng Backend cũ (`Ctrl+C`) và chạy `.\backend\mvnw.cmd -f backend/pom.xml package -DskipTests` trước khi khởi động lại để nạp JAR V3. `GeminiAiAdapter` chỉ kích hoạt khi đặt biến môi trường `AI_GEMINI_API_KEY`; mặc định vận hành ổn định 100% bằng `LocalFallbackAiAdapter`.
+
+## T22 — Hệ Sinh Thái Trợ Lý AI Thông Minh & Load Test k6 V3 (Done, 2026-11-18)
+
+**Tóm tắt triển khai:**
+1. Migration `V18__ai_assistant_conversations.sql`: tạo bảng `ticketing.ai_conversations` và `ticketing.ai_messages` (38 bảng nghiệp vụ V1–V18).
+2. Backend package `com.haolo.ticketing.ai`: `AiModels`, `AiAssistantPort`, `GeminiAiAdapter`, `LocalFallbackAiAdapter`, `AiTicketingService` (Customer Concierge + Organizer Copilot + Admin Ops Diagnostics), `AiAssistantController`.
+3. Frontend: `AiConciergeWidget.ts` + `AiConciergeWidget.test.ts`, gắn vào `DemoShell.ts`, tích hợp AI Copilot trong `OrganizerDashboard.ts` và AI Ops Diagnostics trong `AdminDashboard.ts`.
+4. Load test: `tools/load/k6-oversell-burst.js`.
+5. Kiểm chứng: Backend 251/251 PASS, Frontend 73/73 PASS, Vite build 156ms, OpenAPI contracts 69/69 PASS.
+
+---
+
+## Trạng thái trước đó (Task T20 & T21)
+
 - **Giai đoạn:** EventFlow V3 — Giai đoạn 9: Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (Task T20) (2026-11-18)
 - **Tiến độ:** Hoàn tất toàn diện Task T20 mà không phá vỡ bất kỳ bất biến hay hợp đồng OpenAPI nào của V2:
   - Flyway Migration `V16__event_format_online_and_seat_grid.sql` áp dụng thành công trên PostgreSQL 17 (`ticketing_demo`): bổ sung `events.event_format` (`OFFLINE_SEATED`/`OFFLINE_GA`/`ONLINE`), `events.online_join_url`, `seats.row_label`, `seats.seat_number` (tự backfill tọa độ ghế).

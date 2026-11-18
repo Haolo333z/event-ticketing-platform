@@ -33,6 +33,23 @@ export function AdminDashboard({api}:{api:AdminApi}){
   const[summary,setSummary]=useState<PlatformSummary|null>(null);
   const[eventReports,setEventReports]=useState<EventReport[]>([]);
 
+  // V3 AI Ops Diagnostics state
+  const[aiDiagBusy,setAiDiagBusy]=useState(false);
+  const[aiDiag,setAiDiag]=useState<{adapterUsed:string;severity:string;summaryVi:string;rootCause:string;recommendedAction:string;safeToReplay:boolean}|null>(null);
+
+  async function runAiDiagnostics(bookingId?:string){
+    if(!api.aiDiagnose||aiDiagBusy)return;
+    setAiDiagBusy(true);setError('');
+    try{
+      const res=await api.aiDiagnose(bookingId?{bookingId}:{});
+      setAiDiag(res);
+    }catch(v){
+      setError(message(v));
+    }finally{
+      setAiDiagBusy(false);
+    }
+  }
+
   function revealEditor(){
     const panel=editorPanel.current;if(!panel)return;
     panel.scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -328,6 +345,18 @@ export function AdminDashboard({api}:{api:AdminApi}){
       ))):h('p',{className:'empty-state'},'Chưa có dữ liệu sự kiện để kết xuất báo cáo.')
     ),
 
+    !loading&&!error&&data&&tab==='outbox'&&api.aiDiagnose&&h('div',{className:'ai-ops-bar'},
+      h('div',null,
+        h('strong',null,'🤖 AI Ops Diagnostics (Phân tích DLQ / Outbox & Hoàn tiền muộn)'),
+        h('p',{className:'muted'},'Quét tự động bảng outbox_events, message_failures và refund_attempts để tóm tắt nguyên nhân và khuyến nghị hành động.')
+      ),
+      h('button',{type:'button',className:'best-seats-btn',disabled:aiDiagBusy,onClick:()=>void runAiDiagnostics()},aiDiagBusy?'Đang chẩn đoán…':'✨ Chẩn đoán hệ thống bằng AI')
+    ),
+    aiDiag&&(tab==='outbox'||tab==='bookings')&&h('div',{role:'status',className:'ai-ops-result severity-'+aiDiag.severity.toLowerCase()},
+      h('strong',null,'🤖 Kết quả chẩn đoán AI ('+aiDiag.adapterUsed+') · Mức độ: '+aiDiag.severity),
+      h('p',null,'Nguyên nhân: '+aiDiag.rootCause),
+      h('p',null,'Khuyến nghị: '+aiDiag.recommendedAction)
+    ),
     !loading&&!error&&data&&tab==='outbox'&&table('Outbox sau commit nghiệp vụ',['Event ID / loại','Booking','Version','Trạng thái','Số lần gửi','Chi tiết'],(data.items as Outbox[]).map(e=>h('tr',{key:e.eventId},h('td',{className:'booking-id'},e.eventId,h('small',null,e.eventType)),h('td',{className:'booking-id'},e.bookingId),h('td',null,e.aggregateVersion),h('td',null,e.status),h('td',null,e.attempts),h('td',null,h('button',{type:'button',onClick:()=>{setRecoveryEvent(e.eventId);switchTab('recovery');}},'Chi tiết event '+e.eventId))))),
     tab==='outbox'&&h('p',{className:'muted'},'PENDING: đang chờ; PUBLISHED: Kafka đã xác nhận; FAILED: hết ngân sách gửi. Chọn một event để xem audit/replay có kiểm soát.'),
     data&&tab!=='inventory'&&tab!=='reports'&&h('nav',{className:'pagination','aria-label':'Phân trang quản trị'},h('button',{type:'button',disabled:loading||page===0,onClick:()=>setPage(p=>p-1)},'Trang trước'),h('span',{'aria-live':'polite'},'Trang '+(page+1)+' · '+data.totalElements+' bản ghi'),h('button',{type:'button',disabled:loading||(page+1)*data.size>=data.totalElements,onClick:()=>setPage(p=>p+1)},'Trang sau')),

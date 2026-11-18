@@ -67,6 +67,34 @@ export function OrganizerDashboard({
   // Staff form
   const [staffEmail, setStaffEmail] = useState('');
 
+  // V3 AI Organizer Copilot state
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiSuggestionNote, setAiSuggestionNote] = useState<string | null>(null);
+
+  const handleAiGenerateEvent = async () => {
+    if (!api.ai?.organizerGenerate) return;
+    const kw = (eventTitle || 'Đêm nhạc Live Concert').trim();
+    setAiBusy(true);
+    setAiSuggestionNote(null);
+    setError(null);
+    try {
+      const res = await api.ai.organizerGenerate({
+        keywords: kw,
+        category: eventCategory || 'CONCERT',
+        targetCapacity: 120,
+        basePriceVnd: 350000
+      });
+      setEventTitle(res.suggestedTitle);
+      setEventDesc(res.seoDescription + '\n\nLịch trình dự kiến:\n' + res.agenda.join('\n'));
+      setAiSuggestionNote('🤖 AI Copilot (' + res.adapterUsed + ') đã tự động sinh mô tả SEO, lịch trình & gợi ý ma trận '
+        + res.seatMatrixConfig.rows.length + ' hàng × ' + res.seatMatrixConfig.seatsPerRow + ' ghế (' + res.seatMatrixConfig.totalGeneratedSeats + ' chỗ)!');
+    } catch (e: any) {
+      setError(e?.message || 'Không thể kết nối AI Organizer Copilot');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const loadData = async () => {
     if (!api.organizer) return;
     setLoading(true);
@@ -467,6 +495,16 @@ export function OrganizerDashboard({
           h('button', { type: 'button', className: 'btn-close-modal', onClick: () => setEventModalOpen(false) }, '✕')
         ),
         h('form', { onSubmit: handleSaveEvent, className: 'modal-form' },
+          api.ai?.organizerGenerate && h('div', { className: 'ai-copilot-bar' },
+            h('span', null, '🤖 AI Event Copilot: Nhập vài từ khóa tiêu đề rồi bấm để tự sinh mô tả SEO, lịch trình & sơ đồ ghế'),
+            h('button', {
+              type: 'button',
+              className: 'best-seats-btn',
+              disabled: aiBusy,
+              onClick: () => void handleAiGenerateEvent()
+            }, aiBusy ? 'AI đang soạn…' : '✨ AI Gợi Ý Nội Dung')
+          ),
+          aiSuggestionNote && h('p', { role: 'status', className: 'best-seats-note' }, aiSuggestionNote),
           h('div', { className: 'form-group' },
             h('label', null, 'Tiêu đề sự kiện *'),
             h('input', {

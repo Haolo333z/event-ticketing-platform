@@ -217,6 +217,48 @@ export type WaitingRoomStatus={
   admissionToken?:string|null;
 };
 
+export type AiSeatSuggestion={
+  eventId:string;
+  eventTitle:string;
+  ticketTypeId:string;
+  ticketTypeName:string;
+  mode:'GA'|'SEATED';
+  unitPriceVnd:number;
+  totalPriceVnd:number;
+  contiguous:boolean;
+  seatIds:string[];
+  seatLabels:string[];
+  quantity:number;
+  reason:string;
+};
+
+export type AiConciergeResponse={
+  conversationId:string;
+  reply:string;
+  adapterUsed:string;
+  suggestions:AiSeatSuggestion[];
+  bookingSummaries:Record<string,unknown>[];
+};
+
+export type AiOrganizerResponse={
+  adapterUsed:string;
+  suggestedTitle:string;
+  seoDescription:string;
+  agenda:string[];
+  ticketTiers:{name:string;mode:string;priceVnd:number;capacity:number}[];
+  seatMatrixConfig:{rows:string[];seatsPerRow:number;totalGeneratedSeats:number};
+};
+
+export type AiAdminDiagnoseResponse={
+  adapterUsed:string;
+  severity:'HIGH'|'MEDIUM'|'LOW';
+  summaryVi:string;
+  rootCause:string;
+  recommendedAction:string;
+  safeToReplay:boolean;
+  evidence:Record<string,unknown>;
+};
+
 export type AuthResponse={
   token:string;
   user:User;
@@ -319,6 +361,12 @@ export interface Api{
     myWaitlists():Promise<{items:WaitlistEntry[]}>;
     enterWaitingRoom(eventId:string,sessionId?:string):Promise<WaitingRoomStatus>;
     waitingRoomStatus(eventId:string,sessionId:string):Promise<WaitingRoomStatus>;
+  };
+  ai?:{
+    status():Promise<{activeAdapter:string;fallbackAvailable:boolean;capabilities:string[]}>;
+    conciergeChat(data:{conversationId?:string;message:string}):Promise<AiConciergeResponse>;
+    organizerGenerate(data:{keywords:string;category?:string;targetCapacity?:number;basePriceVnd?:number}):Promise<AiOrganizerResponse>;
+    adminDiagnose(data?:{bookingId?:string;failureId?:string}):Promise<AiAdminDiagnoseResponse>;
   };
 }
 
@@ -489,6 +537,24 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         body:JSON.stringify(sessionId?{sessionId}:{})
       }),
       waitingRoomStatus:(eventId,sessionId)=>call('/api/events/'+encodeURIComponent(eventId)+'/waiting-room/status?sessionId='+encodeURIComponent(sessionId))
+    },
+    ai:{
+      status:()=>call('/api/ai/status'),
+      conciergeChat:(data)=>call('/api/ai/concierge/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      }),
+      organizerGenerate:(data)=>call('/api/ai/organizer/generate-event',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      }),
+      adminDiagnose:(data={})=>call('/api/ai/admin/diagnose',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      })
     }
   };
 }

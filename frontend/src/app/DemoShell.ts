@@ -10,6 +10,7 @@ import { MyBookingsPage } from './MyBookingsPage.ts';
 import { PaymentReturnPage } from './PaymentReturnPage.ts';
 import { OrganizerDashboard } from './OrganizerDashboard.ts';
 import { StaffCheckInPage } from './StaffCheckInPage.ts';
+import { AiConciergeWidget } from './AiConciergeWidget.ts';
 import type { Api, Store, User } from '../api/client.ts';
 import { getStoredUser, clearStoredAuth } from '../api/client.ts';
 import type { AdminApi } from '../api/admin.ts';
@@ -537,6 +538,17 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         h('span', { className: 'dock-icon' }, '💬'),
         h('span', { className: 'dock-tooltip' }, 'Tư vấn trực tuyến 24/7')
       )
-    )
+    ),
+
+    // EventFlow V3: Integrated AI Ticketing Concierge Widget
+    h(AiConciergeWidget, {
+      api: customer,
+      user,
+      onRequireAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); },
+      onBooked: (id) => {
+        setActiveBookingId(id);
+        navigate('/dat-ve');
+      }
+    })
   );
 }
