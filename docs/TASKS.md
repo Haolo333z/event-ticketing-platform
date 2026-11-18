@@ -366,9 +366,9 @@
 
 ## Giai đoạn 10 — Hàng Đợi Ảo Giờ Cao Điểm & Danh Sách Chờ Thông Minh Qua Kafka (T21)
 
-- [ ] **T21.1 — Flyway Migration V17 (`V17__smart_waitlist_and_waiting_room.sql`):** Tạo bảng `ticketing.event_waitlists` và cấu hình phòng chờ ảo.
-- [ ] **T21.2 — Smart Waitlist Engine Qua Kafka:** Đăng ký danh sách chờ khi sự kiện hết vé; tự động ưu tiên thông báo FIFO cho khách xếp hàng qua Kafka Consumer mỗi khi `Expiry Worker` hoặc hủy đơn nhả vé.
-- [ ] **T21.3 — Hàng Đợi Ảo Giờ Cao Điểm (Virtual Waiting Room):** Điều tiết lưu lượng truy cập giờ Flash Sale, hiển thị số thứ tự xếp hàng và cấp token thông hành vào phòng chọn ghế.
+- [x] **T21.1 — Flyway Migration V17 (`V17__smart_waitlist_and_waiting_room.sql`) (Done, 2026-11-18):** Tạo bảng `ticketing.event_waitlists` kèm unique partial index chống đăng ký trùng (`uq_waitlist_active_user_event`) và index FIFO (`idx_waitlist_event_fifo`), nâng tổng số bảng lên **36 bảng nghiệp vụ**.
+- [x] **T21.2 — Smart Waitlist Engine Qua Kafka / Event Listener (Done, 2026-11-18):** Dịch vụ `WaitlistService` & API `POST /api/events/{eventId}/waitlist`, `GET /api/me/waitlists`, `POST /api/events/{eventId}/waitlist/cancel`. Tự động lắng nghe sự kiện `BOOKING_EXPIRED` / `BOOKING_CANCELLED` (`AFTER_COMMIT`), chọn FIFO `FOR UPDATE SKIP LOCKED`, chuyển trạng thái `NOTIFIED`, ghi `email_notifications` và phát SSE `WAITLIST_NOTIFIED`; tích hợp thẻ Smart Waitlist trên giao diện đặt vé khi hết vé.
+- [x] **T21.3 — Hàng Đợi Ảo Giờ Cao Điểm (Virtual Waiting Room) (Done, 2026-11-18):** Dịch vụ `WaitingRoomService` & API `POST /api/events/{eventId}/waiting-room/enter`, `GET /api/events/{eventId}/waiting-room/status`, `POST /api/events/{eventId}/waiting-room/simulate-surge` điều tiết lưu lượng giờ Flash Sale theo ngưỡng cấu hình, trả số thứ tự xếp hàng FIFO, thời gian ước tính và tự động thăng hạng cấp `admissionToken`.
 
 ## Giai đoạn 11 — Hệ Sinh Thái Trợ Lý AI Thông Minh & Load Test V3 (T22)
 

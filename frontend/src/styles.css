@@ -6010,3 +6010,18 @@ legend {
   align-items: center;
   justify-content: center;
 }
+
+.smart-waitlist-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.smart-waitlist-card strong {
+  color: #92400e;
+  font-size: 0.9rem;
+}

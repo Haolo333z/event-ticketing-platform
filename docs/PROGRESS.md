@@ -17,6 +17,14 @@
   - `cmd /c "npm test --prefix tools/contracts"`: **69/69 ca kiểm thử OpenAPI 3.1 PASS**.
 - **Giới hạn kiểm chứng:** Chưa chạy kiểm thử E2E hai trình duyệt mở SSE song song với backend đang build mới (mới kiểm chứng bằng unit test `EventStreamServiceTest` và biên dịch `EventSource` client); bước tiếp theo triển khai **Task T21 (Smart Waitlist qua Kafka & Virtual Waiting Room)**.
 
+## T21 — Hàng Đợi Ảo Giờ Cao Điểm (Virtual Waiting Room) & Danh Sách Chờ Thông Minh (Smart Waitlist) (Done, 2026-11-18)
+
+**Tóm tắt triển khai:**
+1. Migration `V17__smart_waitlist_and_waiting_room.sql`: tạo bảng `ticketing.event_waitlists` (36 bảng nghiệp vụ) với partial unique index chống đăng ký trùng và FIFO index.
+2. Backend package `com.haolo.ticketing.waitlist`: `WaitlistService` (FIFO `FOR UPDATE SKIP LOCKED`, lắng nghe `BOOKING_EXPIRED` / `BOOKING_CANCELLED` sau commit, ghi `email_notifications` & đẩy SSE), `WaitingRoomService` (điều tiết lưu lượng Flash Sale + `simulate-surge`), `WaitlistController`.
+3. Frontend: mở rộng `client.ts` (`api.v3.joinWaitlist`, `enterWaitingRoom`, `waitingRoomStatus`) và thẻ Smart Waitlist tự động xuất hiện khi hết vé trong `App.ts`.
+4. Kiểm chứng: `V17MigrationVerificationTest`, `WaitingRoomServiceTest`, `WaitlistServiceTest`, `V15MigrationVerificationTest` (5/5 PASS), Frontend 72/72 PASS, Vite build 205ms, OpenAPI contracts 69/69 PASS.
+
 ## T20 — Đa Hình Thức Sự Kiện, Thuật Toán Ghế Liền Kề & Đồng Bộ Thời Gian Thực SSE (Done, 2026-11-18)
 
 **Tóm tắt triển khai:**

@@ -67,6 +67,8 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   const[bestSeatQty,setBestSeatQty]=useState(2);
   const[bestSeatBusy,setBestSeatBusy]=useState(false);
   const[bestSeatNote,setBestSeatNote]=useState('');
+  const[waitlistBusy,setWaitlistBusy]=useState(false);
+  const[waitlistMsg,setWaitlistMsg]=useState('');
 
   // Commercial Consultation Form State
   const[contactForm,setContactForm]=useState({fullName:'',orgName:'',email:'',phone:'',eventType:'CONCERT',message:''});
@@ -119,6 +121,18 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
       fail(value);
     }finally{
       setBestSeatBusy(false);
+    }
+  }
+  async function joinSmartWaitlist(){
+    if(!selected||!api.v3?.joinWaitlist||waitlistBusy)return;
+    setWaitlistBusy(true);setWaitlistMsg('');setError(null);
+    try{
+      const entry=await api.v3.joinWaitlist(selected,{ticketTypeId:typeId||undefined,desiredQuantity:Math.min(6,Math.max(1,quantity||1))});
+      setWaitlistMsg('🔔 Đã vào Danh sách chờ thông minh (vị trí #' + entry.queuePosition + '). Hệ thống sẽ tự báo ngay khi Expiry Worker nhả vé!');
+    }catch(value){
+      fail(value);
+    }finally{
+      setWaitlistBusy(false);
     }
   }
   useEffect(()=>{
@@ -445,6 +459,17 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               className:'primary',
               disabled:busy||!canBook
             },busy?'Đang gửi…':pending?'Thử lại cùng yêu cầu':type?.mode==='SEATED'?'Giữ ghế đã chọn':'Giữ vé GA')
+          ),
+          api.v3?.joinWaitlist && selected && ((type?.mode==='GA' && available===0) || (type?.mode==='SEATED' && seatMap.length>0 && seatMap.every(s=>s.status!=='AVAILABLE'))) && h('div',{className:'smart-waitlist-card'},
+            h('strong',null,'🔔 Sự kiện hiện đang hết vé hoặc đang được giữ hết'),
+            h('p',{className:'muted'},'Đăng ký Smart Waitlist qua Kafka — hệ thống sẽ tự động ưu tiên thông báo cho bạn ngay khi có đơn hết hạn giữ chỗ nhả vé!'),
+            h('button',{
+              type:'button',
+              className:'best-seats-btn',
+              disabled:waitlistBusy,
+              onClick:()=>void joinSmartWaitlist()
+            },waitlistBusy?'Đang đăng ký…':'Đăng ký Danh sách chờ thông minh'),
+            waitlistMsg && h('p',{role:'status',className:'best-seats-note'},waitlistMsg)
           ),
           h('p',{className:'footnote'},'Thanh toán chỉ mô phỏng, không thu tiền thật. Ghế chỉ trống trở lại sau khi máy chủ nhả giữ chỗ.')
         )

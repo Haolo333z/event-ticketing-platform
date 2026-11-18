@@ -193,6 +193,30 @@ export type EventV3Item=Event&{
   maxPriceVnd:number;
 };
 
+export type WaitlistEntry={
+  id:string;
+  eventId:string;
+  eventTitle:string;
+  ticketTypeId?:string|null;
+  desiredQuantity:number;
+  status:'WAITING'|'NOTIFIED'|'CONVERTED'|'CANCELLED';
+  queuePosition:number;
+  notifiedAt?:string|null;
+  createdAt:string;
+};
+
+export type WaitingRoomStatus={
+  eventId:string;
+  sessionId:string;
+  status:'ADMITTED'|'QUEUED';
+  position:number;
+  estimatedWaitSeconds:number;
+  activeUsers:number;
+  maxActiveUsers:number;
+  queueLength:number;
+  admissionToken?:string|null;
+};
+
 export type AuthResponse={
   token:string;
   user:User;
@@ -290,6 +314,11 @@ export interface Api{
     calendarUrl(eventId:string):string;
     updateEventFormat(eventId:string,data:{eventFormat:'OFFLINE_SEATED'|'OFFLINE_GA'|'ONLINE';onlineJoinUrl?:string}):Promise<{eventId:string;eventFormat:string;onlineJoinUrl:string}>;
     generateSeatMatrix(eventId:string,data:{ticketTypeId:string;rows:string[];seatsPerRow:number}):Promise<{eventId:string;ticketTypeId:string;createdCount:number;sampleLabels:string[]}>;
+    joinWaitlist(eventId:string,data?:{ticketTypeId?:string;desiredQuantity?:number}):Promise<WaitlistEntry>;
+    cancelWaitlist(eventId:string):Promise<{eventId:string;cancelled:boolean}>;
+    myWaitlists():Promise<{items:WaitlistEntry[]}>;
+    enterWaitingRoom(eventId:string,sessionId?:string):Promise<WaitingRoomStatus>;
+    waitingRoomStatus(eventId:string,sessionId:string):Promise<WaitingRoomStatus>;
   };
 }
 
@@ -442,7 +471,24 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(data)
-      })
+      }),
+      joinWaitlist:(eventId,data={})=>call('/api/events/'+encodeURIComponent(eventId)+'/waitlist',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      }),
+      cancelWaitlist:(eventId)=>call('/api/events/'+encodeURIComponent(eventId)+'/waitlist/cancel',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({})
+      }),
+      myWaitlists:()=>call('/api/me/waitlists'),
+      enterWaitingRoom:(eventId,sessionId)=>call('/api/events/'+encodeURIComponent(eventId)+'/waiting-room/enter',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(sessionId?{sessionId}:{})
+      }),
+      waitingRoomStatus:(eventId,sessionId)=>call('/api/events/'+encodeURIComponent(eventId)+'/waiting-room/status?sessionId='+encodeURIComponent(sessionId))
     }
   };
 }
