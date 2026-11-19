@@ -70,7 +70,7 @@ jobs:
         run: sh ./mvnw -B -ntp verify cyclonedx:makeAggregateBom
       - name: Compile load measurement client
         run: javac -d "$RUNNER_TEMP/ticketing-load-client" tools/load/HttpBurst.java
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: backend-test-evidence
@@ -164,7 +164,7 @@ jobs:
             exit 1
           fi
           grep -q 'Mock auth is allowed only in local/test profiles' /tmp/ticketing-prod-guard.log
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: admin-ui-test-evidence
