@@ -1,8 +1,7 @@
-$lines = Get-Content (Join-Path $PSScriptRoot '..\.env')
-foreach ($line in $lines) {
-    if ($line -match '^([^#=\s]+)=(.*)$') {
-        [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim())
-    }
-}
-$jar = (Join-Path $PSScriptRoot '.local-runtime\backend.jar')
-& java "-Duser.timezone=UTC" -jar "$jar" "--server.port=8080"
+param()
+$repoRoot = Split-Path -Parent $PSScriptRoot
+. "$PSScriptRoot/local-env.ps1"
+$runtimeDir = "$PSScriptRoot/.local-runtime"
+New-Item -ItemType Directory -Force $runtimeDir | Out-Null
+Copy-Item "$repoRoot/backend/target/ticketing-backend-0.0.1-SNAPSHOT.jar" -Destination "$runtimeDir/backend.jar" -Force
+& java '-Duser.timezone=UTC' -jar "$runtimeDir/backend.jar" --server.port=8080

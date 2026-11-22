@@ -87,7 +87,7 @@ public class EventV3Service {
         List<EventV3Item> items = jdbc.query(
             "SELECT e.id, e.title, e.description, e.venue, e.category_id, e.event_format, e.online_join_url, " +
                 "e.sale_start_at, e.sale_end_at, e.starts_at, e.status " +
-                "FROM ticketing.events e" + where + " ORDER BY e.starts_at, e.id LIMIT ? OFFSET ?",
+                "FROM ticketing.events e" + where + " ORDER BY (e.sale_end_at > clock_timestamp()) DESC, e.starts_at ASC, e.id ASC LIMIT ? OFFSET ?",
             (rs, n) -> {
                 UUID eventId = rs.getObject("id", UUID.class);
                 List<TicketTypeV3> types = jdbc.query(

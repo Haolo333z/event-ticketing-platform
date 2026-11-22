@@ -892,8 +892,8 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
     auth:{
       register:(data)=>call('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       login:(data)=>call('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
-      refresh:()=>call('/api/auth/refresh',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
-      logout:()=>call('/api/auth/logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
+      refresh:()=>call('/api/auth/refresh',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}),
+      logout:()=>call('/api/auth/logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}),
       me:()=>call('/api/auth/me')
     },
     oauth:{
@@ -912,7 +912,7 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
       event:(id)=>call('/api/organizer/events/'+encodeURIComponent(id)),
       createEvent:(data)=>call('/api/organizer/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       updateEvent:(id,data)=>call('/api/organizer/events/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
-      publishEvent:(id)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/publish',{method:'POST'}),
+      publishEvent:(id)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}),
       addTicketType:(id,data)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/ticket-types',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
       staff:(id)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/staff'),
       assignStaff:(id,data)=>call('/api/organizer/events/'+encodeURIComponent(id)+'/staff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),
@@ -1082,8 +1082,16 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         body: JSON.stringify(data)
       }),
       lookup: (token) => call('/api/transfers/lookup/' + encodeURIComponent(token)),
-      accept: (token) => call('/api/transfers/accept/' + encodeURIComponent(token), { method: 'POST' }),
-      cancel: (id) => call('/api/transfers/' + encodeURIComponent(id) + '/cancel', { method: 'POST' }),
+      accept: (token) => call('/api/transfers/accept/' + encodeURIComponent(token), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }),
+      cancel: (id) => call('/api/transfers/' + encodeURIComponent(id) + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }),
       sent: () => call('/api/me/transfers/sent'),
       received: () => call('/api/me/transfers/received')
     },
@@ -1116,9 +1124,21 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         body: JSON.stringify(data)
       }),
       listForEvent: (eventId) => call('/api/events/' + encodeURIComponent(eventId) + '/resale-listings'),
-      reserve: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/reserve', { method: 'POST' }),
-      settle: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/settle', { method: 'POST' }),
-      cancel: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/cancel', { method: 'POST' }),
+      reserve: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }),
+      settle: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }),
+      cancel: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }),
       myListings: () => call('/api/me/resale/listings')
     }
   };

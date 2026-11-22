@@ -23,7 +23,7 @@ public class CatalogRepository {
     }
     public CatalogViews.Page list(int page,int size){
         long total=jdbc.queryForObject("SELECT count(*) FROM ticketing.events WHERE status='PUBLISHED'",Long.class);
-        return new CatalogViews.Page(jdbc.query("SELECT * FROM ticketing.events WHERE status='PUBLISHED' ORDER BY starts_at,id LIMIT ? OFFSET ?",this::map,size,page*size),page,size,total);
+        return new CatalogViews.Page(jdbc.query("SELECT * FROM ticketing.events WHERE status='PUBLISHED' ORDER BY (sale_end_at > clock_timestamp()) DESC, starts_at ASC, id ASC LIMIT ? OFFSET ?",this::map,size,page*size),page,size,total);
     }
     public Map<String,Object> availability(UUID id){
         var event=find(id,true);var types=new ArrayList<Map<String,Object>>();

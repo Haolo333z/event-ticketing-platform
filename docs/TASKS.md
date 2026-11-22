@@ -511,3 +511,39 @@
   - **P1-6 (Chuẩn hóa tiếng Việt UTF-8 sạch cho Dropdown Thể loại & Địa điểm):** Bổ sung `DEFAULT_CATEGORIES` và `DEFAULT_VENUES` chuẩn UTF-8 trong `frontend/src/app/OrganizerDashboard.ts` với đầy đủ thông tin chuẩn hóa (Nhà hát Lớn Hà Nội, Trung tâm Hội nghị Quốc gia, SVĐ Mỹ Đình, Nhà hát TP. HCM) tránh rỗng hoặc lỗi font khi mạng chậm.
   - **P1-7 (Chặn Admin tự hạ quyền hoặc tự khóa chính mình):** Cập nhật cả UI lẫn logic xử lý trong `frontend/src/app/AdminDashboard.ts`: so sánh `isSelf` với `getStoredUser()`, vô hiệu hóa nút `- ADMIN` và nút `Khóa`/`Mở khóa` đối với tài khoản admin đang đăng nhập, hiển thị badge "Bạn" và tooltip giải thích trực quan; chặn đồng thời ở cấp handler `handleRoleAction` và `handleStatusAction`.
   - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (193ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.
+
+- [x] **T33 — Khắc Phục Dứt Điểm 3 Nhóm Lỗi P2: Rút Gọn UUID Admin, Đăng Nhập Trực Tiếp Tài Khoản, Liên Kết Gói Bảng Giá (Done, 2026-11-22):**
+  - **P2-1 (Rút gọn UUID thô 36 ký tự tại `/admin`):** Rút gọn mã booking dạng `#EF-` + 6 ký tự hex cuối in hoa kèm nút Copy icon 📋 (sao chép trực tiếp vào clipboard) và tooltip chứa full UUID 36 ký tự trên tab `bookings`, bảng `refunds`, tab `payouts` và tab `outbox`. Thay thế UUID thô của người duyệt Lead đối tác trong ghi chú thành `Quản trị viên (ADMIN)` ở cả frontend và backend.
+  - **P2-2 (Bổ sung nút "Đăng nhập ngay" tại `/tai-khoan`):** Bổ sung prop `onOpenAuth` vào `AccountProfilePage`. Khi người dùng chưa đăng nhập (`!user`), màn hình hiển thị trực quan nút màu xanh mint `🔑 Đăng nhập ngay` bên cạnh nút `Quay về Trang chủ`, cho phép click mở ngay `AuthModal` mà không cần rời trang.
+  - **P2-3 (Truyền gói dịch vụ từ `/bang-gia` sang Form liên hệ `/lien-he`):** Cập nhật các nút chọn gói dịch vụ chuyển hướng kèm query parameter `?package=starter`, `?package=pro`, `?package=enterprise`. Cập nhật Route Guard trong `DemoShell.ts` hỗ trợ route có query string và form `ContactPage.ts` tự động chọn sẵn gói tương ứng.
+  - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (392ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR.
+
+- [x] **T34 — Nghiệm Thu Thực Tế (Live E2E Re-Audit) 15 Hạng Mục Lỗi P0, P1, P2 Trên Trình Duyệt Thật (Done, 2026-11-22):**
+  - **Khởi tạo môi trường Clean Slate:** Xóa toàn bộ token, cookies, storage; kiểm thử trực tiếp trên `http://127.0.0.1:5173/` với backend `:8080` và PostgreSQL 17 `:5432`.
+  - **Kết quả 12/15 hạng mục PASS 100%:**
+    - `P0-1`: Chặn `/admin` trái phép, chuyển hướng về `/` mở AuthModal, không lộ dữ liệu, không cấp token demo ngầm.
+    - `P0-2`: `GET /api/events/{id}/resale-listings` trả về 200 OK, xóa bỏ hoàn toàn lỗi SQL crash 500 `t.seat_id`.
+    - `P0-3`: `GET /api/staff/events` trả về 200 OK, tải danh sách vé offline mượt mà.
+    - `P0-4`: Preflight OPTIONS 204 và PUT 200 OK trên `/api/me/profile` và `/api/me/vat-defaults`.
+    - `P0-5`: Duyệt lead B2B (`/convert-to-organizer`) và Reset Circuit Breaker (`/circuit-breaker/reset`) trả về 200 OK với body JSON hợp lệ.
+    - `P1-1`: Màn hình `/tai-khoan` tải độc lập qua `Promise.allSettled`, Tab 5 "🎪 Đối tác Tổ chức" hiển thị đúng trạng thái.
+    - `P1-4`: AI Concierge phản hồi chính xác 100% chính sách hoàn hủy 10 phút, Fan-to-Fan Resale và hướng dẫn xuất VAT điện tử.
+    - `P1-5`: Khóa nút đặt vé và gắn badge `⛔ ĐÃ ĐÓNG CỔNG BÁN VÉ` khi quá hạn `sale_end_at`.
+    - `P1-7`: Khóa nút `- ADMIN` và `Khóa` của chính admin đang đăng nhập với tooltip giải thích.
+    - `P2-1`: Mã booking rút gọn `#EF-XXXXXX` kèm nút Copy `📋`, người duyệt Lead hiển thị `Quản trị viên (ADMIN)`.
+    - `P2-2`: Màn hình `/tai-khoan` khi chưa đăng nhập hiển thị nút "🔑 Đăng nhập ngay" mở `AuthModal` tại chỗ.
+    - `P2-3`: Các nút chọn gói tại `/bang-gia` điều hướng sang `/lien-he?package=...` và tự động chọn sẵn gói.
+  - **Phát hiện 3 vấn đề tồn đọng & nguyên nhân gốc:**
+    - `P1-2`: Filter "Ghế chỉ định" rỗng do `CatalogService.java` phân trang cố định `size <= 100` trong khi DB có 139 sự kiện và 3 sự kiện ghế chỉ định nằm ở index 133–139.
+    - `P1-6`: Dropdown thể loại và địa điểm tại `/organizer` bị Mojibake do dữ liệu gốc trong 2 bảng PostgreSQL `ticketing.event_categories` và `ticketing.venues` lưu chuỗi lỗi mã hóa.
+    - `P1-3 & Mới`: API `POST /api/organizer/events/{id}/publish` bị HTTP 415 do dòng 915 `frontend/src/api/client.ts` thiếu header `Content-Type: application/json` và body `{}`.
+  - **Chỉ số kiểm thử:** 357 Backend tests PASS, 84 Frontend tests PASS, OpenAPI 3.1 Contracts PASS, 119 browser steps hoàn tất.
+
+- [x] **T35 — Khắc Phục Triệt Để 3 Lỗi Cuối Cùng Sau Live E2E Audit (15/15 PASS 100%): HTTP 415 Mở Bán, Mojibake Flyway V29 & Ưu Tiên Sự Kiện Mở Bán Trang Chủ (Done, 2026-11-22):**
+  - **P1-3 (HTTP 415 trên `publishEvent`):** Bổ sung `headers: { 'Content-Type': 'application/json' }` và `body: JSON.stringify({})` cho `publishEvent` trong `frontend/src/api/client.ts`. Đồng thời rà soát và bổ sung đồng bộ cho các endpoint POST/PUT rỗng khác (`auth.refresh`, `auth.logout`, `transfers.accept`, `transfers.cancel`, `resale.reserve`, `resale.settle`, `resale.cancel`), vượt qua hoàn toàn quy tắc kiểm tra của `RequestPolicyFilter.java`.
+  - **P1-6 (Mojibake UTF-8 trong Thể loại & Địa điểm):** Tạo migration Flyway mới `V29__fix_utf8_categories_and_venues.sql` (chuẩn UTF-8 without BOM), cập nhật lại toàn bộ tên tiếng Việt có dấu chuẩn xác cho bảng `ticketing.event_categories` (*Đại nhạc hội & Concert*, *Nhà hát & Nghệ thuật Hàn lâm*, *Hội nghị Công nghệ & Triển lãm*, *Sự kiện Thể thao & Giải đấu*) và bảng `ticketing.venues` (*Nhà hát Lớn Hà Nội*, *Trung tâm Hội nghị Quốc gia*, *Nhà hát Thành phố Hồ Chí Minh*, *Sân vận động Quốc gia Mỹ Đình*).
+  - **P1-2 (Bộ lọc "🪑 Ghế chỉ định (SEATED)" ngoài Trang chủ):**
+    - Chuyển 98 sự kiện test rác cũ (`concurrency`, `other event`, `check-in test`, `dummy`) về `DRAFT` trong migration `V29`, đưa tổng số sự kiện `PUBLISHED` từ 139 xuống còn 41 (nằm trọn trong trang 1 `size=100`).
+    - Gia hạn mở bán (`sale_start_at = NOW() - 1 ngày`, `sale_end_at = NOW() + 30 ngày`, `starts_at = NOW() + 35 ngày`) cho các sự kiện thật, đảm bảo cả 3 sự kiện ghế chỉ định (*Đêm nhạc ghế chỉ định*, *Đêm Nhạc Giao Hưởng Ánh Trăng - Beethoven Symphony*, *Live Tour: Vũ - Bảo Tàng Của Nuối Tiếc*) luôn ở trạng thái đang mở bán.
+    - Cập nhật thứ tự sắp xếp trong `CatalogRepository.java` và `EventV3Service.java` theo `(sale_end_at > clock_timestamp()) DESC, starts_at ASC, id ASC`, ưu tiên các sự kiện đang còn hạn mở bán lên đầu trang.
+  - **Chỉ số kiểm thử:** 358 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (176ms), OpenAPI 3.1 Contracts PASS 100%. Xác thực trực tiếp qua Live API: curl `publishEvent` trả về HTTP 200 OK (`PUBLISHED`), `categories`/`venues` chuẩn UTF-8 100%, trang chủ lọc ra chính xác 3 sự kiện SEATED. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR.

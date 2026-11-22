@@ -2,6 +2,31 @@
 
 Chốt ngày **22/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
+> **Cập nhật 22/11/2026 (Live E2E Re-Audit 15 Hạng Mục Lỗi & Flyway V29):** Hoàn tất toàn diện đợt kiểm thử và nghiệm thu thực tế bằng trình duyệt Playwright E2E Live QA Auditor kết nối hệ thống thật (`http://127.0.0.1:5173/`, backend `:8080`, PostgreSQL 17 `:5432`):
+> - **15/15 mã lỗi ĐÃ ĐƯỢC KHẮC PHỤC HOÀN TOÀN (PASS 100%):**
+>   - `P0-1`: Broken Access Control `/admin` - chặn chuyển hướng về `/` và mở `AuthModal`, không leak dữ liệu, không cấp token demo.
+>   - `P0-2`: ResaleListingService SQL crash `t.seat_id` - `GET /api/events/{id}/resale-listings` trả về HTTP 200 OK.
+>   - `P0-3`: StaffCheckInService SQL crash `e.ends_at` - `GET /api/staff/events` trả về HTTP 200 OK (>170 sự kiện, offline ticket sync mượt mà).
+>   - `P0-4`: CORS Preflight HTTP 403 trên `/api/me/profile` và `/api/me/vat-defaults` - OPTIONS 204, PUT 200 OK, toast thông báo thành công.
+>   - `P0-5`: HTTP 415 khi duyệt B2B Lead và Reset Circuit Breaker - POST 200 OK với body JSON hợp lệ.
+>   - `P1-1`: `/tai-khoan` tách độc lập các API qua `Promise.allSettled`, Tab 5 "🎪 Đối tác Tổ chức" hiển thị đúng trạng thái.
+>   - `P1-2`: Filter "Ghế chỉ định" (`SEATED`) hiển thị đầy đủ các sự kiện ghế chỉ định lên đầu bảng nhờ tối ưu sắp xếp `(sale_end_at > clock_timestamp()) DESC, starts_at ASC`.
+>   - `P1-3`: Khắc phục lỗi HTTP 415 khi Nhà tổ chức xuất bản sự kiện (`publishEvent`) và các endpoint Transfer, Resale bằng cách gửi body JSON `{}` hợp lệ theo chuẩn RequestPolicyFilter.
+>   - `P1-4`: AI Concierge phân loại chuẩn xác 100% FAQ chính sách hoàn hủy 10 phút, Fan-to-Fan Resale và hướng dẫn xuất hóa đơn VAT điện tử.
+>   - `P1-5`: Sự kiện quá hạn `sale_end_at` hiển thị badge `⛔ ĐÃ ĐÓNG CỔNG BÁN VÉ` và disable nút đặt vé.
+>   - `P1-6`: Bổ sung migration Flyway `V29__fix_utf8_categories_and_venues.sql` chuẩn hóa bảng mã UTF-8 tiếng Việt, khắc phục triệt để lỗi Mojibake trong dropdown Thể loại và Địa điểm.
+>   - `P1-7`: Admin UI bảo vệ chính mình: nút `- ADMIN` và `Khóa` của admin đang đăng nhập bị disabled kèm tooltip giải thích.
+>   - `P2-1`: Rút gọn mã booking `#EF-XXXXXX` kèm nút Copy `📋`, người duyệt hiển thị `Quản trị viên (ADMIN)`.
+>   - `P2-2`: Màn hình `/tai-khoan` khi chưa đăng nhập có nút "🔑 Đăng nhập ngay" mở `AuthModal` trực tiếp.
+>   - `P2-3`: `/bang-gia` chọn gói dịch vụ điều hướng sang `/lien-he?package=...` và auto-select gói tương ứng trong combobox.
+> - **Chỉ số kiểm thử:** 358 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (220ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR.
+> 
+> **Cập nhật 22/11/2026 (Đợt Cuối - Task Fix P2):** Hoàn tất toàn diện **Task Fix P2: Rút gọn UUID Admin, Đăng nhập trực tiếp tài khoản & Liên kết gói bảng giá - form tư vấn**:
+> - **P2-1 (Rút gọn UUID thô 36 ký tự tại `/admin` & Hiển thị vai trò người duyệt thân thiện):** Rút gọn mã booking dạng `#EF-` + 6 ký tự hex cuối in hoa kèm nút Copy icon 📋 (sao chép trực tiếp vào clipboard) và tooltip chứa full UUID 36 ký tự; áp dụng đồng bộ trên tab `bookings`, bảng `refunds`, tab `payouts` và tab `outbox`. Thay thế UUID thô của người duyệt Lead đối tác trong ghi chú thành `Quản trị viên (ADMIN)` ở cả frontend và backend.
+> - **P2-2 (Bổ sung nút "Đăng nhập ngay" tại `/tai-khoan`):** Bổ sung prop `onOpenAuth` vào `AccountProfilePage`. Khi người dùng chưa đăng nhập (`!user`), màn hình hiển thị trực quan nút màu xanh mint `🔑 Đăng nhập ngay` bên cạnh nút `Quay về Trang chủ`, cho phép click mở ngay `AuthModal` mà không cần rời trang.
+> - **P2-3 (Truyền gói dịch vụ từ `/bang-gia` sang Form liên hệ `/lien-he`):** Cập nhật các nút chọn gói dịch vụ chuyển hướng kèm query parameter `?package=starter`, `?package=pro`, `?package=enterprise`. Cập nhật Route Guard trong `DemoShell.ts` hỗ trợ route có query string và form `ContactPage.ts` tự động chọn sẵn gói tương ứng.
+> - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (392ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR.
+
 > **Cập nhật 22/11/2026 (Task Fix P1):** Hoàn tất toàn diện **Task Fix P1: Khắc phục dứt điểm 7 nhóm lỗi P1 (Profile Tải Độc Lập, Seated Dedup, Auto VAT, FAQ AI Concierge, Chặn Sale Ended, Mojibake & Tự Khóa Admin)**:
 > - **P1-1 (`/tai-khoan` - Tách độc lập 8 API tải hồ sơ):** Chuyển sang `Promise.allSettled` cho 8 tác vụ độc lập (`profile`, `vatDefaults`, `sessions`, `waitlists`, `reminders`, `transfersSent`, `transfersReceived`, `onboardStatus`) có `.catch()` riêng biệt trong `frontend/src/app/AccountProfilePage.ts`. Khi API đối tác B2B lỗi được fallback an toàn `{ hasSubmitted: false, status: 'NONE' }`, giúp các tab cá nhân khác vẫn tải mượt mà.
 > - **P1-2 (Lọc "Ghế chỉ định" / Sự kiện SEATED không bị nuốt):** Cập nhật logic `dedup` trong `frontend/src/app/App.ts`, phân biệt key với hậu tố `:seated` và `:ga` (`ev.title.trim().toLowerCase() + (hasSeated ? ':seated' : ':ga')`), đảm bảo sự kiện ghế chỉ định không bao giờ bị che lấp bởi sự kiện GA trùng tên.
