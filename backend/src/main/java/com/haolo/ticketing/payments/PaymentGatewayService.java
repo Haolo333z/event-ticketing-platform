@@ -13,6 +13,7 @@ import com.haolo.ticketing.bookings.BookingLifecycle;
 import com.haolo.ticketing.bookings.BookingTransactions;
 import com.haolo.ticketing.identity.DemoPrincipal;
 import com.haolo.ticketing.payments.PaymentModels.*;
+import com.haolo.ticketing.payments.resilience.PaymentCircuitBreaker;
 import com.haolo.ticketing.shared.ApiException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -28,6 +29,7 @@ public class PaymentGatewayService {
     private final VnPayGatewayAdapter vnPayAdapter;
     private final PaymentResultProcessor paymentResultProcessor;
     private final ObjectMapper mapper;
+    private final PaymentCircuitBreaker circuitBreaker;
 
     public PaymentGatewayService(
             JdbcTemplate jdbc,
@@ -37,6 +39,19 @@ public class PaymentGatewayService {
             VnPayGatewayAdapter vnPayAdapter,
             PaymentResultProcessor paymentResultProcessor,
             ObjectMapper mapper) {
+        this(jdbc, transactions, lifecycle, gatewayRegistry, vnPayAdapter, paymentResultProcessor, mapper, new PaymentCircuitBreaker(3, 30));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PaymentGatewayService(
+            JdbcTemplate jdbc,
+            BookingTransactions transactions,
+            BookingLifecycle lifecycle,
+            PaymentGatewayRegistry gatewayRegistry,
+            VnPayGatewayAdapter vnPayAdapter,
+            PaymentResultProcessor paymentResultProcessor,
+            ObjectMapper mapper,
+            PaymentCircuitBreaker circuitBreaker) {
         this.jdbc = jdbc;
         this.transactions = transactions;
         this.lifecycle = lifecycle;
@@ -44,6 +59,7 @@ public class PaymentGatewayService {
         this.vnPayAdapter = vnPayAdapter;
         this.paymentResultProcessor = paymentResultProcessor;
         this.mapper = mapper;
+        this.circuitBreaker = circuitBreaker != null ? circuitBreaker : new PaymentCircuitBreaker(3, 30);
     }
 
     public PaymentInitResult checkout(DemoPrincipal principal, CheckoutRequest request, String ipAddr) {
@@ -80,6 +96,12 @@ public class PaymentGatewayService {
             UUID attemptId = UUID.randomUUID();
             String merchantRef = "EVF_" + request.bookingId().toString().substring(0, 8) + "_" + System.currentTimeMillis();
 
+            if ("VNPAY".equalsIgnoreCase(provider) && !circuitBreaker.allowRequest()) {
+                throw new ApiException(503, "PAYMENT_GATEWAY_CIRCUIT_OPEN",
+                    "Cổng thanh toán " + provider + " đang gián đoạn dịch vụ hoặc bảo trì (Mạch ngắt). Vui lòng thử lại sau " 
+                    + circuitBreaker.getRemainingCooldownSeconds() + " giây hoặc chọn phương thức thanh toán khác.");
+            }
+
             PaymentInitCommand cmd = new PaymentInitCommand(
                 request.bookingId(),
                 port.getProvider(),
@@ -91,7 +113,18 @@ public class PaymentGatewayService {
                 expiresAt.toInstant()
             );
 
-            PaymentInitResult result = port.initiateCheckout(cmd, attemptId);
+            PaymentInitResult result;
+            try {
+                result = port.initiateCheckout(cmd, attemptId);
+                if ("VNPAY".equalsIgnoreCase(provider)) {
+                    circuitBreaker.recordSuccess();
+                }
+            } catch (Exception ex) {
+                if ("VNPAY".equalsIgnoreCase(provider)) {
+                    circuitBreaker.recordFailure(ex.getMessage());
+                }
+                throw ex;
+            }
 
             jdbc.update(
                 "INSERT INTO ticketing.payment_attempts(id, booking_id, provider, merchant_ref, amount_vnd, currency, status, gateway_url, expires_at) " +

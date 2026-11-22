@@ -71,6 +71,14 @@ export function StaffCheckInPage({
   const [history, setHistory] = useState<CheckInHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // V4 Offline-first check-in state
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [offlineManifest, setOfflineManifest] = useState<import('../api/client.ts').OfflineManifest | null>(null);
+  const [offlinePendingQueue, setOfflinePendingQueue] = useState<import('../api/client.ts').OfflineSyncItem[]>([]);
+  const [offlineLoading, setOfflineLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<import('../api/client.ts').BatchSyncResponse | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const manualInputRef = useRef<HTMLInputElement>(null);
 
   const hasStaffOrAdminRole = !!user && (
@@ -78,6 +86,17 @@ export function StaffCheckInPage({
     user.role === 'ADMIN' ||
     (user.roles && (user.roles.includes('STAFF') || user.roles.includes('ADMIN')))
   );
+
+  useEffect(() => {
+    const handleOnline = () => { if (isOfflineMode) setIsOfflineMode(false); };
+    const handleOffline = () => { setIsOfflineMode(true); };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isOfflineMode]);
 
   useEffect(() => {
     if (!user) {
@@ -94,8 +113,55 @@ export function StaffCheckInPage({
   useEffect(() => {
     if (selectedEventId) {
       void loadEventData(selectedEventId);
+      try {
+        const cachedManifest = localStorage.getItem('eventflow.offline_manifest.' + selectedEventId);
+        if (cachedManifest) setOfflineManifest(JSON.parse(cachedManifest));
+        else setOfflineManifest(null);
+
+        const cachedQueue = localStorage.getItem('eventflow.offline_pending.' + selectedEventId);
+        if (cachedQueue) setOfflinePendingQueue(JSON.parse(cachedQueue));
+        else setOfflinePendingQueue([]);
+      } catch {
+        // ignore localStorage access issues in sandbox
+      }
     }
   }, [selectedEventId]);
+
+  async function handleDownloadOfflineManifest() {
+    if (!selectedEventId || !api.staff?.getOfflineManifest) return;
+    setOfflineLoading(true);
+    setError(null);
+    try {
+      const manifest = await api.staff.getOfflineManifest(selectedEventId);
+      setOfflineManifest(manifest);
+      try { localStorage.setItem('eventflow.offline_manifest.' + selectedEventId, JSON.stringify(manifest)); } catch {}
+      playBeep('success');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu soát vé offline');
+      playBeep('error');
+    } finally {
+      setOfflineLoading(false);
+    }
+  }
+
+  async function handleSyncOfflineQueue() {
+    if (!selectedEventId || !api.staff?.batchSync || offlinePendingQueue.length === 0 || isSyncing) return;
+    setIsSyncing(true);
+    setError(null);
+    try {
+      const res = await api.staff.batchSync({ eventId: selectedEventId, items: offlinePendingQueue });
+      setSyncResult(res);
+      setOfflinePendingQueue([]);
+      try { localStorage.removeItem('eventflow.offline_pending.' + selectedEventId); } catch {}
+      playBeep('success');
+      void loadEventData(selectedEventId);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Lỗi đồng bộ dữ liệu soát vé lên máy chủ');
+      playBeep('error');
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   async function loadAssignedEvents() {
     setLoading(true);
@@ -149,6 +215,88 @@ export function StaffCheckInPage({
     setIsScanning(true);
     setLastResult(null);
     setLastError(null);
+
+    // V4 Offline-first local validation
+    if (isOfflineMode || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      setIsScanning(false);
+      if (!offlineManifest || offlineManifest.tickets.length === 0) {
+        setLastError({
+          code: 'OFFLINE_NO_DATA',
+          message: 'Chưa có danh sách vé offline cho sự kiện này. Vui lòng bấm \"Tải Dữ Liệu Offline\" trước.'
+        });
+        playBeep('error');
+        return;
+      }
+
+      let targetTicket: import('../api/client.ts').OfflineTicketItem | undefined;
+      if (mode === 'qr') {
+        const raw = qrInput.trim();
+        targetTicket = offlineManifest.tickets.find(t => t.qrToken === raw || raw.startsWith(t.ticketId));
+      } else {
+        const code = ticketCodeInput.trim().toUpperCase();
+        targetTicket = offlineManifest.tickets.find(t => t.ticketCode.toUpperCase() === code);
+      }
+
+      if (!targetTicket) {
+        setLastError({ code: 'NOT_FOUND', message: 'Vé không tồn tại trong danh mục vé sự kiện này!' });
+        playBeep('error');
+        return;
+      }
+
+      if (targetTicket.checkedIn) {
+        setLastError({
+          code: 'TICKET_ALREADY_USED',
+          message: `CẢNH BÁO: Vé này đã được quét ${targetTicket.checkedInAt ? 'lúc ' + formatDateTime(targetTicket.checkedInAt) : 'trước đó'}!`
+        });
+        playBeep('warning');
+        return;
+      }
+
+      // Mark locally checked-in
+      const nowIso = new Date().toISOString();
+      targetTicket.checkedIn = true;
+      targetTicket.checkedInAt = nowIso;
+      try {
+        localStorage.setItem('eventflow.offline_manifest.' + selectedEventId, JSON.stringify(offlineManifest));
+      } catch {}
+
+      // Add to pending sync queue
+      const queueItem: import('../api/client.ts').OfflineSyncItem = {
+        clientSyncId: 'OFF-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        ticketId: targetTicket.ticketId,
+        ticketCode: targetTicket.ticketCode,
+        qrToken: targetTicket.qrToken,
+        gateName,
+        clientTimestamp: nowIso,
+        deviceInfo: 'Offline Web Terminal'
+      };
+      const nextQueue = [...offlinePendingQueue, queueItem];
+      setOfflinePendingQueue(nextQueue);
+      try {
+        localStorage.setItem('eventflow.offline_pending.' + selectedEventId, JSON.stringify(nextQueue));
+      } catch {}
+
+      setLastResult({
+        status: 'CHECKED_IN_OFFLINE',
+        ticketId: targetTicket.ticketId,
+        ticketCode: targetTicket.ticketCode,
+        attendeeName: targetTicket.attendeeName,
+        ticketType: targetTicket.ticketType,
+        seatLabel: targetTicket.seatLabel,
+        checkedInAt: nowIso,
+        gate: gateName,
+        message: 'HỢP LỆ — SOÁT VÉ NGOẠI TUYẾN THÀNH CÔNG (ĐÃ LƯU HÀNG ĐỢI)'
+      });
+      setLastError(null);
+      playBeep('success');
+
+      if (mode === 'qr') setQrInput('');
+      if (mode === 'manual') {
+        setTicketCodeInput('');
+        manualInputRef.current?.focus();
+      }
+      return;
+    }
 
     try {
       const res = await api.staff.checkIn(selectedEventId, payload);
@@ -266,6 +414,50 @@ export function StaffCheckInPage({
           h('span', { className: 'meta-time' }, `🕒 Khởi hành: ${formatDateTime(selectedEvent.startsAt)}`)
         )
       )
+    ),
+
+    // V4 Offline-First Control Bar
+    h('div', { className: 'staff-offline-bar', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: isOfflineMode ? '#fffbeb' : '#f0fdf4', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: `1px solid ${isOfflineMode ? '#fde68a' : '#bbf7d0'}`, marginBottom: '1.25rem' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '0.75rem' } },
+        h('span', {
+          className: 'badge-network-status',
+          style: {
+            padding: '0.3rem 0.6rem',
+            borderRadius: '9999px',
+            fontSize: '0.8rem',
+            fontWeight: 'bold',
+            background: isOfflineMode ? '#fef3c7' : '#dcfce7',
+            color: isOfflineMode ? '#92400e' : '#166534'
+          }
+        }, isOfflineMode ? '🟠 CHẾ ĐỘ NGOẠI TUYẾN (OFFLINE)' : '🟢 TRỰC TUYẾN (ONLINE)'),
+        h('button', {
+          type: 'button',
+          className: 'btn-mode-toggle',
+          style: { fontSize: '0.8rem', padding: '0.3rem 0.6rem', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' },
+          onClick: () => setIsOfflineMode(x => !x)
+        }, isOfflineMode ? 'Chuyển sang Online' : 'Chuyển sang Offline')
+      ),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' } },
+        h('button', {
+          type: 'button',
+          className: 'btn-download-manifest',
+          style: { fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '4px', background: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
+          disabled: offlineLoading || !selectedEventId,
+          onClick: () => void handleDownloadOfflineManifest()
+        }, offlineLoading ? 'Đang tải...' : offlineManifest ? `📥 Cập nhật vé Offline (${offlineManifest.totalTickets} vé)` : '📥 Tải danh sách vé Offline'),
+        offlinePendingQueue.length > 0 && h('button', {
+          type: 'button',
+          className: 'btn-sync-queue',
+          style: { fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '4px', background: '#059669', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
+          disabled: isSyncing,
+          onClick: () => void handleSyncOfflineQueue()
+        }, isSyncing ? 'Đang đồng bộ...' : `🔄 Đồng bộ lên Server (${offlinePendingQueue.length} vé)`)
+      )
+    ),
+
+    // Sync result alert
+    syncResult && h('div', { className: 'alert alert-info', style: { marginBottom: '1rem', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '0.75rem', borderRadius: '0.5rem' } },
+      `Đồng bộ hoàn tất: ${syncResult.syncedCount}/${syncResult.total} vé thành công (${syncResult.conflictCount} vé xung đột quét trùng).`
     ),
 
     // Realtime Check-in Stats

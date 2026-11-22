@@ -25,7 +25,25 @@ public class BookingLifecycle {
         var rows=jdbc.queryForList("SELECT *,expires_at<=clock_timestamp() AS due FROM ticketing.bookings WHERE id=? FOR UPDATE",id);
         if(rows.isEmpty())throw ApiException.missing();return rows.getFirst();
     }
-    public void releaseAndTransition(UUID id,String target,UUID correlation){inventory.release(id);transition(id,target,correlation,Map.of());}
+    public void releaseAndTransition(UUID id,String target,UUID correlation){
+        inventory.release(id);
+        releaseVoucher(id);
+        transition(id,target,correlation,Map.of());
+    }
+    private void releaseVoucher(UUID bookingId) {
+        try {
+            var rows = jdbc.queryForList("SELECT voucher_id, discount_amount_vnd FROM ticketing.bookings WHERE id = ?", bookingId);
+            if (!rows.isEmpty() && rows.getFirst().get("voucher_id") != null) {
+                UUID voucherId = (UUID) rows.getFirst().get("voucher_id");
+                long discount = ((Number) rows.getFirst().get("discount_amount_vnd")).longValue();
+                jdbc.update("UPDATE ticketing.vouchers SET used_count = GREATEST(0, used_count - 1) WHERE id = ?", voucherId);
+                jdbc.update("DELETE FROM ticketing.voucher_redemptions WHERE booking_id = ?", bookingId);
+                jdbc.update("UPDATE ticketing.bookings SET voucher_id = NULL, discount_amount_vnd = 0, total_amount_vnd = total_amount_vnd + ? WHERE id = ?", discount, bookingId);
+            }
+        } catch (Exception ignored) {
+            // Tolerant to environments where vouchers table is not yet migrated
+        }
+    }
     public void transition(UUID id,String target,UUID correlation,Map<String,Object> extra){
         var booking=lock(id);String from=(String)booking.get("status");
         boolean valid=from.equals("PENDING_PAYMENT")&&Set.of("CONFIRMED","PAYMENT_FAILED","CANCELLED","EXPIRED").contains(target)||from.equals("EXPIRED")&&target.equals("REFUND_REQUIRED");

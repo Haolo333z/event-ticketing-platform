@@ -57,4 +57,54 @@ public final class AiModels {
         boolean safeToReplay,
         Map<String, Object> evidence
     ) {}
+
+    public record SellOutForecastResponse(
+        UUID eventId,
+        String eventTitle,
+        String status,
+        int totalCapacity,
+        int soldTickets,
+        int heldTickets,
+        int availableTickets,
+        int soldLast24Hours,
+        double salesVelocityPerHour,
+        double heldPercentage,
+        double occupancyPercentage,
+        int waitlistCount,
+        Double estimatedHoursToSellOut,
+        String sellOutStatus,
+        boolean recommendVirtualWaitingRoom,
+        String recommendationVi,
+        String adapterUsed
+    ) {}
+
+    public record ScalpingAlertDto(
+        UUID id,
+        String alertType,
+        UUID eventId,
+        String eventTitle,
+        UUID targetAccountId,
+        String targetAccountEmail,
+        String targetAccountName,
+        String clientIp,
+        String riskLevel,
+        String explanationVi,
+        String status,
+        Map<String, Object> evidence,
+        java.time.Instant createdAt,
+        java.time.Instant resolvedAt
+    ) {}
+
+    public record ScalpingActionRequest(
+        String action,
+        String notes
+    ) {}
+
+    public record ScalpingActionResponse(
+        UUID alertId,
+        String actionTaken,
+        String status,
+        String messageVi,
+        int releasedBookingsCount
+    ) {}
 }

@@ -50,7 +50,7 @@ public class AuthController {
     record UserMeRow(UUID id, String demoRole, String displayName, String email, String phone) {}
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req, HttpServletResponse response) {
+    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest req, HttpServletRequest request, HttpServletResponse response) {
         if (req == null || req.email() == null || req.email().isBlank() || !req.email().contains("@")) {
             throw new ApiException(400, "VALIDATION_ERROR", "Email không hợp lệ");
         }
@@ -87,7 +87,11 @@ public class AuthController {
 
         List<String> roles = List.of("CUSTOMER");
         String accessToken = jwtService.generateToken(id, normalizedEmail, "CUSTOMER", roles, displayName);
-        String refreshToken = refreshTokenService.createRefreshToken(id);
+        String userAgent = request != null ? request.getHeader("User-Agent") : null;
+        String ipAddress = request != null ? request.getRemoteAddr() : null;
+        String refreshToken = (userAgent != null || ipAddress != null)
+            ? refreshTokenService.createRefreshToken(id, userAgent, ipAddress)
+            : refreshTokenService.createRefreshToken(id);
 
         setRefreshCookie(response, refreshToken, 7 * 24 * 3600);
 
@@ -95,8 +99,12 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(accessToken, userDto));
     }
 
+    public ResponseEntity<AuthResponse> register(RegisterRequest req, HttpServletResponse response) {
+        return register(req, null, response);
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletResponse response) {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
         if (req == null || req.email() == null || req.email().isBlank() || req.password() == null || req.password().isBlank()) {
             throw new ApiException(400, "VALIDATION_ERROR", "Email và mật khẩu không được để trống");
         }
@@ -132,15 +140,24 @@ public class AuthController {
         }
 
         List<String> roles = fetchUserRoles(id, demoRole);
-        String primaryRole = !roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER");
+        List<String> priorityOrder = List.of("ADMIN", "ORGANIZER", "STAFF", "CUSTOMER");
+        String primaryRole = priorityOrder.stream().filter(roles::contains).findFirst().orElse(!roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER"));
 
         String accessToken = jwtService.generateToken(id, email, primaryRole, roles, displayName);
-        String refreshToken = refreshTokenService.createRefreshToken(id);
+        String userAgent = request != null ? request.getHeader("User-Agent") : null;
+        String ipAddress = request != null ? request.getRemoteAddr() : null;
+        String refreshToken = (userAgent != null || ipAddress != null)
+            ? refreshTokenService.createRefreshToken(id, userAgent, ipAddress)
+            : refreshTokenService.createRefreshToken(id);
 
         setRefreshCookie(response, refreshToken, 7 * 24 * 3600);
 
         UserDto userDto = new UserDto(id, displayName, email, phone, primaryRole, roles);
         return ResponseEntity.ok(new AuthResponse(accessToken, userDto));
+    }
+
+    public ResponseEntity<AuthResponse> login(LoginRequest req, HttpServletResponse response) {
+        return login(req, null, response);
     }
 
     @PostMapping("/refresh")
@@ -150,7 +167,11 @@ public class AuthController {
             throw new ApiException(401, "UNAUTHENTICATED", "Không tìm thấy phiên làm việc (Refresh Cookie). Vui lòng đăng nhập lại.");
         }
 
-        var rotation = refreshTokenService.rotateRefreshToken(rawRefreshToken);
+        String userAgent = request != null ? request.getHeader("User-Agent") : null;
+        String ipAddress = request != null ? request.getRemoteAddr() : null;
+        var rotation = (userAgent != null || ipAddress != null)
+            ? refreshTokenService.rotateRefreshToken(rawRefreshToken, userAgent, ipAddress)
+            : refreshTokenService.rotateRefreshToken(rawRefreshToken);
         UUID userId = rotation.userId();
 
         var users = jdbc.query(
@@ -176,7 +197,8 @@ public class AuthController {
         String phone = user.phone();
 
         List<String> roles = fetchUserRoles(userId, demoRole);
-        String primaryRole = !roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER");
+        List<String> priorityOrder = List.of("ADMIN", "ORGANIZER", "STAFF", "CUSTOMER");
+        String primaryRole = priorityOrder.stream().filter(roles::contains).findFirst().orElse(!roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER"));
 
         String newAccessToken = jwtService.generateToken(userId, email, primaryRole, roles, displayName);
         setRefreshCookie(response, rotation.newRawToken(), 7 * 24 * 3600);
@@ -227,7 +249,8 @@ public class AuthController {
         String phone = row.phone();
 
         List<String> roles = fetchUserRoles(id, demoRole);
-        String primaryRole = !roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER");
+        List<String> priorityOrder = List.of("ADMIN", "ORGANIZER", "STAFF", "CUSTOMER");
+        String primaryRole = priorityOrder.stream().filter(roles::contains).findFirst().orElse(!roles.isEmpty() ? roles.getFirst() : (demoRole != null ? demoRole : "CUSTOMER"));
 
         return ResponseEntity.ok(new UserDto(id, displayName, email, phone, primaryRole, roles));
     }

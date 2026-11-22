@@ -29,6 +29,10 @@ final class MockBearerFilter extends OncePerRequestFilter {
         String header = req.getHeader("Authorization");
         if (header != null) {
             if (!header.startsWith("Bearer ")) {
+                if (isPublicEndpoint(req)) {
+                    chain.doFilter(req, res);
+                    return;
+                }
                 errors.write(req, res, 401, "UNAUTHENTICATED", "Token không hợp lệ");
                 return;
             }
@@ -50,6 +54,10 @@ final class MockBearerFilter extends OncePerRequestFilter {
                     return;
                 }
                 if (users.isEmpty()) {
+                    if (isPublicEndpoint(req)) {
+                        chain.doFilter(req, res);
+                        return;
+                    }
                     errors.write(req, res, 401, "UNAUTHENTICATED", "Tài khoản không tồn tại");
                     return;
                 }
@@ -72,7 +80,9 @@ final class MockBearerFilter extends OncePerRequestFilter {
                 if (roles.isEmpty() && user.role() != null) {
                     roles = List.of(user.role());
                 }
-                String primaryRole = user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER");
+                List<String> priorityOrder = List.of("ADMIN", "ORGANIZER", "STAFF", "CUSTOMER");
+                String primaryRole = priorityOrder.stream().filter(roles::contains).findFirst()
+                    .orElse(user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER"));
                 var principalWithRoles = new DemoPrincipal(user.accountId(), primaryRole, roles);
 
                 List<SimpleGrantedAuthority> authorities = roles.stream()
@@ -93,6 +103,10 @@ final class MockBearerFilter extends OncePerRequestFilter {
                 else if (token.equals(settings.adminToken)) account = "10000000-0000-4000-8000-000000000002";
             }
             if (account == null) {
+                if (isPublicEndpoint(req)) {
+                    chain.doFilter(req, res);
+                    return;
+                }
                 errors.write(req, res, 401, "UNAUTHENTICATED", "Token không hợp lệ");
                 return;
             }
@@ -108,6 +122,10 @@ final class MockBearerFilter extends OncePerRequestFilter {
                 return;
             }
             if (users.isEmpty()) {
+                if (isPublicEndpoint(req)) {
+                    chain.doFilter(req, res);
+                    return;
+                }
                 errors.write(req, res, 401, "UNAUTHENTICATED", "Tài khoản demo không tồn tại");
                 return;
             }
@@ -127,7 +145,9 @@ final class MockBearerFilter extends OncePerRequestFilter {
             if (roles.isEmpty() && user.role() != null) {
                 roles = List.of(user.role());
             }
-            String primaryRole = user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER");
+            List<String> priorityOrder = List.of("ADMIN", "ORGANIZER", "STAFF", "CUSTOMER");
+            String primaryRole = priorityOrder.stream().filter(roles::contains).findFirst()
+                .orElse(user.role() != null ? user.role() : (!roles.isEmpty() ? roles.getFirst() : "CUSTOMER"));
             var principalWithRoles = new DemoPrincipal(user.accountId(), primaryRole, roles);
 
             List<SimpleGrantedAuthority> authorities = roles.stream()
@@ -139,5 +159,33 @@ final class MockBearerFilter extends OncePerRequestFilter {
             );
         }
         chain.doFilter(req, res);
+    }
+
+    private boolean isPublicEndpoint(HttpServletRequest req) {
+        String m = req.getMethod();
+        String u = req.getRequestURI();
+        if ("GET".equalsIgnoreCase(m)) {
+            if (u.startsWith("/api/events") ||
+                u.startsWith("/api/v3/events") ||
+                u.startsWith("/api/categories") ||
+                u.startsWith("/api/plans") ||
+                u.startsWith("/api/organizer/venues") ||
+                u.startsWith("/api/organizer/categories") ||
+                u.startsWith("/api/e-invoices/lookup") ||
+                u.startsWith("/api/transfers/lookup") ||
+                u.startsWith("/api/ai/status") ||
+                u.startsWith("/api/payments/vnpay/") ||
+                u.startsWith("/actuator/health") ||
+                u.startsWith("/error")) {
+                return true;
+            }
+        }
+        return u.startsWith("/api/auth/") ||
+               u.startsWith("/api/security/anti-bot/") ||
+               u.equals("/api/contact/leads") ||
+               u.startsWith("/api/organizer/onboard") ||
+               u.equals("/api/vouchers/validate") ||
+               u.equals("/api/ai/concierge/chat") ||
+               (u.contains("/waiting-room/enter") && "POST".equalsIgnoreCase(m));
     }
 }

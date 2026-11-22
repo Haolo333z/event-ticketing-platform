@@ -1,6 +1,13 @@
 # Bàn giao event-ticketing-platform
 
-Chốt ngày **14/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
+Chốt ngày **22/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
+
+> **Cập nhật 22/11/2026:** Hoàn tất toàn diện **Task T28: Sửa Dứt Điểm Token /dat-ve, Tối Ưu Navbar Avatar Dropdown & Xây Trang Tài Khoản Cá Nhân /tai-khoan 5 Tab**:
+> - **Hạng mục 1:** Khắc phục triệt để lỗi token hết hạn chặn 401 trên các API công khai bằng helper `isPublicEndpoint(req)` trong `MockBearerFilter.java`, kết hợp interceptor tự phục hồi `client.ts` tự động fallback anonymous request.
+> - **Hạng mục 2:** Tối ưu hóa thanh Navbar: gom toàn bộ liên kết phân quyền vào duy nhất 1 cụm **Avatar + Tên + ▾** Dropdown Menu tương phản cao, chữ đậm sắc nét, phân tách rõ ràng 4 vai trò, kèm nút cam `+ Tạo sự kiện` nổi bật.
+> - **Hạng mục 3:** Xây dựng Trang Quản Lý Tài Khoản Cá Nhân (`/tai-khoan`) đầy đủ 5 Tab (Profile, Security & Sessions, VAT Invoice Defaults, Notifications & Reminders / Waitlists / Transfers, Organizer Partner). Tích hợp tự động điền VAT defaults vào `Checkout.ts`.
+> - **Flyway Migration V28:** Bổ sung `avatar_url`, các trường hóa đơn VAT mặc định vào `ticketing.users`; bổ sung `user_agent`, `ip_address` và chỉ mục vào `ticketing.refresh_tokens`.
+> - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (179ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.
 
 ## 1. Git và tiến độ
 

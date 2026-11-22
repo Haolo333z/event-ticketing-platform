@@ -69,6 +69,77 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   const[bestSeatNote,setBestSeatNote]=useState('');
   const[waitlistBusy,setWaitlistBusy]=useState(false);
   const[waitlistMsg,setWaitlistMsg]=useState('');
+  const[previewSeatView,setPreviewSeatView]=useState<import('../api/client.ts').SeatView|null>(null);
+  const[reminderNotice,setReminderNotice]=useState<string|null>(null);
+  const[reminderBusy,setReminderBusy]=useState(false);
+
+  // V4 Fan-to-Fan Resale Marketplace
+  const[resaleListings,setResaleListings]=useState<import('../api/client.ts').ResaleListingItem[]>([]);
+  const[resaleLoading,setResaleLoading]=useState(false);
+  const[activeResalePurchase,setActiveResalePurchase]=useState<import('../api/client.ts').ResaleListingItem|null>(null);
+  const[resaleReserveResult,setResaleReserveResult]=useState<import('../api/client.ts').ReserveResaleResult|null>(null);
+  const[resaleSettleSuccess,setResaleSettleSuccess]=useState<import('../api/client.ts').SettleResaleResult|null>(null);
+  const[resaleActionBusy,setResaleActionBusy]=useState(false);
+  const[resaleActionError,setResaleActionError]=useState<string|null>(null);
+
+  async function handleBuyResale(item:import('../api/client.ts').ResaleListingItem){
+    if(!user){
+      if(onRequireAuth)onRequireAuth(()=>void handleBuyResale(item));
+      return;
+    }
+    setActiveResalePurchase(item);
+    setResaleActionBusy(true);
+    setResaleActionError(null);
+    setResaleReserveResult(null);
+    setResaleSettleSuccess(null);
+    try{
+      const res=await api.resale!.reserve(item.id);
+      setResaleReserveResult(res);
+    }catch(err:any){
+      setResaleActionError(err?.message||'Không thể giữ chỗ vé sang nhượng');
+    }finally{
+      setResaleActionBusy(false);
+    }
+  }
+
+  async function handleConfirmResalePayment(){
+    if(!activeResalePurchase||!api.resale?.settle)return;
+    setResaleActionBusy(true);
+    setResaleActionError(null);
+    try{
+      const res=await api.resale.settle(activeResalePurchase.id);
+      setResaleSettleSuccess(res);
+      if(selected&&api.resale.listForEvent){
+        api.resale.listForEvent(selected).then(r=>setResaleListings(r.items)).catch(()=>{});
+      }
+    }catch(err:any){
+      setResaleActionError(err?.message||'Thanh toán vé sang nhượng thất bại');
+    }finally{
+      setResaleActionBusy(false);
+    }
+  }
+
+  async function viewSeatPerspective(seatId:string){
+    if(!selected||!api.seats?.getView)return;
+    try{
+      const view=await api.seats.getView(selected,seatId);
+      setPreviewSeatView(view);
+    }catch{/* preview fallback */}
+  }
+
+  async function registerEventReminder(minutes=15){
+    if(!selected||!api.reminders?.register)return;
+    setReminderBusy(true);
+    setReminderNotice(null);
+    try{
+      const res=await api.reminders.register(selected,minutes);
+      setReminderNotice(res.message);
+    }catch(err:any){
+      fail(err);
+    }finally{
+      setReminderBusy(false);
+    }
+  }
 
   // Commercial Consultation Form State
   const[contactForm,setContactForm]=useState({fullName:'',orgName:'',email:'',phone:'',eventType:'CONCERT',message:''});
@@ -93,6 +164,19 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
     if(!selected)return;let active=true;
     const timer=setInterval(()=>{api.availability(selected).then(value=>{if(active){setAvailability(value);setAvailabilityStale(false);}}).catch(()=>{if(active)setAvailabilityStale(true);});},3000);
     return()=>{active=false;clearInterval(timer);};
+  },[api,selected]);
+  useEffect(()=>{
+    if(!selected||!api.resale?.listForEvent){
+      setResaleListings([]);
+      return;
+    }
+    let active=true;
+    setResaleLoading(true);
+    api.resale.listForEvent(selected)
+      .then(res=>{if(active)setResaleListings(res.items);})
+      .catch(()=>{if(active)setResaleListings([]);})
+      .finally(()=>{if(active)setResaleLoading(false);});
+    return()=>{active=false;};
   },[api,selected]);
   useEffect(()=>{
     setSseLive(false);setBestSeatNote('');
@@ -395,6 +479,15 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               ...(detail?.ticketTypes.filter(t=>t.active)??[]).map(t=>h('option',{key:t.id,value:t.id},t.name))
             ),
             type&&h('p',{className:'unit-price'},vnd(type.priceVnd),h('small',null,' / vé · giá từ máy chủ')),
+            api.reminders&&h('div',{style:{margin:'6px 0 12px'}},
+              h('button',{
+                type:'button',
+                className:'reminder-action-btn',
+                disabled:reminderBusy,
+                onClick:()=>void registerEventReminder(15)
+              },reminderBusy?'Đang đăng ký...':'🔔 Nhắc tôi trước giờ mở bán (15 phút)'),
+              reminderNotice&&h('p',{className:'reminder-toast'},'✅ ',reminderNotice)
+            ),
             type?.mode==='SEATED'?h('div',{className:'seat-section'},
               h('div',{className:'stage-container'},
                 h('div',{className:'stage-screen'},'🎭 SÂN KHẤU CHÍNH / STAGE'),
@@ -433,11 +526,27 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
                 'aria-pressed':seatIds.includes(seat.id),
                 className:'seat '+seat.status.toLowerCase()+(seatIds.includes(seat.id)?' chosen':''),
                 disabled:busy||!!pending||seat.status!=='AVAILABLE'||seatIds.length>=6&&!seatIds.includes(seat.id),
-                onClick:()=>setSeatIds(current=>current.includes(seat.id)?current.filter(id=>id!==seat.id):[...current,seat.id])
+                onClick:()=>{
+                  setSeatIds(current=>current.includes(seat.id)?current.filter(id=>id!==seat.id):[...current,seat.id]);
+                  if(api.seats?.getView)void viewSeatPerspective(seat.id);
+                }
               },
                 h('strong',null,seat.label),
                 h('small',null,seat.status==='AVAILABLE'?'Trống':seat.status==='HELD'?'Đang giữ':'Không khả dụng')
               ))),
+              previewSeatView&&h('div',{className:'seat-preview-card'},
+                h('div',{className:'seat-preview-header'},
+                  h('h4',null,'👁️ Góc nhìn 3D từ ghế '+previewSeatView.seatLabel+' ('+previewSeatView.ticketTypeName+')'),
+                  h('button',{type:'button',className:'seat-preview-close',onClick:()=>setPreviewSeatView(null)},'✕')
+                ),
+                h('div',{className:'seat-preview-svg-container',dangerouslySetInnerHTML:{__html:previewSeatView.perspectiveSvg}}),
+                h('div',{className:'seat-preview-details'},
+                  h('span',{className:'preview-badge score'},'⭐ Tầm nhìn: '+previewSeatView.viewQualityScore+'/100'),
+                  h('span',{className:'preview-badge dist'},'📏 Cự ly: '+previewSeatView.distanceMeters+'m'),
+                  h('span',{className:'preview-badge elev'},'📐 Độ dốc: '+previewSeatView.elevationAngle+'°')
+                ),
+                h('p',{className:'seat-preview-notes'},'💡 '+previewSeatView.viewNotes)
+              ),
               h('p',{'aria-live':'polite',className:'selected-seats-count'},'Đã chọn '+seatIds.length+' ghế (Tối đa 6 ghế)')
             ):h('div',null,
               h('p',{'aria-live':'polite',className:available===0?'sold-out':'availability'},available===null?'Chưa có tồn kho tham khảo':available===0?'Hết vé':'Còn '+available+' vé tham khảo'),
@@ -470,6 +579,44 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               onClick:()=>void joinSmartWaitlist()
             },waitlistBusy?'Đang đăng ký…':'Đăng ký Danh sách chờ thông minh'),
             waitlistMsg && h('p',{role:'status',className:'best-seats-note'},waitlistMsg)
+          ),
+          api.resale?.listForEvent && selected && h('div',{className:'resale-marketplace-card',style:{background:'#f8fafc',border:'1px solid #cbd5e1',borderRadius:'16px',padding:'1.25rem',marginTop:'1.5rem'}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}},
+              h('div',null,
+                h('span',{style:{background:'#e0e7ff',color:'#4338ca',padding:'3px 8px',borderRadius:'6px',fontSize:'0.75rem',fontWeight:700}},'🏷️ FAN-TO-FAN RESALE'),
+                h('h4',{style:{margin:'4px 0 0',fontSize:'1.05rem',color:'#0f172a'}},'Chợ Vé Sang Nhượng Chính Chủ'),
+                h('p',{className:'muted',style:{margin:0,fontSize:'0.82rem'}},'Bảo đảm 100% không vé giả: vé cũ bị hủy, cấp vé mới tức thì kèm mã QR ký số.')
+              ),
+              h('span',{style:{fontSize:'0.82rem',color:'#059669',fontWeight:600}},'🛡️ Cam kết ≤ Giá gốc')
+            ),
+            resaleLoading ? h('p',{className:'muted',style:{fontSize:'0.85rem'}},'Đang tải vé sang nhượng…') :
+            resaleListings.length === 0 ? h('div',{style:{background:'#ffffff',padding:'1rem',borderRadius:'10px',textAlign:'center',color:'#64748b',fontSize:'0.85rem'}},
+              'Hiện chưa có khán giả nào đăng bán lại vé cho sự kiện này.'
+            ) : h('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}},
+              resaleListings.map(rsl => h('div',{
+                key:rsl.id,
+                style:{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#ffffff',border:'1px solid #e2e8f0',borderRadius:'10px',padding:'10px 14px'}
+              },
+                h('div',null,
+                  h('strong',{style:{fontSize:'0.9rem',color:'#1e293b'}},rsl.ticketTypeTitle + (rsl.seatLabel ? ' — Ghế ' + rsl.seatLabel : ' — Vé GA')),
+                  h('div',{style:{fontSize:'0.78rem',color:'#64748b'}},'Bởi: ' + rsl.sellerName + ' • Giá gốc: ' + vnd(rsl.originalPriceVnd))
+                ),
+                h('div',{style:{display:'flex',alignItems:'center',gap:'10px'}},
+                  h('div',{style:{textAlign:'right'}},
+                    h('strong',{style:{color:'#4338ca',fontSize:'1rem'}},vnd(rsl.askingPriceVnd)),
+                    rsl.askingPriceVnd < rsl.originalPriceVnd && h('span',{style:{display:'block',fontSize:'0.7rem',color:'#059669',fontWeight:700}},
+                      'Tiết kiệm ' + Math.round((1 - rsl.askingPriceVnd / rsl.originalPriceVnd) * 100) + '%'
+                    )
+                  ),
+                  h('button',{
+                    type:'button',
+                    className:'btn-primary',
+                    style:{fontSize:'0.82rem',padding:'6px 12px'},
+                    onClick:()=>void handleBuyResale(rsl)
+                  },'Mua ngay')
+                )
+              ))
+            )
           ),
           h('p',{className:'footnote'},'Thanh toán chỉ mô phỏng, không thu tiền thật. Ghế chỉ trống trở lại sau khi máy chủ nhả giữ chỗ.')
         )
@@ -855,6 +1002,64 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
         h('div',{className:'footer-bottom'},
           h('p',null,'© 2026 EventFlow Technology Platform. Bản quyền thuộc về Đồ án Tốt nghiệp Kỹ thuật Phần mềm.'),
           h('p',{className:'footer-note'},'Hệ thống mẫu chuẩn hóa kỹ thuật theo tài liệu PRD & Architecture.')
+        )
+      )
+    ),
+
+    activeResalePurchase && h('div',{className:'auth-modal-backdrop',onClick:(e)=>{if(e.target===e.currentTarget)setActiveResalePurchase(null);}},
+      h('div',{className:'auth-modal-card',style:{maxWidth:'500px'}},
+        h('div',{className:'auth-modal-header'},
+          h('div',null,
+            h('h3',{style:{margin:0,fontSize:'1.15rem',color:'#0f172a'}},'🏷️ Mua vé sang nhượng chính chủ'),
+            h('p',{className:'muted',style:{margin:'4px 0 0',fontSize:'0.82rem'}},detail?.title)
+          ),
+          h('button',{type:'button',className:'auth-close-btn',onClick:()=>setActiveResalePurchase(null)},'×')
+        ),
+        resaleActionError && h('div',{className:'auth-error-alert'},'⚠️ ',resaleActionError),
+        resaleSettleSuccess ? h('div',{style:{padding:'16px 0',display:'flex',flexDirection:'column',gap:'12px'}},
+          h('div',{style:{background:'#ecfdf5',border:'1px solid #a7f3d0',borderRadius:'10px',padding:'14px',color:'#065f46'}},
+            h('strong',{style:{fontSize:'1rem'}},'🎉 ' + resaleSettleSuccess.message),
+            h('p',{style:{margin:'8px 0 0',fontSize:'0.85rem'}},
+              'Vé mới đã được phát hành và lưu trực tiếp vào Ví vé điện tử của bạn. Mã vé: '
+            ),
+            h('div',{style:{background:'#ffffff',padding:'8px 12px',borderRadius:'8px',border:'1px dashed #059669',marginTop:'8px',display:'inline-block'}},
+              h('strong',{style:{color:'#047857',letterSpacing:'1px'}},resaleSettleSuccess.newTicketCode)
+            )
+          ),
+          h('div',{style:{display:'flex',gap:'8px',justifyContent:'flex-end',marginTop:'8px'}},
+            h('button',{type:'button',className:'hero-cta-coral',onClick:()=>{setActiveResalePurchase(null);nav('/ve-cua-toi');}},'🎟️ Vào Ví vé của tôi →')
+          )
+        ) : h('div',{style:{display:'flex',flexDirection:'column',gap:'12px',marginTop:'12px'}},
+          h('div',{style:{background:'#f8fafc',borderRadius:'10px',border:'1px solid #e2e8f0',padding:'12px'}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'6px'}},
+              h('span',{className:'muted',style:{fontSize:'0.85rem'}},'Hạng vé / Vị trí:'),
+              h('strong',{style:{fontSize:'0.85rem'}},activeResalePurchase.ticketTypeTitle + (activeResalePurchase.seatLabel ? ' (Ghế ' + activeResalePurchase.seatLabel + ')' : ' (Vé GA)'))
+            ),
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'6px'}},
+              h('span',{className:'muted',style:{fontSize:'0.85rem'}},'Người đăng bán:'),
+              h('span',{style:{fontSize:'0.85rem'}},activeResalePurchase.sellerName)
+            ),
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:'6px'}},
+              h('span',{className:'muted',style:{fontSize:'0.85rem'}},'Giá gốc:'),
+              h('span',{style:{textDecoration:'line-through',color:'#94a3b8',fontSize:'0.85rem'}},vnd(activeResalePurchase.originalPriceVnd))
+            ),
+            h('div',{style:{display:'flex',justifyContent:'space-between',borderTop:'1px solid #e2e8f0',paddingTop:'6px',marginTop:'6px'}},
+              h('strong',{style:{fontSize:'0.95rem',color:'#0f172a'}},'Giá thanh toán:'),
+              h('strong',{style:{fontSize:'1.1rem',color:'#4338ca'}},vnd(activeResalePurchase.askingPriceVnd))
+            )
+          ),
+          h('div',{style:{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'8px',padding:'10px',fontSize:'0.78rem',color:'#1e40af'}},
+            '🛡️ Cơ chế bảo mật EventFlow: Khi bạn xác nhận, vé cũ của người bán sẽ lập tức bị HỦY (REVOKED) và hệ thống cấp mã vé mới mang tên bạn kèm mã QR ký số HMAC-SHA256.'
+          ),
+          h('div',{style:{display:'flex',gap:'8px',justifyContent:'flex-end',marginTop:'8px'}},
+            h('button',{type:'button',className:'quiet',disabled:resaleActionBusy,onClick:()=>setActiveResalePurchase(null)},'Hủy'),
+            h('button',{
+              type:'button',
+              className:'hero-cta-coral',
+              disabled:resaleActionBusy,
+              onClick:()=>void handleConfirmResalePayment()
+            },resaleActionBusy ? 'Đang giao dịch…' : 'Xác nhận thanh toán ' + vnd(activeResalePurchase.askingPriceVnd))
+          )
         )
       )
     )

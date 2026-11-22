@@ -377,3 +377,87 @@
 - [x] **T22.3 — AI Organizer Copilot (Nhà Tổ Chức) (Done, 2026-11-18):** Endpoint `POST /api/ai/organizer/generate-event` tự động sinh tiêu đề SEO, mô tả, 4 chặng Agenda, 3 hạng vé (`Early Bird`, `Standard`, `VIP`) và JSON ma trận sơ đồ ghế; tích hợp nút **"✨ AI Gợi Ý Nội Dung"** trực tiếp trong modal tạo sự kiện của `OrganizerDashboard.ts`.
 - [x] **T22.4 — AI Ops Diagnostics (Admin) (Done, 2026-11-18):** Endpoint `POST /api/ai/admin/diagnose` đọc thực tế `message_failures`, `outbox_events`, `bookings`, `refund_attempts`, phân loại mức độ (`HIGH`/`MEDIUM`/`LOW`), tóm tắt nguyên nhân tiếng Việt và khuyến nghị hành động (*Outbox Replay* vs *Duyệt hoàn tiền muộn*); tích hợp trực tiếp trong `AdminDashboard.ts`.
 - [x] **T22.5 — Script Load Test k6, Kiểm Thử Hồi Quy V3 & Đóng Gói `v3.0.0-release` (Done, 2026-11-18):** Bổ sung script `tools/load/k6-oversell-burst.js` (500–1.000 VUs đồng thời), chạy PASS 100% toàn bộ test suite Backend + Frontend + Contracts, đóng gói JAR mới và gắn nhãn phát hành `v3.0.0-release`.
+
+---
+
+# LỘ TRÌNH NÂNG CẤP EVENTFLOW ENTERPRISE V4 — BỘ CHỨC NĂNG THƯƠNG MẠI 2026 CHO CHỦ SÀN & NHÀ TỔ CHỨC (T23 – T26)
+
+## Giai đoạn 12 — Đối Soát Tài Chính Tự Động & Circuit Breaker Cổng Thanh Toán (T23 - Cụm 1)
+
+- [x] **T23.1 — Flyway Migration V19 (`V19__financial_reconciliation_and_settlement.sql`) (Done, 2026-11-21):** Tạo bảng `ticketing.reconciliation_runs` và `ticketing.reconciliation_discrepancies` (tổng **40 bảng nghiệp vụ** V1–V19), lưu vết đầy đủ chi tiết các phiên đối soát tài chính định kỳ.
+- [x] **T23.2 — Financial Reconciliation Engine (`ReconciliationService` & `ReconciliationController`) (Done, 2026-11-21):** Đối soát tự động 3 chiều giữa CSDL giao dịch nội bộ và file/nhật ký Cổng thanh toán (VNPAY Sandbox), phân loại và gắn cờ các bất thường (`AMOUNT_MISMATCH`, `MISSING_IN_GATEWAY`, `MISSING_IN_DB`), cập nhật trạng thái xử lý và xuất file CSV an toàn.
+- [x] **T23.3 — Payment Gateway Circuit Breaker (`PaymentCircuitBreaker` & Resilience Controller) (Done, 2026-11-21):** Bộ ngắt mạch trạng thái Closed / Open / Half-Open tự động cách ly Cổng thanh toán khi phát hiện 3 lỗi liên tiếp, chuyển sang thăm dò Half-Open sau 30 giây; hỗ trợ ngắt mạch và reset thủ công từ Admin Portal.
+- [x] **T23.4 — Giao Diện Quản Trị Đối Soát & Cổng Thanh Toán Trong `AdminDashboard.ts` (Done, 2026-11-21):** Bổ sung tab **"Đối soát & Cổng TT"**: thẻ trạng thái Circuit Breaker thời gian thực, bảng lịch sử đối soát, nút kích hoạt phiên đối soát (hỗ trợ mô phỏng lệch tiền) và tải file CSV.
+
+## Giai đoạn 13 — Tự Phục Vụ B2B, Voucher ACID, Hóa Đơn VAT Điện Tử & Rút Doanh Thu (T24 - Cụm 2)
+
+- [x] **T24.1 — Flyway Migration V20 (`V20__vouchers_payouts_and_invoices.sql`) (Done, 2026-11-21):** Tạo các bảng `ticketing.vouchers`, `ticketing.voucher_redemptions`, `ticketing.organizer_payouts`, `ticketing.e_invoices`, bổ sung `saas_plan` vào `organizer_profiles`/`contact_leads` và `discount_amount_vnd` vào `bookings` (tổng **41 bảng nghiệp vụ**).
+- [x] **T24.2 — Self-Service B2B Onboarding & Duyệt 1-Chạm (`OrganizerOnboardingController` & `AdminLeadController`) (Done, 2026-11-21):** API công khai đăng ký đối tác tự phục vụ (`POST /api/organizer/onboard`) kèm chọn gói SaaS (`STARTER`, `GROWTH`, `ENTERPRISE`); tính năng Admin duyệt 1 chạm từ Contact Leads tự động cấp tài khoản và gán vai trò `ORGANIZER`.
+- [x] **T24.3 — Engine Mã Giảm Giá ACID (`VoucherService` & `VoucherController`) (Done, 2026-11-21):** Kiểm tra điều kiện áp mã (min spend, usage limit, thời hạn), trừ tiền tức thì trong giao dịch đặt vé; hoàn trả mã và phục hồi lượt sử dụng nguyên tử khi booking hết hạn/hủy (`BookingLifecycle.releaseVoucher`).
+- [x] **T24.4 — Hóa Đơn VAT Điện Tử 10% (`EInvoiceService` & `EInvoiceController`) (Done, 2026-11-21):** Xuất hóa đơn VAT điện tử chuẩn hóa thông tin doanh nghiệp (Mã số thuế, Địa chỉ, Tiền trước thuế, Thuế GTGT 10%, Tổng thanh toán), tra cứu công khai không cần đăng nhập (`GET /api/e-invoices/lookup/{no}`).
+- [x] **T24.5 — Cổng Rút Doanh Thu Nhà Tổ Chức (`OrganizerPayoutService` & `OrganizerPayoutController`) (Done, 2026-11-21):** Nhà tổ chức gửi yêu cầu rút tiền kèm thông tin ngân hàng thụ hưởng; Admin xem danh sách và mở modal phê duyệt/từ chối 1 chạm trong Admin Dashboard.
+
+## Giai đoạn 14 — Soát Vé Offline-First & Chống Bot / Đầu Cơ Giờ Mở Bán (T25 - Cụm 3)
+
+- [x] **T25.1 — Flyway Migration V21 (`V21__offline_checkins_and_anti_bot.sql`) (Done, 2026-11-21):** Mở rộng bảng `ticketing.ticket_check_ins` (cột `is_offline`, `synced_at`, `client_checked_in_at`), mở rộng `ticketing.events` (cột `anti_bot_enabled`), tạo bảng `ticketing.anti_bot_challenges` và `ticketing.rate_limit_audits` (tổng **42 bảng nghiệp vụ**).
+- [x] **T25.2 — Offline Manifest & Batch Sync Nguyên Tử (`StaffCheckInService` & Controller) (Done, 2026-11-21):** Tải danh sách vé Offline Manifest có kèm chữ ký số QR token (`GET /api/staff/events/{id}/offline-manifest`); đồng bộ lô an toàn (`POST /api/staff/check-ins/batch-sync`), đối soát xung đột quét trùng trên ràng buộc `UNIQUE(ticket_id)` của CSDL.
+- [x] **T25.3 — Giao Diện Staff Soát Vé PWA Ngoại Tuyến (`StaffCheckInPage.ts`) (Done, 2026-11-21):** Thanh điều khiển ngoại tuyến (Offline Control Bar): phát hiện mất mạng tự động, nút tải manifest lưu `localStorage`, quét và xác thực QR tức thì không cần mạng, lưu hàng đợi cục bộ và nút đồng bộ lên máy chủ khi có mạng lại.
+- [x] **T25.4 — Sliding-Window Rate Limiter & HMAC Proof-of-Work (`RateLimiterService` & `AntiBotService`) (Done, 2026-11-21):** Thuật toán Sliding Window đếm và chặn IP vượt ngưỡng; cổng Hexagonal `AntiBotChallengePort` với adapter `HmacProofOfWorkChallengeAdapter` sinh thử thách toán học bảo mật, cấp `admissionToken` có thời hạn 15 phút bảo vệ mở bán.
+
+## Giai đoạn 15 — AI Ops Nâng Cao: Dự Báo Cháy Vé & Phát Hiện Cụm Đầu Cơ (T26 - Cụm 4)
+
+- [x] **T26.1 — Flyway Migration V22 (`V22__ai_ops_forecasting_and_scalping.sql`) (Done, 2026-11-21):** Tạo bảng `ticketing.scalping_alerts` và bổ sung `status` ('ACTIVE', 'LOCKED', 'SUSPENDED') vào `ticketing.users` (tổng **43 bảng nghiệp vụ** V1–V22).
+- [x] **T26.2 — Demand & Sell-Out Forecasting (`SellOutForecastService`) (Done, 2026-11-21):** Phân tích vận tốc bán vé (vé/giờ 24h qua), tỷ lệ giữ chỗ (% Hold Rate), tỷ lệ lấp đầy, số khách Smart Waitlist; ước tính thời gian cháy vé (`SELL_OUT_IMMINENT`, `HIGH_DEMAND`, `SOLD_OUT`) và khuyến nghị kích hoạt Virtual Waiting Room.
+- [x] **T26.3 — Anti-Scalping Anomaly Detection Engine (`AntiScalpingDetectionService`) (Done, 2026-11-21):** Quét tự động phát hiện cụm $\ge 3$ tài khoản gom vé cùng IP trong 15 phút (`MASS_HOLD_SAME_IP`, rủi ro `HIGH`) hoặc tài khoản găm giữ rồi nhả cọc $\ge 2$ lần liên tiếp (`HOARDING_ABANDON_BURST`, rủi ro `MEDIUM`); hỗ trợ thao tác 1 chạm khóa tài khoản (`LOCK_ACCOUNT`) và tự động giải phóng toàn bộ vé/ghế đang găm giữ.
+- [x] **T26.4 — Giao Diện AI Ops & Bảng Cảnh Báo Đầu Cơ Trong `AdminDashboard.ts` (Done, 2026-11-21):** Thêm tab **"🤖 AI Ops & Chống Bot"**: widget dự báo cháy vé và bảng cảnh báo đầu cơ với nút thao tác 1 chạm "🔒 Khóa tài khoản" hoặc "Bỏ qua".
+- [x] **T26.5 — Kiểm Thử Hồi Quy Toàn Diện, OpenAPI 3.1 & Bàn Giao V4 (Done, 2026-11-21):** 313/313 tests Backend PASS 100%, 77/77 tests Frontend PASS 100%, 47 operations OpenAPI 3.1 PASS 100%, Frontend build Vite production SUCCESS (152ms). Bảo toàn 100% cam kết Zero Oversell, 0 Deadlock và không commit/push.
+
+---
+
+# LỘ TRÌNH NÂNG CẤP EVENTFLOW ENTERPRISE — BỘ TÍNH NĂNG TRẢI NGHIỆM KHÁCH HÀNG THẾ HỆ 2026 (T27: CỤM 1, 2, 3, 4)
+
+## Giai đoạn 16 — Trải Nghiệm Khách Hàng Chuẩn Thương Mại 2026 (T27)
+
+- [x] **T27.1 — Cụm 1: Đăng Nhập 1 Chạm Google OAuth2 & Kiến Trúc Hexagonal (Done, 2026-11-21):**
+  - Flyway Migration V23 (`V23__oauth_identities.sql`): bảng `ticketing.oauth_identities` (`provider`, `provider_user_id`, `user_id`, `avatar_url`, UNIQUE(provider, provider_user_id)).
+  - Backend: `OAuthIdentityPort`, `GoogleOAuthAdapter`, `LocalDemoGoogleAdapter` (3 tài khoản demo: Khách hàng, Nhà tổ chức, Quản trị viên), `OAuthAuthenticationService` (liên kết tài khoản an toàn, cấp JWT + Token Family refresh token, chặn tài khoản `ACCOUNT_LOCKED`), `OAuthController`.
+  - Frontend: Google 'G' vector SVG, nút "Tiếp tục với Google (1-Chạm)", dropdown chọn nhanh tài khoản demo 1 chạm trong `AuthModal.ts`.
+  - Tests: `OAuthAuthenticationServiceTest` (5/5 PASS), `V23MigrationVerificationTest`, `client.test.ts`.
+
+- [x] **T27.2 — Cụm 2: Xem Góc Nhìn Từ Ghế (Seat View 3D/SVG), Nhắc Giờ Mở Bán & Tiến Trình Hoàn Tiền Minh Bạch (Done, 2026-11-21):**
+  - Flyway Migration V24 (`V24__seat_view_and_event_reminders.sql`): bổ sung `distance_meters`, `elevation_angle`, `view_quality_score`, `view_notes` vào `ticketing.seats`; tạo bảng `ticketing.event_reminders`.
+  - Backend:
+    - Package `seatview`: `SeatViewService` (thuật toán sinh vector SVG 3D Isometric góc nhìn sân khấu từ tọa độ hàng/ghế, cự ly và độ dốc), `SeatViewController`.
+    - Package `reminders`: `EventReminderService` & `EventReminderController` (nhắc mở bán trước 15 phút).
+    - Package `payments`: `RefundProgressService` & `RefundProgressController` (Anti-IDOR, tính toán tiến trình 3 bước: Tiếp nhận $\rightarrow$ Đối soát $\rightarrow$ Hoàn tiền).
+  - Frontend: Sơ đồ ghế xem góc nhìn 3D trực quan, nút Đăng ký nhắc mở bán trên trang sự kiện, thanh tiến trình hoàn tiền 3 bước minh bạch trên thẻ Boarding Pass `MyBookingsPage.ts`.
+  - Tests: `SeatViewServiceTest` (3/3 PASS), `EventReminderServiceTest` (4/4 PASS), `RefundProgressServiceTest` (2/2 PASS), `V24MigrationVerificationTest`.
+
+- [x] **T27.3 — Cụm 3: Gửi Tặng Vé Cho Bạn Bè (Peer-to-Peer Ticket Transfer) & Thu Hồi QR Cũ (Done, 2026-11-21):**
+  - Flyway Migration V25 (`V25__peer_to_peer_ticket_transfers.sql`): mở rộng `ticketing.tickets` (cột `status` 'VALID'/'REVOKED'/'TRANSFERRED', `owner_user_id`, `transferred_from_ticket_id`), tạo bảng `ticketing.ticket_transfers`.
+  - Backend: `TicketTransferService` & `TicketTransferController` (chuyển nhượng nguyên tử ACID `SELECT FOR UPDATE`, vô hiệu hóa vé cũ `REVOKED`, cấp vé mới cho người nhận kèm chữ ký số QR HMAC-SHA256, ghi Kafka Outbox `TICKET_TRANSFERRED`, chặn vé đã soát vé tại cổng, chặn tự nhận vé của chính mình).
+  - Bảo vệ Check-in & QR Code: `TicketQrService` và `StaffCheckInService` từ chối ngay lập tức mã vé cũ đã bị `REVOKED` (`TICKET_REVOKED`).
+  - Frontend: Nút "🎁 Gửi tặng vé cho bạn bè" trên từng vé, Modal gửi tặng nhập email/lời nhắn, sinh link nhận vé `TRF-...`, trang nhận vé `TransferAcceptPage.ts` (`/transfer/accept?token=...`) cho phép người nhận tra cứu và xác nhận nhận vé 1 chạm.
+  - Tests: `TicketTransferServiceTest` (4/4 PASS), `V25MigrationVerificationTest`, `client.test.ts`.
+
+- [x] **T27.4 — Cụm 4: Chợ Chuyển Nhượng Vé Chính Chủ (Official Fan-to-Fan Resale Marketplace) (Done, 2026-11-21):**
+  - Flyway Migration V26 (`V26__fan_to_fan_resale_marketplace.sql`): tạo bảng `ticketing.resale_listings` với ràng buộc CSDL bất biến chống đầu cơ `CONSTRAINT chk_resale_anti_scalping CHECK (asking_price_vnd > 0 AND asking_price_vnd <= original_price_vnd)` và partial unique index `uq_active_resale_ticket`.
+  - Backend: `ResaleListingModels`, `ResaleListingService`, `ResaleListingController` (`POST /api/resale/listings`, `GET /api/events/{id}/resale-listings`, `POST /api/resale/listings/{id}/reserve` khóa `SELECT FOR UPDATE` 10 phút, `POST /api/resale/listings/{id}/settle` thu hồi vé cũ `REVOKED` và cấp vé mới cho người mua, `POST /api/resale/listings/{id}/cancel`, `GET /api/me/resale/listings`).
+  - Frontend:
+    - `MyBookingsPage.ts`: Nút "🏷️ Bán lại (Resale)", Modal bán lại với kiểm tra giá $\le$ giá gốc thời gian thực.
+    - `App.ts`: Khu vực "Chợ vé sang nhượng chính chủ" trên trang sự kiện, hiển thị vé resale, cờ giảm giá %, nút Mua vé giữ chỗ 10 phút và hoàn tất thanh toán mô phỏng nhận vé mới.
+  - Tests: `ResaleListingServiceTest` (6/6 PASS), `V26MigrationVerificationTest`, `client.test.ts`.
+
+- [x] **T27.5 — Kiểm Thử Hồi Quy Toàn Diện, OpenAPI 3.1 & Bàn Giao Bộ Trải Nghiệm Khách Hàng 2026 (Done, 2026-11-21):**
+  - 343/343 tests Backend JUnit 5 PASS 100% (0 failures, 0 errors, 141 skipped an toàn).
+  - 81/81 tests Frontend Vitest PASS 100%.
+  - Frontend build Vite production SUCCESS (210ms).
+  - 47 operations, 69 positive/negative payload cases OpenAPI 3.1 PASS 100%.
+  - Bảo toàn 100% các bất biến cốt lõi: 0% Bán Lố Vé (Zero Oversell), Chống Deadlock, Anti-IDOR tuyệt đối, Vé QR ký số HMAC-SHA256, Không tự ý commit/push.
+
+- [x] **T28 — Sửa Dứt Điểm Token /dat-ve, Tối Ưu Navbar Avatar Dropdown & Xây Trang Tài Khoản Cá Nhân /tai-khoan 5 Tab (Done, 2026-11-22):**
+  - **Hạng mục 1:** Khắc phục lỗi `UNAUTHENTICATED` token trên `/dat-ve`: thêm `isPublicEndpoint` trong `MockBearerFilter.java` bỏ qua lỗi token trên các route public GET (`/api/events/**`, `/api/categories/**`, `/api/plans/**`...) để không chặn 401; hoàn thiện interceptor tự phục hồi `client.ts` tự động fallback anonymous.
+  - **Hạng mục 2:** Tối ưu hóa Navbar & Avatar Dropdown: loại bỏ nút thừa trùng lặp trên topbar, chỉ giữ 1 nút cam `+ Tạo sự kiện`, gom vào 1 cụm Avatar trigger + Tên người dùng + ▾, xổ ra menu dropdown tương phản cao, chữ đậm sắc nét, 4 vai trò, kèm divider và nút Đăng xuất đỏ.
+  - **Hạng mục 3:** Trang Quản Lý Tài Khoản Cá Nhân (`/tai-khoan`) 5 Tab (Profile, Security & Sessions, VAT Invoice Defaults, Notifications/Waitlists/Transfers, Organizer Partner) và tích hợp tự động điền VAT defaults vào `Checkout.ts`.
+  - **Flyway V28:** `V28__user_profile_sessions_and_vat_defaults.sql` thêm avatar, VAT defaults vào `users`; thêm user_agent, ip_address vào `refresh_tokens`.
+  - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend Vitest PASS 100%, Vite build SUCCESS (179ms), 47 operations / 69 payload cases OpenAPI 3.1 PASS 100%.

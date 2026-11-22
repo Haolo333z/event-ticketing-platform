@@ -269,3 +269,192 @@ test('leads tab displays enterprise leads and allows status updates', async () =
   assert.match(document.querySelector('.alert.success')!.textContent!, /Đã cập nhật trạng thái lead sang CONTACTED/);
 });
 
+test('leads tab supports 1-click conversion to organizer', async () => {
+  let convertedLeadId: string | null = null;
+  const lead = {
+    id: 'lead-uuid-conv',
+    fullName: 'Đặng Tuấn Anh',
+    email: 'tuananh@musicagency.vn',
+    phone: '0912345678',
+    companyName: 'Music Agency VN',
+    saasPlan: 'PROFESSIONAL',
+    message: 'Muốn bán vé liveshow lớn',
+    status: 'NEW' as const,
+    createdAt: '2026-11-20T10:00:00Z'
+  };
+
+  await mount(fixture({
+    leads: async (page, size) => ({ items: [lead], page, size, totalElements: 1 }),
+    convertToOrganizer: async (leadId) => {
+      convertedLeadId = leadId;
+      return {
+        leadId,
+        userId: 'user-new-org',
+        organizerProfileId: 'org-prof-1',
+        organizationName: 'Music Agency VN',
+        email: 'tuananh@musicagency.vn',
+        saasPlan: 'PROFESSIONAL',
+        status: 'CONVERTED',
+        message: 'Đã duyệt đối tác thành công'
+      };
+    }
+  }));
+
+  await settle(() => button('Yêu cầu Doanh nghiệp').click());
+  assert.match(document.body.textContent!, /Đặng Tuấn Anh/);
+  assert.match(document.body.textContent!, /PROFESSIONAL/);
+
+  const convertBtn = button('⚡ Duyệt thành Nhà tổ chức');
+  assert(convertBtn, 'Missing convert to organizer button');
+  await settle(() => convertBtn.click());
+
+  assert.equal(convertedLeadId, 'lead-uuid-conv');
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã duyệt đối tác thành công! Cấp quyền ORGANIZER/);
+});
+
+test('payouts tab lists organizer payouts and supports approval modal flow', async () => {
+  let processCalls: any[] = [];
+  const payoutItem = {
+    id: 'payout-uuid-1',
+    organizerId: 'org-uuid-1',
+    organizationName: 'Công ty Sự Kiện Sao Mai',
+    eventId: 'event-uuid-1',
+    eventTitle: 'Liveshow Mùa Thu 2026',
+    grossRevenueVnd: 100000000,
+    platformFeePercent: 5.0,
+    platformFeeVnd: 5000000,
+    netPayoutVnd: 95000000,
+    bankName: 'Vietcombank',
+    bankAccountNumber: '001100223344',
+    bankAccountHolder: 'CONG TY SAO MAI',
+    status: 'REQUESTED' as const,
+    requestedAt: '2026-11-20T14:00:00Z'
+  };
+
+  await mount(fixture({
+    payouts: async (status) => [payoutItem],
+    processPayout: async (payoutId, decision, adminNotes) => {
+      processCalls.push({ payoutId, decision, adminNotes });
+      return {
+        payoutId,
+        status: decision,
+        processedAt: '2026-11-20T15:00:00Z',
+        message: 'Đã xử lý yêu cầu rút tiền thành công'
+      };
+    }
+  }));
+
+  await settle(() => button('Duyệt Rút Tiền').click());
+  assert.match(document.body.textContent!, /Danh sách yêu cầu rút tiền từ Nhà tổ chức/);
+  assert.match(document.body.textContent!, /95.000.000 ₫/);
+  assert.match(document.body.textContent!, /Vietcombank/);
+  assert.match(document.body.textContent!, /001100223344/);
+
+  // Click "Duyệt chi" to open modal
+  const approveBtn = button('Duyệt chi');
+  assert(approveBtn, 'Missing Duyệt chi button');
+  await settle(() => approveBtn.click());
+
+  assert.match(document.body.textContent!, /Phê duyệt yêu cầu rút tiền/);
+
+  // Type note into modal textarea
+  await input('payout-note-input', 'Đã kiểm tra doanh thu hợp lệ');
+
+  // Click confirm button in modal
+  const confirmBtn = button('Xác nhận Duyệt chi');
+  assert(confirmBtn, 'Missing confirm Duyệt chi button');
+  await settle(() => confirmBtn.click());
+
+  assert.deepEqual(processCalls.at(-1), {
+    payoutId: 'payout-uuid-1',
+    decision: 'APPROVE',
+    adminNotes: 'Đã kiểm tra doanh thu hợp lệ'
+  });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã xử lý yêu cầu rút tiền thành công/);
+});
+
+test('ai-ops tab displays sell-out forecast and scalping alerts with 1-click lock', async () => {
+  let actionTaken: any = null;
+  const mockAlert = {
+    id: 'alert-1',
+    alertType: 'MASS_HOLD_SAME_IP',
+    eventId: 'event-1',
+    eventTitle: 'Live Music Gala 2026',
+    targetAccountId: 'user-scalper-1',
+    targetAccountEmail: 'scalper@botnet.com',
+    targetAccountName: 'Botnet Scalper',
+    clientIp: '103.20.15.88',
+    riskLevel: 'HIGH' as const,
+    explanationVi: 'Phát hiện cụm 5 tài khoản gom vé từ cùng địa chỉ IP',
+    status: 'NEW' as const,
+    evidence: { clusterSize: 5 },
+    createdAt: '2026-11-21T10:00:00Z',
+    resolvedAt: null
+  };
+
+  const mockForecast = {
+    eventId: 'event-1',
+    eventTitle: 'Live Music Gala 2026',
+    status: 'PUBLISHED',
+    totalCapacity: 1000,
+    soldTickets: 850,
+    heldTickets: 120,
+    availableTickets: 30,
+    soldLast24Hours: 480,
+    salesVelocityPerHour: 20.0,
+    heldPercentage: 12.0,
+    occupancyPercentage: 97.0,
+    waitlistCount: 45,
+    estimatedHoursToSellOut: 1.5,
+    sellOutStatus: 'SELL_OUT_IMMINENT' as const,
+    recommendVirtualWaitingRoom: true,
+    recommendationVi: 'Nguy cơ cháy vé trong vòng 1.5 giờ tới. Khuyến nghị bật Virtual Waiting Room.',
+    adapterUsed: 'local-fallback-v4'
+  };
+
+  await mount(fixture({
+    events: async (page, size) => ({
+      items: [{ id: 'event-1', title: 'Live Music Gala 2026', description: '', venue: 'Hà Nội', startsAt: '2026-12-01T20:00:00Z', saleStartAt: '', saleEndAt: '', status: 'PUBLISHED', ticketTypes: [] }],
+      page, size, totalElements: 1
+    }),
+    scalpingAlerts: async () => [mockAlert],
+    sellOutForecast: async () => mockForecast,
+    actionScalpingAlert: async (id, action, notes) => {
+      actionTaken = { id, action, notes };
+      return {
+        alertId: id,
+        actionTaken: action,
+        status: 'ACTION_TAKEN',
+        messageVi: 'Đã khóa tài khoản thành công',
+        releasedBookingsCount: 3
+      };
+    }
+  }));
+
+  await settle(() => button('🤖 AI Ops & Chống Bot').click());
+  assert.match(document.body.textContent!, /Dự Báo Cháy Vé & Nhu Cầu Mở Bán/);
+  assert.match(document.body.textContent!, /20 vé\/giờ/);
+  assert.match(document.body.textContent!, /Nguy cơ cháy vé trong vòng 1.5 giờ tới/);
+  assert.match(document.body.textContent!, /Bật Virtual Waiting Room/);
+
+  // Check scalping alerts table
+  assert.match(document.body.textContent!, /Cảnh Báo Phát Hiện Cụm Đầu Cơ & Gom Vé/);
+  assert.match(document.body.textContent!, /MASS_HOLD_SAME_IP/);
+  assert.match(document.body.textContent!, /HIGH/);
+  assert.match(document.body.textContent!, /scalper@botnet.com/);
+  assert.match(document.body.textContent!, /103.20.15.88/);
+
+  // Click 1-click lock button
+  const lockBtn = button('🔒 Khóa tài khoản');
+  assert(lockBtn, 'Missing 🔒 Khóa tài khoản button');
+  await settle(() => lockBtn.click());
+
+  assert.deepEqual(actionTaken, {
+    id: 'alert-1',
+    action: 'LOCK_ACCOUNT',
+    notes: undefined
+  });
+  assert.match(document.querySelector('.alert.success')!.textContent!, /Đã khóa tài khoản thành công/);
+});
+
+

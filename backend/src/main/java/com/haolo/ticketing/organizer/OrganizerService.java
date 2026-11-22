@@ -291,9 +291,40 @@ public class OrganizerService {
     public OrganizerEventDto publishEvent(UUID eventId, DemoPrincipal principal) {
         securityService.assertEventOwner(eventId, principal);
 
+        var eventTimes = jdbc.queryForList(
+            "SELECT sale_start_at, sale_end_at, starts_at, event_format FROM ticketing.events WHERE id = ?",
+            eventId
+        );
+        if (eventTimes.isEmpty()) {
+            throw new ApiException(404, "NOT_FOUND", "Không tìm thấy sự kiện");
+        }
+        var row = eventTimes.getFirst();
+        Timestamp saleStart = (Timestamp) row.get("sale_start_at");
+        Timestamp saleEnd = (Timestamp) row.get("sale_end_at");
+        Timestamp startsAt = (Timestamp) row.get("starts_at");
+
+        if (saleStart != null && saleEnd != null && !saleStart.before(saleEnd)) {
+            throw new ApiException(400, "INVALID_SALE_TIMING", "Thời gian bắt đầu mở bán phải trước thời gian kết thúc mở bán!");
+        }
+        if (saleEnd != null && startsAt != null && saleEnd.after(startsAt)) {
+            throw new ApiException(400, "INVALID_EVENT_TIMING", "Thời gian kết thúc mở bán không được sau thời gian diễn ra sự kiện!");
+        }
+
         List<TicketTypeDto> types = fetchTicketTypes(eventId);
         if (types.isEmpty()) {
             throw new ApiException(400, "VALIDATION_ERROR", "Sự kiện phải có ít nhất 1 loại vé trước khi xuất bản mở bán");
+        }
+
+        boolean hasSeated = types.stream().anyMatch(t -> "SEATED".equalsIgnoreCase(t.mode()));
+        if (hasSeated) {
+            Integer seatCount = jdbc.queryForObject(
+                "SELECT count(*) FROM ticketing.seats WHERE event_id = ?",
+                Integer.class,
+                eventId
+            );
+            if (seatCount == null || seatCount == 0) {
+                throw new ApiException(400, "SEATS_NOT_CONFIGURED", "Sự kiện có hạng vé ngồi (SEATED) nhưng chưa khởi tạo ghế trong sơ đồ!");
+            }
         }
 
         long totalCap = types.stream().mapToLong(t -> t.capacity() != null ? t.capacity() : 0).sum();

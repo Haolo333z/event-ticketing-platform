@@ -87,7 +87,22 @@ describe('StaffCheckInPage Component', () => {
         message: 'HỢP LỆ — MỜI VÀO'
       }),
       stats: async () => mockStats,
-      history: async () => mockHistory
+      history: async () => mockHistory,
+      getOfflineManifest: async () => ({
+        eventId: 'ev-uuid-001',
+        title: 'Đại Nhạc Hội Mùa Thu 2026',
+        asOf: '2026-11-20T10:00:00Z',
+        totalTickets: 1,
+        tickets: []
+      }),
+      batchSync: async () => ({
+        eventId: 'ev-uuid-001',
+        syncedAt: '2026-11-20T10:00:00Z',
+        total: 0,
+        syncedCount: 0,
+        conflictCount: 0,
+        results: []
+      })
     }
   };
 
@@ -139,5 +154,38 @@ describe('StaffCheckInPage Component', () => {
 
     assert.ok(html.includes('STAFF TERMINAL'));
     assert.ok(html.includes('CỔNG CHÍNH (MAIN_GATE)'));
+  });
+
+  it('renders offline-first control elements including network status and download button', () => {
+    const html = renderToString(h(StaffCheckInPage, {
+      api: {
+        ...mockApi,
+        staff: {
+          ...mockApi.staff!,
+          getOfflineManifest: async () => ({
+            eventId: 'ev-uuid-001',
+            title: 'Test Event',
+            asOf: '2026-11-20T10:00:00Z',
+            totalTickets: 100,
+            tickets: []
+          }),
+          batchSync: async () => ({
+            eventId: 'ev-uuid-001',
+            syncedAt: '2026-11-20T10:00:00Z',
+            total: 0,
+            syncedCount: 0,
+            conflictCount: 0,
+            results: []
+          })
+        }
+      },
+      user: staffUser,
+      onNavigate: () => {},
+      onOpenAuth: () => {}
+    }));
+
+    assert.ok(html.includes('TRỰC TUYẾN (ONLINE)'));
+    assert.ok(html.includes('Tải danh sách vé Offline'));
+    assert.ok(html.includes('Chuyển sang Offline'));
   });
 });

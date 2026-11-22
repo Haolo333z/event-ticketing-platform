@@ -77,7 +77,7 @@ public class TicketQrService {
         }
 
         var rows = jdbc.queryForList(
-            "SELECT t.id, t.code, t.booking_id, b.event_id, b.account_id, b.status " +
+            "SELECT t.id, t.code, t.booking_id, t.status AS ticket_status, t.owner_user_id, b.event_id, b.account_id, b.status " +
             "FROM ticketing.tickets t " +
             "JOIN ticketing.bookings b ON b.id = t.booking_id " +
             "WHERE t.id = ?",
@@ -90,15 +90,22 @@ public class TicketQrService {
 
         var row = rows.getFirst();
         UUID bookingAccountId = (UUID) row.get("account_id");
+        UUID ownerUserId = (UUID) row.get("owner_user_id");
+        String ticketStatus = (String) row.get("ticket_status");
         String status = (String) row.get("status");
         UUID eventId = (UUID) row.get("event_id");
         String code = (String) row.get("code");
+
+        if ("REVOKED".equalsIgnoreCase(ticketStatus)) {
+            throw new ApiException(410, "TICKET_REVOKED", "Vé này đã bị thu hồi do đã chuyển nhượng cho người khác");
+        }
 
         if (!"CONFIRMED".equals(status)) {
             throw new ApiException(400, "BAD_REQUEST", "Vé chỉ được kích hoạt khi đơn hàng đã thanh toán thành công");
         }
 
-        boolean isOwner = principal.accountId() != null && principal.accountId().equals(bookingAccountId);
+        UUID effectiveOwner = ownerUserId != null ? ownerUserId : bookingAccountId;
+        boolean isOwner = principal.accountId() != null && principal.accountId().equals(effectiveOwner);
         boolean isAdmin = principal.hasRole("ADMIN");
         if (!isOwner && !isAdmin) {
             throw new ApiException(403, "FORBIDDEN", "Bạn không có quyền truy cập mã QR của vé này");

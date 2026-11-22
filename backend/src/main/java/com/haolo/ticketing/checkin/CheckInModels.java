@@ -51,4 +51,57 @@ public class CheckInModels {
         String status,
         String assignedAt
     ) {}
+
+    public record OfflineTicketItem(
+        UUID ticketId,
+        String ticketCode,
+        String attendeeName,
+        String ticketType,
+        String seatLabel,
+        String qrToken,
+        boolean checkedIn,
+        String checkedInAt
+    ) {}
+
+    public record OfflineManifestDto(
+        UUID eventId,
+        String title,
+        String asOf,
+        int totalTickets,
+        java.util.List<OfflineTicketItem> tickets
+    ) {}
+
+    public record OfflineSyncItem(
+        String clientSyncId,
+        UUID ticketId,
+        String ticketCode,
+        String qrToken,
+        String gateName,
+        String clientTimestamp,
+        String deviceInfo
+    ) {}
+
+    public record OfflineSyncRequest(
+        UUID eventId,
+        java.util.List<OfflineSyncItem> items
+    ) {}
+
+    public record OfflineSyncResultItem(
+        String clientSyncId,
+        UUID ticketId,
+        String ticketCode,
+        String status,
+        String gateName,
+        String checkedInAt,
+        String message
+    ) {}
+
+    public record BatchSyncResponse(
+        UUID eventId,
+        String syncedAt,
+        int total,
+        int syncedCount,
+        int conflictCount,
+        java.util.List<OfflineSyncResultItem> results
+    ) {}
 }

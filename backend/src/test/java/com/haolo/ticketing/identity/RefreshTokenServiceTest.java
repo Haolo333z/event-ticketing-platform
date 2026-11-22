@@ -25,16 +25,16 @@ class RefreshTokenServiceTest {
     @Test
     void createRefreshTokenInsertsHashedToken() {
         UUID userId = UUID.randomUUID();
-        when(jdbc.update(anyString(), any(UUID.class), eq(userId), anyString(), any(UUID.class), any(Instant.class)))
+        when(jdbc.update(anyString(), any(UUID.class), eq(userId), anyString(), any(UUID.class), any(java.sql.Timestamp.class), any(), any()))
             .thenReturn(1);
 
-        String rawToken = service.createRefreshToken(userId);
+        String rawToken = service.createRefreshToken(userId, "Mozilla/5.0", "127.0.0.1");
 
         assertNotNull(rawToken);
         assertEquals(64, rawToken.length()); // 32 bytes hex = 64 chars
         verify(jdbc, times(1)).update(
             contains("INSERT INTO ticketing.refresh_tokens"),
-            any(UUID.class), eq(userId), anyString(), any(UUID.class), any(Instant.class)
+            any(UUID.class), eq(userId), anyString(), any(UUID.class), any(java.sql.Timestamp.class), eq("Mozilla/5.0"), eq("127.0.0.1")
         );
     }
 
@@ -79,7 +79,7 @@ class RefreshTokenServiceTest {
         // Verify new token is inserted with same familyId
         verify(jdbc, times(1)).update(
             contains("INSERT INTO ticketing.refresh_tokens"),
-            any(UUID.class), eq(userId), anyString(), eq(familyId), any(Instant.class)
+            any(UUID.class), eq(userId), anyString(), eq(familyId), any(java.sql.Timestamp.class), any(), any()
         );
     }
 
@@ -136,5 +136,46 @@ class RefreshTokenServiceTest {
     void missingTokenThrowsValidationError() {
         assertThrows(ApiException.class, () -> service.rotateRefreshToken(null));
         assertThrows(ApiException.class, () -> service.rotateRefreshToken(""));
+    }
+
+    @Test
+    void getActiveSessionsReturnsMappedList() {
+        UUID userId = UUID.randomUUID();
+        UUID currentFamilyId = UUID.randomUUID();
+
+        when(jdbc.query(contains("SELECT DISTINCT ON (family_id)"), any(RowMapper.class), eq(userId)))
+            .thenReturn(List.of(
+                new RefreshTokenService.ActiveSessionDto(currentFamilyId, "Chrome", "192.168.1.1", Instant.now(), Instant.now().plus(7, ChronoUnit.DAYS), true)
+            ));
+
+        var sessions = service.getActiveSessions(userId, currentFamilyId);
+        assertNotNull(sessions);
+        assertEquals(1, sessions.size());
+        assertTrue(sessions.getFirst().current());
+        assertEquals("Chrome", sessions.getFirst().userAgent());
+    }
+
+    @Test
+    void revokeFamilyUpdatesRevokedStatus() {
+        UUID userId = UUID.randomUUID();
+        UUID familyId = UUID.randomUUID();
+
+        when(jdbc.update(contains("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id = ?"), eq(userId), eq(familyId)))
+            .thenReturn(1);
+
+        service.revokeFamily(userId, familyId);
+        verify(jdbc, times(1)).update(contains("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id = ?"), eq(userId), eq(familyId));
+    }
+
+    @Test
+    void revokeOtherFamiliesUpdatesOtherFamilies() {
+        UUID userId = UUID.randomUUID();
+        UUID currentFamilyId = UUID.randomUUID();
+
+        when(jdbc.update(contains("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id <> ?"), eq(userId), eq(currentFamilyId)))
+            .thenReturn(2);
+
+        service.revokeOtherFamilies(userId, currentFamilyId);
+        verify(jdbc, times(1)).update(contains("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id <> ?"), eq(userId), eq(currentFamilyId));
     }
 }

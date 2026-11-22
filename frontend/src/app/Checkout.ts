@@ -7,7 +7,50 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
   const[busy,setBusy]=useState(false),[error,setError]=useState<ApiError|null>(null),[notice,setNotice]=useState('');
   const[tickets,setTickets]=useState<Ticket[]>([]),[accepted,setAccepted]=useState(false);
   const[vnpayLoading,setVnpayLoading]=useState(false);
+  const[voucherCode,setVoucherCode]=useState('');
+  const[voucherBusy,setVoucherBusy]=useState(false);
+  const[voucherSuccess,setVoucherSuccess]=useState<string|null>(null);
+  const[voucherDiscount,setVoucherDiscount]=useState<number>(0);
+  const[voucherError,setVoucherError]=useState<string|null>(null);
+  const[requestVat,setRequestVat]=useState(false);
+  const[vatTaxCode,setVatTaxCode]=useState('');
+  const[vatCompanyName,setVatCompanyName]=useState('');
+  const[vatCompanyAddress,setVatCompanyAddress]=useState('');
+  const[vatRecipientEmail,setVatRecipientEmail]=useState('');
+  const[vatIssued,setVatIssued]=useState(false);
+  const[vatNotice,setVatNotice]=useState<string|null>(null);
   const sending=useRef(false);
+
+  useEffect(()=>{
+    if(requestVat&&!vatCompanyName&&api.profile?.vatDefaults){
+      api.profile.vatDefaults().then(defaults=>{
+        if(defaults){
+          if(defaults.companyName)setVatCompanyName(defaults.companyName);
+          if(defaults.taxCode)setVatTaxCode(defaults.taxCode);
+          if(defaults.companyAddress)setVatCompanyAddress(defaults.companyAddress);
+          if(defaults.recipientEmail)setVatRecipientEmail(defaults.recipientEmail);
+        }
+      }).catch(()=>{});
+    }
+  },[requestVat,api.profile]);
+
+  async function applyVoucher(){
+    if(!voucherCode.trim()||voucherBusy||booking.status!=='PENDING_PAYMENT')return;
+    setVoucherBusy(true);setVoucherError(null);setVoucherSuccess(null);
+    try{
+      if(api.vouchers?.apply){
+        const res=await api.vouchers.apply(booking.bookingId,voucherCode.trim());
+        setVoucherSuccess(res.message||`Áp dụng mã ${res.code} thành công: giảm ${res.discountAmountVnd.toLocaleString('vi-VN')}đ`);
+        setVoucherDiscount(res.discountAmountVnd);
+        await refresh(booking.bookingId);
+      }
+    }catch(val){
+      const msg=val instanceof ApiError?val.message:'Không áp dụng được mã giảm giá';
+      setVoucherError(msg);
+    }finally{
+      setVoucherBusy(false);
+    }
+  }
 
   async function checkoutVnPay(){
     if(sending.current||busy||vnpayLoading)return;
@@ -60,9 +103,95 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
   return h('section',{className:'checkout','aria-label':'Thanh toán mô phỏng'},
     h('h3',null,'Thanh toán mô phỏng'),
     h('p',{className:'demo-warning'},'Demo — không thu tiền thật. Không nhập thông tin thẻ.'),
-    error&&h('div',{role:'alert',className:'alert error'},error.message,h('small',null,' · Mã lỗi: '+error.code),error.correlationId&&h('small',null,' · Mã tra cứu: '+error.correlationId)),
+    error&&h('div',{
+      role:'alert',
+      className:error.code==='PAYMENT_GATEWAY_CIRCUIT_OPEN'?'alert warning circuit-breaker-alert':'alert error',
+      style:error.code==='PAYMENT_GATEWAY_CIRCUIT_OPEN'?{background:'#fff7ed',borderColor:'#fdba74',color:'#9a3412',padding:'1rem',borderRadius:'12px',marginBottom:'1rem'}:undefined
+    },
+      error.code==='PAYMENT_GATEWAY_CIRCUIT_OPEN'&&h('div',{style:{fontWeight:700,fontSize:'0.95rem',marginBottom:'0.35rem',display:'flex',alignItems:'center',gap:'0.5rem'}},
+        h('span',null,'⚠️'),
+        h('span',null,'CỔNG THANH TOÁN TẠM THỜI GIÁN ĐOẠN / BẢO TRÌ (CIRCUIT OPEN)')
+      ),
+      h('div',null,error.message),
+      h('small',{style:{display:'block',marginTop:'0.35rem',opacity:0.85}},'Mã lỗi: '+error.code,error.correlationId&&' · Tra cứu: '+error.correlationId)
+    ),
     notice&&h('p',{role:'status'},notice),
     pending&&h('div',{className:'alert pending'},'Yêu cầu mô phỏng chưa rõ kết quả cho booking '+pending.bookingId+'. Giữ nguyên requestId và kịch bản khi thử lại.',h('button',{type:'button',disabled:busy,onClick:()=>void pay(pending.scenario)},'Thử lại thanh toán cùng yêu cầu')),
+    booking.status==='PENDING_PAYMENT'&&h('div',{className:'voucher-box',style:{margin:'1rem 0',padding:'1rem',background:'#f8fafc',border:'1px dashed #cbd5e1',borderRadius:'12px'}},
+      h('div',{style:{fontWeight:600,marginBottom:'0.5rem',display:'flex',alignItems:'center',gap:'0.5rem'}},
+        h('span',null,'🎟️'),
+        h('span',null,'Mã ưu đãi / Voucher giảm giá')
+      ),
+      h('div',{style:{display:'flex',gap:'0.5rem'}},
+        h('input',{
+          type:'text',
+          placeholder:'Nhập SUMMER2026 hoặc WELCOME50K...',
+          value:voucherCode,
+          disabled:voucherBusy||voucherDiscount>0,
+          onChange:(e:any)=>setVoucherCode(e.target.value.toUpperCase()),
+          style:{flex:1,padding:'0.5rem 0.75rem',border:'1px solid #cbd5e1',borderRadius:'8px',textTransform:'uppercase',fontWeight:600}
+        }),
+        h('button',{
+          type:'button',
+          className:'btn-primary',
+          disabled:voucherBusy||!voucherCode.trim()||voucherDiscount>0,
+          onClick:()=>void applyVoucher(),
+          style:{padding:'0.5rem 1rem',borderRadius:'8px'}
+        },voucherBusy?'Đang áp dụng…':voucherDiscount>0?'✓ Đã áp dụng':'Áp dụng')
+      ),
+      voucherSuccess&&h('p',{style:{color:'#059669',fontSize:'0.875rem',margin:'0.5rem 0 0',fontWeight:500}},'✓ '+voucherSuccess),
+      voucherError&&h('p',{style:{color:'#e11d48',fontSize:'0.875rem',margin:'0.5rem 0 0'}},'✕ '+voucherError),
+      voucherDiscount>0&&h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'0.75rem',paddingTop:'0.5rem',borderTop:'1px solid #e2e8f0',fontWeight:600}},
+        h('span',null,'Giảm giá voucher:'),
+        h('span',{style:{color:'#059669'}},`-${voucherDiscount.toLocaleString('vi-VN')}đ`)
+      )
+    ),
+    booking.status==='PENDING_PAYMENT'&&h('div',{className:'vat-invoice-box',style:{margin:'1rem 0',padding:'1rem',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px'}},
+      h('label',{style:{display:'flex',alignItems:'center',gap:'0.5rem',fontWeight:600,cursor:'pointer',userSelect:'none'}},
+        h('input',{
+          type:'checkbox',
+          checked:requestVat,
+          onChange:(e:any)=>setRequestVat(e.target.checked),
+          style:{width:'18px',height:'18px',cursor:'pointer'}
+        }),
+        h('span',null,'🧾 Yêu cầu xuất hóa đơn điện tử VAT (10%)')
+      ),
+      requestVat&&h('div',{style:{marginTop:'0.75rem',display:'flex',flexDirection:'column',gap:'0.5rem'}},
+        h('p',{style:{fontSize:'0.825rem',color:'#166534',margin:'0 0 0.25rem'}},
+          '✓ Thông tin đã được tự động điền từ Hồ sơ cá nhân (nếu đã lưu sẵn)'
+        ),
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem'}},
+          h('input',{
+            type:'text',
+            placeholder:'Mã số thuế (MST)',
+            value:vatTaxCode,
+            onChange:(e:any)=>setVatTaxCode(e.target.value),
+            style:{padding:'0.45rem 0.65rem',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'0.875rem'}
+          }),
+          h('input',{
+            type:'text',
+            placeholder:'Tên công ty / Đơn vị',
+            value:vatCompanyName,
+            onChange:(e:any)=>setVatCompanyName(e.target.value),
+            style:{padding:'0.45rem 0.65rem',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'0.875rem'}
+          })
+        ),
+        h('input',{
+          type:'text',
+          placeholder:'Địa chỉ công ty theo ĐKKD',
+          value:vatCompanyAddress,
+          onChange:(e:any)=>setVatCompanyAddress(e.target.value),
+          style:{padding:'0.45rem 0.65rem',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'0.875rem'}
+        }),
+        h('input',{
+          type:'email',
+          placeholder:'Email nhận hóa đơn điện tử (.pdf & .xml)',
+          value:vatRecipientEmail,
+          onChange:(e:any)=>setVatRecipientEmail(e.target.value),
+          style:{padding:'0.45rem 0.65rem',border:'1px solid #cbd5e1',borderRadius:'6px',fontSize:'0.875rem'}
+        })
+      )
+    ),
     booking.status==='PENDING_PAYMENT'&&h('div',{className:'payment-gateway-box'},
       h('button',{
         type:'button',

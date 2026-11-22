@@ -67,6 +67,118 @@ export function OrganizerDashboard({
   // Staff form
   const [staffEmail, setStaffEmail] = useState('');
 
+  // V4 Tabs & Commercial Features (Payouts & Vouchers)
+  const [activeTab, setActiveTab] = useState<'events' | 'payouts' | 'vouchers'>('events');
+
+  // Payouts state
+  const [payoutEventId, setPayoutEventId] = useState<string>('');
+  const [payoutSummary, setPayoutSummary] = useState<import('../api/client.ts').PayoutSummary | null>(null);
+  const [payoutsList, setPayoutsList] = useState<import('../api/client.ts').OrganizerPayoutItem[]>([]);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState<number>(0);
+  const [payoutBank, setPayoutBank] = useState('Vietcombank');
+  const [payoutAccNum, setPayoutAccNum] = useState('');
+  const [payoutAccHolder, setPayoutAccHolder] = useState('');
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false);
+
+  // Vouchers state
+  const [vouchersList, setVouchersList] = useState<import('../api/client.ts').VoucherItem[]>([]);
+  const [vouchersLoading, setVouchersLoading] = useState(false);
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+  const [newVoucherCode, setNewVoucherCode] = useState('');
+  const [newVoucherType, setNewVoucherType] = useState<'PERCENTAGE' | 'FIXED_VND'>('PERCENTAGE');
+  const [newVoucherValue, setNewVoucherValue] = useState(10);
+  const [newVoucherMinOrder, setNewVoucherMinOrder] = useState(100000);
+  const [newVoucherMaxDiscount, setNewVoucherMaxDiscount] = useState<number | undefined>(50000);
+  const [newVoucherMaxUses, setNewVoucherMaxUses] = useState(100);
+  const [newVoucherValidFrom, setNewVoucherValidFrom] = useState('');
+  const [newVoucherValidTo, setNewVoucherValidTo] = useState('');
+  const [newVoucherSubmitting, setNewVoucherSubmitting] = useState(false);
+
+  const loadPayouts = async (eventId?: string) => {
+    if (!api.payouts) return;
+    setPayoutLoading(true);
+    try {
+      const list = await api.payouts.list();
+      setPayoutsList(list);
+      const targetEv = eventId || payoutEventId || (events.length > 0 ? events[0].id : '');
+      if (targetEv) {
+        setPayoutEventId(targetEv);
+        const sum = await api.payouts.summary(targetEv);
+        setPayoutSummary(sum);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Không thể tải dữ liệu doanh thu & rút tiền');
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+
+  const handleRequestPayout = async (e: any) => {
+    e.preventDefault();
+    if (!api.payouts || !payoutEventId || payoutAmount <= 0) return;
+    setPayoutSubmitting(true);
+    setError(null);
+    try {
+      await api.payouts.request({
+        eventId: payoutEventId,
+        amountVnd: Number(payoutAmount),
+        bankName: payoutBank,
+        bankAccountNumber: payoutAccNum,
+        bankAccountHolder: payoutAccHolder
+      });
+      showNotification('Đã gửi yêu cầu rút tiền thành công!');
+      setPayoutAmount(0);
+      setPayoutAccNum('');
+      setPayoutAccHolder('');
+      await loadPayouts(payoutEventId);
+    } catch (err: any) {
+      setError(err?.message || 'Lỗi khi gửi yêu cầu rút tiền');
+    } finally {
+      setPayoutSubmitting(false);
+    }
+  };
+
+  const loadVouchers = async () => {
+    if (!api.vouchers) return;
+    setVouchersLoading(true);
+    try {
+      const list = await api.vouchers.list();
+      setVouchersList(list);
+    } catch (e: any) {
+      setError(e?.message || 'Không thể tải danh sách mã giảm giá');
+    } finally {
+      setVouchersLoading(false);
+    }
+  };
+
+  const handleCreateVoucher = async (e: any) => {
+    e.preventDefault();
+    if (!api.vouchers) return;
+    setNewVoucherSubmitting(true);
+    setError(null);
+    try {
+      await api.vouchers.create({
+        code: newVoucherCode.trim().toUpperCase(),
+        discountType: newVoucherType,
+        discountValue: Number(newVoucherValue),
+        minOrderAmountVnd: Number(newVoucherMinOrder),
+        maxDiscountAmountVnd: newVoucherMaxDiscount ? Number(newVoucherMaxDiscount) : undefined,
+        maxUses: Number(newVoucherMaxUses),
+        validFrom: newVoucherValidFrom ? new Date(newVoucherValidFrom).toISOString() : new Date().toISOString(),
+        validTo: newVoucherValidTo ? new Date(newVoucherValidTo).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString()
+      });
+      showNotification('Đã tạo mã giảm giá thành công!');
+      setVoucherModalOpen(false);
+      setNewVoucherCode('');
+      await loadVouchers();
+    } catch (err: any) {
+      setError(err?.message || 'Lỗi khi tạo mã giảm giá');
+    } finally {
+      setNewVoucherSubmitting(false);
+    }
+  };
+
   // V3 AI Organizer Copilot state
   const [aiBusy, setAiBusy] = useState(false);
   const [aiSuggestionNote, setAiSuggestionNote] = useState<string | null>(null);
@@ -382,8 +494,30 @@ export function OrganizerDashboard({
       )
     ),
 
+    // Navigation Tabs
+    h('div', { className: 'organizer-tabs-nav', style: { display: 'flex', gap: '0.75rem', margin: '1.5rem 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' } },
+      h('button', {
+        type: 'button',
+        className: activeTab === 'events' ? 'btn-primary' : 'quiet',
+        onClick: () => setActiveTab('events'),
+        style: { borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600 }
+      }, '🎪 Sự Kiện (' + events.length + ')'),
+      h('button', {
+        type: 'button',
+        className: activeTab === 'payouts' ? 'btn-primary' : 'quiet',
+        onClick: () => { setActiveTab('payouts'); void loadPayouts(); },
+        style: { borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600 }
+      }, '💰 Doanh Thu & Rút Tiền'),
+      h('button', {
+        type: 'button',
+        className: activeTab === 'vouchers' ? 'btn-primary' : 'quiet',
+        onClick: () => { setActiveTab('vouchers'); void loadVouchers(); },
+        style: { borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600 }
+      }, '🎟️ Mã Giảm Giá (Vouchers)')
+    ),
+
     // Main Content: Events Table
-    h('section', { className: 'organizer-events-section' },
+    activeTab === 'events' && h('section', { className: 'organizer-events-section' },
       h('div', { className: 'section-toolbar' },
         h('h2', { className: 'section-heading' }, 'Danh Sách Sự Kiện Quản Lý'),
         h('button', {
@@ -482,6 +616,227 @@ export function OrganizerDashboard({
                 )
               );
             })
+          )
+        )
+      )
+    ),
+
+    // Section: Payouts Management
+    activeTab === 'payouts' && h('section', { className: 'organizer-payouts-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '💰 Doanh Thu & Rút Tiền Về Tài Khoản'),
+        h('button', {
+          type: 'button',
+          className: 'btn-refresh-data',
+          onClick: () => void loadPayouts(payoutEventId)
+        }, '🔄 Tải Lại')
+      ),
+      payoutLoading ? h('div', { className: 'loading-state' }, 'Đang tải dữ liệu doanh thu & số dư...') :
+      events.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('p', null, 'Bạn chưa có sự kiện nào để theo dõi doanh thu và rút tiền.')
+      ) :
+      h('div', null,
+        // Event Selector & Financial Overview Card
+        h('div', { style: { background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' } },
+            h('label', { style: { fontWeight: 600, fontSize: '0.875rem' } }, 'Chọn sự kiện đối soát:'),
+            h('select', {
+              className: 'form-select',
+              style: { minWidth: '300px', flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' },
+              value: payoutEventId,
+              onChange: (e: any) => {
+                const id = e.target.value;
+                setPayoutEventId(id);
+                void loadPayouts(id);
+              }
+            },
+              events.map(ev => h('option', { key: ev.id, value: ev.id }, `${ev.title} (${ev.status})`))
+            )
+          ),
+          payoutSummary && h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' } },
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Gói SaaS & Phí Sàn'),
+              h('span', { className: 'stat-value', style: { color: '#4338ca' } }, `${payoutSummary.saasPlan} (${payoutSummary.platformFeePercent}%)`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Tổng Doanh Thu Gộp'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.grossRevenueVnd))
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Phí Nền Tảng Đã Trích'),
+              h('span', { className: 'stat-value', style: { color: '#e11d48' } }, `-${vnd(payoutSummary.platformFeeVnd)}`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Đã Yêu Cầu / Rút'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.totalPayoutsRequestedVnd))
+            ),
+            h('div', { className: 'stat-card', style: { background: '#ecfdf5', borderColor: '#a7f3d0' } },
+              h('span', { className: 'stat-label', style: { color: '#065f46' } }, 'Số Dư Khả Dụng Rút'),
+              h('span', { className: 'stat-value', style: { color: '#059669', fontWeight: 800 } }, vnd(payoutSummary.availableBalanceVnd))
+            )
+          )
+        ),
+
+        // Payout Request Form
+        payoutSummary && payoutSummary.availableBalanceVnd > 0 && h('div', { style: { background: '#fff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '1.5rem' } },
+          h('h3', { style: { margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700 } }, '🏦 Yêu Cầu Rút Tiền Về Tài Khoản Ngân Hàng'),
+          h('form', { onSubmit: handleRequestPayout },
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' } },
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tiền muốn rút (VND) *'),
+                h('input', {
+                  type: 'number',
+                  required: true,
+                  min: 50000,
+                  max: payoutSummary.availableBalanceVnd,
+                  value: payoutAmount || '',
+                  placeholder: `Tối đa ${payoutSummary.availableBalanceVnd.toLocaleString('vi-VN')}đ`,
+                  onChange: (e: any) => setPayoutAmount(Number(e.target.value)),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Ngân hàng nhận *'),
+                h('select', {
+                  value: payoutBank,
+                  onChange: (e: any) => setPayoutBank(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                },
+                  ['Vietcombank', 'Techcombank', 'MB Bank', 'VietinBank', 'BIDV', 'ACB', 'VPBank', 'TPBank'].map(b => h('option', { key: b, value: b }, b))
+                )
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tài khoản *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: 001100223344',
+                  value: payoutAccNum,
+                  onChange: (e: any) => setPayoutAccNum(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Chủ tài khoản (viết hoa không dấu) *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: NGUYEN VAN A',
+                  value: payoutAccHolder,
+                  onChange: (e: any) => setPayoutAccHolder(e.target.value.toUpperCase()),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }
+                })
+              )
+            ),
+            h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' } },
+              h('button', {
+                type: 'submit',
+                className: 'btn-primary',
+                disabled: payoutSubmitting || payoutAmount <= 0 || payoutAmount > payoutSummary.availableBalanceVnd,
+                style: { padding: '0.6rem 1.5rem', borderRadius: '8px', fontWeight: 600 }
+              }, payoutSubmitting ? 'Đang gửi yêu cầu…' : '⚡ Gửi Yêu Cầu Rút Tiền')
+            )
+          )
+        ),
+
+        // Payouts History Table
+        h('h3', { style: { margin: '1.5rem 0 0.75rem', fontSize: '1.1rem', fontWeight: 700 } }, '📋 Lịch Sử Các Đợt Yêu Cầu Rút Tiền'),
+        payoutsList.length === 0 ? h('p', { className: 'muted' }, 'Chưa có yêu cầu rút tiền nào.') :
+        h('div', { className: 'events-table-wrapper' },
+          h('table', { className: 'organizer-table' },
+            h('thead', null,
+              h('tr', null,
+                h('th', null, 'Thời Gian'),
+                h('th', null, 'Sự Kiện'),
+                h('th', null, 'Số Tiền Thực Nhận'),
+                h('th', null, 'Phí Sàn'),
+                h('th', null, 'Tài Khoản Nhận'),
+                h('th', null, 'Trạng Thái'),
+                h('th', null, 'Ghi Chú Admin')
+              )
+            ),
+            h('tbody', null,
+              payoutsList.map(p => {
+                const statusBadge = p.status === 'PAID' ? '🟢 Đã chuyển' :
+                                    p.status === 'APPROVED' ? '🔵 Đã duyệt chi' :
+                                    p.status === 'REJECTED' ? '🔴 Từ chối' : '🟡 Chờ duyệt';
+                return h('tr', { key: p.id },
+                  h('td', null, formatDateTime(p.requestedAt)),
+                  h('td', null, p.eventTitle),
+                  h('td', { style: { fontWeight: 700, color: '#059669' } }, vnd(p.netPayoutVnd)),
+                  h('td', null, vnd(p.platformFeeVnd) + ` (${p.platformFeePercent}%)`),
+                  h('td', null, `${p.bankName} - ${p.bankAccountNumber} (${p.bankAccountHolder})`),
+                  h('td', null, h('span', { style: { fontWeight: 600 } }, statusBadge)),
+                  h('td', { className: 'muted' }, p.adminNotes || '--')
+                );
+              })
+            )
+          )
+        )
+      )
+    ),
+
+    // Section: Vouchers Management
+    activeTab === 'vouchers' && h('section', { className: 'organizer-vouchers-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '🎟️ Quản Lý Mã Giảm Giá & Chiến Dịch Ưu Đãi'),
+        h('div', { style: { display: 'flex', gap: '0.5rem' } },
+          h('button', {
+            type: 'button',
+            className: 'btn-refresh-data',
+            onClick: loadVouchers
+          }, '🔄 Tải Lại'),
+          h('button', {
+            type: 'button',
+            className: 'btn-primary',
+            onClick: () => {
+              setNewVoucherCode('');
+              setNewVoucherType('PERCENTAGE');
+              setNewVoucherValue(10);
+              setNewVoucherMinOrder(100000);
+              setNewVoucherMaxDiscount(50000);
+              setNewVoucherMaxUses(100);
+              setVoucherModalOpen(true);
+            },
+            style: { padding: '0.5rem 1rem', borderRadius: '8px' }
+          }, '➕ Tạo Mã Ưu Đãi Mới')
+        )
+      ),
+      vouchersLoading ? h('div', { className: 'loading-state' }, 'Đang tải danh sách voucher...') :
+      vouchersList.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('span', { className: 'empty-icon' }, '🎟️'),
+        h('h3', null, 'Chưa có mã giảm giá nào'),
+        h('p', null, 'Tạo mã voucher để kích cầu người mua vé cho các sự kiện của bạn!'),
+        h('button', {
+          type: 'button',
+          className: 'btn-primary',
+          onClick: () => setVoucherModalOpen(true),
+          style: { padding: '0.5rem 1.25rem', borderRadius: '8px' }
+        }, '➕ Tạo Mã Ngay')
+      ) :
+      h('div', { className: 'events-table-wrapper' },
+        h('table', { className: 'organizer-table' },
+          h('thead', null,
+            h('tr', null,
+              h('th', null, 'Mã Code'),
+              h('th', null, 'Mức Giảm'),
+              h('th', null, 'Đơn Tối Thiểu'),
+              h('th', null, 'Giảm Tối Đa'),
+              h('th', null, 'Đã Dùng / Giới Hạn'),
+              h('th', null, 'Thời Gian Áp Dụng'),
+              h('th', null, 'Trạng Thái')
+            )
+          ),
+          h('tbody', null,
+            vouchersList.map(v => h('tr', { key: v.id },
+              h('td', null, h('strong', { style: { color: '#4338ca', fontSize: '1rem', letterSpacing: '0.05em' } }, v.code)),
+              h('td', null, v.discountType === 'PERCENTAGE' ? `${v.discountValue}%` : vnd(v.discountValue)),
+              h('td', null, vnd(v.minOrderAmountVnd)),
+              h('td', null, v.maxDiscountAmountVnd ? vnd(v.maxDiscountAmountVnd) : 'Không giới hạn'),
+              h('td', null, `${v.usedCount} / ${v.maxUses} lượt`),
+              h('td', { style: { fontSize: '0.85rem' } }, `${formatDateTime(v.validFrom)} → ${formatDateTime(v.validTo)}`),
+              h('td', null, v.isActive ? h('span', { style: { color: '#059669', fontWeight: 600 } }, '🟢 Đang hoạt động') : h('span', { style: { color: '#64748b' } }, '⚪ Tạm ngừng'))
+            ))
           )
         )
       )
@@ -605,6 +960,227 @@ export function OrganizerDashboard({
       )
     ),
 
+    // Section: Payouts Management
+    activeTab === 'payouts' && h('section', { className: 'organizer-payouts-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '💰 Doanh Thu & Rút Tiền Về Tài Khoản'),
+        h('button', {
+          type: 'button',
+          className: 'btn-refresh-data',
+          onClick: () => void loadPayouts(payoutEventId)
+        }, '🔄 Tải Lại')
+      ),
+      payoutLoading ? h('div', { className: 'loading-state' }, 'Đang tải dữ liệu doanh thu & số dư...') :
+      events.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('p', null, 'Bạn chưa có sự kiện nào để theo dõi doanh thu và rút tiền.')
+      ) :
+      h('div', null,
+        // Event Selector & Financial Overview Card
+        h('div', { style: { background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' } },
+            h('label', { style: { fontWeight: 600, fontSize: '0.875rem' } }, 'Chọn sự kiện đối soát:'),
+            h('select', {
+              className: 'form-select',
+              style: { minWidth: '300px', flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' },
+              value: payoutEventId,
+              onChange: (e: any) => {
+                const id = e.target.value;
+                setPayoutEventId(id);
+                void loadPayouts(id);
+              }
+            },
+              events.map(ev => h('option', { key: ev.id, value: ev.id }, `${ev.title} (${ev.status})`))
+            )
+          ),
+          payoutSummary && h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' } },
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Gói SaaS & Phí Sàn'),
+              h('span', { className: 'stat-value', style: { color: '#4338ca' } }, `${payoutSummary.saasPlan} (${payoutSummary.platformFeePercent}%)`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Tổng Doanh Thu Gộp'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.grossRevenueVnd))
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Phí Nền Tảng Đã Trích'),
+              h('span', { className: 'stat-value', style: { color: '#e11d48' } }, `-${vnd(payoutSummary.platformFeeVnd)}`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Đã Yêu Cầu / Rút'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.totalPayoutsRequestedVnd))
+            ),
+            h('div', { className: 'stat-card', style: { background: '#ecfdf5', borderColor: '#a7f3d0' } },
+              h('span', { className: 'stat-label', style: { color: '#065f46' } }, 'Số Dư Khả Dụng Rút'),
+              h('span', { className: 'stat-value', style: { color: '#059669', fontWeight: 800 } }, vnd(payoutSummary.availableBalanceVnd))
+            )
+          )
+        ),
+
+        // Payout Request Form
+        payoutSummary && payoutSummary.availableBalanceVnd > 0 && h('div', { style: { background: '#fff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '1.5rem' } },
+          h('h3', { style: { margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700 } }, '🏦 Yêu Cầu Rút Tiền Về Tài Khoản Ngân Hàng'),
+          h('form', { onSubmit: handleRequestPayout },
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' } },
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tiền muốn rút (VND) *'),
+                h('input', {
+                  type: 'number',
+                  required: true,
+                  min: 50000,
+                  max: payoutSummary.availableBalanceVnd,
+                  value: payoutAmount || '',
+                  placeholder: `Tối đa ${payoutSummary.availableBalanceVnd.toLocaleString('vi-VN')}đ`,
+                  onChange: (e: any) => setPayoutAmount(Number(e.target.value)),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Ngân hàng nhận *'),
+                h('select', {
+                  value: payoutBank,
+                  onChange: (e: any) => setPayoutBank(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                },
+                  ['Vietcombank', 'Techcombank', 'MB Bank', 'VietinBank', 'BIDV', 'ACB', 'VPBank', 'TPBank'].map(b => h('option', { key: b, value: b }, b))
+                )
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tài khoản *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: 001100223344',
+                  value: payoutAccNum,
+                  onChange: (e: any) => setPayoutAccNum(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Chủ tài khoản (viết hoa không dấu) *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: NGUYEN VAN A',
+                  value: payoutAccHolder,
+                  onChange: (e: any) => setPayoutAccHolder(e.target.value.toUpperCase()),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }
+                })
+              )
+            ),
+            h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' } },
+              h('button', {
+                type: 'submit',
+                className: 'btn-primary',
+                disabled: payoutSubmitting || payoutAmount <= 0 || payoutAmount > payoutSummary.availableBalanceVnd,
+                style: { padding: '0.6rem 1.5rem', borderRadius: '8px', fontWeight: 600 }
+              }, payoutSubmitting ? 'Đang gửi yêu cầu…' : '⚡ Gửi Yêu Cầu Rút Tiền')
+            )
+          )
+        ),
+
+        // Payouts History Table
+        h('h3', { style: { margin: '1.5rem 0 0.75rem', fontSize: '1.1rem', fontWeight: 700 } }, '📋 Lịch Sử Các Đợt Yêu Cầu Rút Tiền'),
+        payoutsList.length === 0 ? h('p', { className: 'muted' }, 'Chưa có yêu cầu rút tiền nào.') :
+        h('div', { className: 'events-table-wrapper' },
+          h('table', { className: 'organizer-table' },
+            h('thead', null,
+              h('tr', null,
+                h('th', null, 'Thời Gian'),
+                h('th', null, 'Sự Kiện'),
+                h('th', null, 'Số Tiền Thực Nhận'),
+                h('th', null, 'Phí Sàn'),
+                h('th', null, 'Tài Khoản Nhận'),
+                h('th', null, 'Trạng Thái'),
+                h('th', null, 'Ghi Chú Admin')
+              )
+            ),
+            h('tbody', null,
+              payoutsList.map(p => {
+                const statusBadge = p.status === 'PAID' ? '🟢 Đã chuyển' :
+                                    p.status === 'APPROVED' ? '🔵 Đã duyệt chi' :
+                                    p.status === 'REJECTED' ? '🔴 Từ chối' : '🟡 Chờ duyệt';
+                return h('tr', { key: p.id },
+                  h('td', null, formatDateTime(p.requestedAt)),
+                  h('td', null, p.eventTitle),
+                  h('td', { style: { fontWeight: 700, color: '#059669' } }, vnd(p.netPayoutVnd)),
+                  h('td', null, vnd(p.platformFeeVnd) + ` (${p.platformFeePercent}%)`),
+                  h('td', null, `${p.bankName} - ${p.bankAccountNumber} (${p.bankAccountHolder})`),
+                  h('td', null, h('span', { style: { fontWeight: 600 } }, statusBadge)),
+                  h('td', { className: 'muted' }, p.adminNotes || '--')
+                );
+              })
+            )
+          )
+        )
+      )
+    ),
+
+    // Section: Vouchers Management
+    activeTab === 'vouchers' && h('section', { className: 'organizer-vouchers-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '🎟️ Quản Lý Mã Giảm Giá & Chiến Dịch Ưu Đãi'),
+        h('div', { style: { display: 'flex', gap: '0.5rem' } },
+          h('button', {
+            type: 'button',
+            className: 'btn-refresh-data',
+            onClick: loadVouchers
+          }, '🔄 Tải Lại'),
+          h('button', {
+            type: 'button',
+            className: 'btn-primary',
+            onClick: () => {
+              setNewVoucherCode('');
+              setNewVoucherType('PERCENTAGE');
+              setNewVoucherValue(10);
+              setNewVoucherMinOrder(100000);
+              setNewVoucherMaxDiscount(50000);
+              setNewVoucherMaxUses(100);
+              setVoucherModalOpen(true);
+            },
+            style: { padding: '0.5rem 1rem', borderRadius: '8px' }
+          }, '➕ Tạo Mã Ưu Đãi Mới')
+        )
+      ),
+      vouchersLoading ? h('div', { className: 'loading-state' }, 'Đang tải danh sách voucher...') :
+      vouchersList.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('span', { className: 'empty-icon' }, '🎟️'),
+        h('h3', null, 'Chưa có mã giảm giá nào'),
+        h('p', null, 'Tạo mã voucher để kích cầu người mua vé cho các sự kiện của bạn!'),
+        h('button', {
+          type: 'button',
+          className: 'btn-primary',
+          onClick: () => setVoucherModalOpen(true),
+          style: { padding: '0.5rem 1.25rem', borderRadius: '8px' }
+        }, '➕ Tạo Mã Ngay')
+      ) :
+      h('div', { className: 'events-table-wrapper' },
+        h('table', { className: 'organizer-table' },
+          h('thead', null,
+            h('tr', null,
+              h('th', null, 'Mã Code'),
+              h('th', null, 'Mức Giảm'),
+              h('th', null, 'Đơn Tối Thiểu'),
+              h('th', null, 'Giảm Tối Đa'),
+              h('th', null, 'Đã Dùng / Giới Hạn'),
+              h('th', null, 'Thời Gian Áp Dụng'),
+              h('th', null, 'Trạng Thái')
+            )
+          ),
+          h('tbody', null,
+            vouchersList.map(v => h('tr', { key: v.id },
+              h('td', null, h('strong', { style: { color: '#4338ca', fontSize: '1rem', letterSpacing: '0.05em' } }, v.code)),
+              h('td', null, v.discountType === 'PERCENTAGE' ? `${v.discountValue}%` : vnd(v.discountValue)),
+              h('td', null, vnd(v.minOrderAmountVnd)),
+              h('td', null, v.maxDiscountAmountVnd ? vnd(v.maxDiscountAmountVnd) : 'Không giới hạn'),
+              h('td', null, `${v.usedCount} / ${v.maxUses} lượt`),
+              h('td', { style: { fontSize: '0.85rem' } }, `${formatDateTime(v.validFrom)} → ${formatDateTime(v.validTo)}`),
+              h('td', null, v.isActive ? h('span', { style: { color: '#059669', fontWeight: 600 } }, '🟢 Đang hoạt động') : h('span', { style: { color: '#64748b' } }, '⚪ Tạm ngừng'))
+            ))
+          )
+        )
+      )
+    ),
+
     // Modal: Add Ticket Type
     ticketModalOpen && targetEventForTicket && h('div', { className: 'modal-backdrop' },
       h('div', { className: 'modal-dialog' },
@@ -680,6 +1256,227 @@ export function OrganizerDashboard({
           h('div', { className: 'modal-footer' },
             h('button', { type: 'button', className: 'btn-secondary', onClick: () => setTicketModalOpen(false) }, 'Đóng'),
             h('button', { type: 'submit', className: 'btn-primary' }, 'Lưu Hạng Vé')
+          )
+        )
+      )
+    ),
+
+    // Section: Payouts Management
+    activeTab === 'payouts' && h('section', { className: 'organizer-payouts-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '💰 Doanh Thu & Rút Tiền Về Tài Khoản'),
+        h('button', {
+          type: 'button',
+          className: 'btn-refresh-data',
+          onClick: () => void loadPayouts(payoutEventId)
+        }, '🔄 Tải Lại')
+      ),
+      payoutLoading ? h('div', { className: 'loading-state' }, 'Đang tải dữ liệu doanh thu & số dư...') :
+      events.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('p', null, 'Bạn chưa có sự kiện nào để theo dõi doanh thu và rút tiền.')
+      ) :
+      h('div', null,
+        // Event Selector & Financial Overview Card
+        h('div', { style: { background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' } },
+            h('label', { style: { fontWeight: 600, fontSize: '0.875rem' } }, 'Chọn sự kiện đối soát:'),
+            h('select', {
+              className: 'form-select',
+              style: { minWidth: '300px', flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' },
+              value: payoutEventId,
+              onChange: (e: any) => {
+                const id = e.target.value;
+                setPayoutEventId(id);
+                void loadPayouts(id);
+              }
+            },
+              events.map(ev => h('option', { key: ev.id, value: ev.id }, `${ev.title} (${ev.status})`))
+            )
+          ),
+          payoutSummary && h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' } },
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Gói SaaS & Phí Sàn'),
+              h('span', { className: 'stat-value', style: { color: '#4338ca' } }, `${payoutSummary.saasPlan} (${payoutSummary.platformFeePercent}%)`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Tổng Doanh Thu Gộp'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.grossRevenueVnd))
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Phí Nền Tảng Đã Trích'),
+              h('span', { className: 'stat-value', style: { color: '#e11d48' } }, `-${vnd(payoutSummary.platformFeeVnd)}`)
+            ),
+            h('div', { className: 'stat-card' },
+              h('span', { className: 'stat-label' }, 'Đã Yêu Cầu / Rút'),
+              h('span', { className: 'stat-value' }, vnd(payoutSummary.totalPayoutsRequestedVnd))
+            ),
+            h('div', { className: 'stat-card', style: { background: '#ecfdf5', borderColor: '#a7f3d0' } },
+              h('span', { className: 'stat-label', style: { color: '#065f46' } }, 'Số Dư Khả Dụng Rút'),
+              h('span', { className: 'stat-value', style: { color: '#059669', fontWeight: 800 } }, vnd(payoutSummary.availableBalanceVnd))
+            )
+          )
+        ),
+
+        // Payout Request Form
+        payoutSummary && payoutSummary.availableBalanceVnd > 0 && h('div', { style: { background: '#fff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #cbd5e1', marginBottom: '1.5rem' } },
+          h('h3', { style: { margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700 } }, '🏦 Yêu Cầu Rút Tiền Về Tài Khoản Ngân Hàng'),
+          h('form', { onSubmit: handleRequestPayout },
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' } },
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tiền muốn rút (VND) *'),
+                h('input', {
+                  type: 'number',
+                  required: true,
+                  min: 50000,
+                  max: payoutSummary.availableBalanceVnd,
+                  value: payoutAmount || '',
+                  placeholder: `Tối đa ${payoutSummary.availableBalanceVnd.toLocaleString('vi-VN')}đ`,
+                  onChange: (e: any) => setPayoutAmount(Number(e.target.value)),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Ngân hàng nhận *'),
+                h('select', {
+                  value: payoutBank,
+                  onChange: (e: any) => setPayoutBank(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                },
+                  ['Vietcombank', 'Techcombank', 'MB Bank', 'VietinBank', 'BIDV', 'ACB', 'VPBank', 'TPBank'].map(b => h('option', { key: b, value: b }, b))
+                )
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Số tài khoản *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: 001100223344',
+                  value: payoutAccNum,
+                  onChange: (e: any) => setPayoutAccNum(e.target.value),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1' }
+                })
+              ),
+              h('div', null,
+                h('label', { style: { display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' } }, 'Chủ tài khoản (viết hoa không dấu) *'),
+                h('input', {
+                  type: 'text',
+                  required: true,
+                  placeholder: 'VD: NGUYEN VAN A',
+                  value: payoutAccHolder,
+                  onChange: (e: any) => setPayoutAccHolder(e.target.value.toUpperCase()),
+                  style: { width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }
+                })
+              )
+            ),
+            h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' } },
+              h('button', {
+                type: 'submit',
+                className: 'btn-primary',
+                disabled: payoutSubmitting || payoutAmount <= 0 || payoutAmount > payoutSummary.availableBalanceVnd,
+                style: { padding: '0.6rem 1.5rem', borderRadius: '8px', fontWeight: 600 }
+              }, payoutSubmitting ? 'Đang gửi yêu cầu…' : '⚡ Gửi Yêu Cầu Rút Tiền')
+            )
+          )
+        ),
+
+        // Payouts History Table
+        h('h3', { style: { margin: '1.5rem 0 0.75rem', fontSize: '1.1rem', fontWeight: 700 } }, '📋 Lịch Sử Các Đợt Yêu Cầu Rút Tiền'),
+        payoutsList.length === 0 ? h('p', { className: 'muted' }, 'Chưa có yêu cầu rút tiền nào.') :
+        h('div', { className: 'events-table-wrapper' },
+          h('table', { className: 'organizer-table' },
+            h('thead', null,
+              h('tr', null,
+                h('th', null, 'Thời Gian'),
+                h('th', null, 'Sự Kiện'),
+                h('th', null, 'Số Tiền Thực Nhận'),
+                h('th', null, 'Phí Sàn'),
+                h('th', null, 'Tài Khoản Nhận'),
+                h('th', null, 'Trạng Thái'),
+                h('th', null, 'Ghi Chú Admin')
+              )
+            ),
+            h('tbody', null,
+              payoutsList.map(p => {
+                const statusBadge = p.status === 'PAID' ? '🟢 Đã chuyển' :
+                                    p.status === 'APPROVED' ? '🔵 Đã duyệt chi' :
+                                    p.status === 'REJECTED' ? '🔴 Từ chối' : '🟡 Chờ duyệt';
+                return h('tr', { key: p.id },
+                  h('td', null, formatDateTime(p.requestedAt)),
+                  h('td', null, p.eventTitle),
+                  h('td', { style: { fontWeight: 700, color: '#059669' } }, vnd(p.netPayoutVnd)),
+                  h('td', null, vnd(p.platformFeeVnd) + ` (${p.platformFeePercent}%)`),
+                  h('td', null, `${p.bankName} - ${p.bankAccountNumber} (${p.bankAccountHolder})`),
+                  h('td', null, h('span', { style: { fontWeight: 600 } }, statusBadge)),
+                  h('td', { className: 'muted' }, p.adminNotes || '--')
+                );
+              })
+            )
+          )
+        )
+      )
+    ),
+
+    // Section: Vouchers Management
+    activeTab === 'vouchers' && h('section', { className: 'organizer-vouchers-section' },
+      h('div', { className: 'section-toolbar' },
+        h('h2', { className: 'section-heading' }, '🎟️ Quản Lý Mã Giảm Giá & Chiến Dịch Ưu Đãi'),
+        h('div', { style: { display: 'flex', gap: '0.5rem' } },
+          h('button', {
+            type: 'button',
+            className: 'btn-refresh-data',
+            onClick: loadVouchers
+          }, '🔄 Tải Lại'),
+          h('button', {
+            type: 'button',
+            className: 'btn-primary',
+            onClick: () => {
+              setNewVoucherCode('');
+              setNewVoucherType('PERCENTAGE');
+              setNewVoucherValue(10);
+              setNewVoucherMinOrder(100000);
+              setNewVoucherMaxDiscount(50000);
+              setNewVoucherMaxUses(100);
+              setVoucherModalOpen(true);
+            },
+            style: { padding: '0.5rem 1rem', borderRadius: '8px' }
+          }, '➕ Tạo Mã Ưu Đãi Mới')
+        )
+      ),
+      vouchersLoading ? h('div', { className: 'loading-state' }, 'Đang tải danh sách voucher...') :
+      vouchersList.length === 0 ? h('div', { className: 'empty-events-panel' },
+        h('span', { className: 'empty-icon' }, '🎟️'),
+        h('h3', null, 'Chưa có mã giảm giá nào'),
+        h('p', null, 'Tạo mã voucher để kích cầu người mua vé cho các sự kiện của bạn!'),
+        h('button', {
+          type: 'button',
+          className: 'btn-primary',
+          onClick: () => setVoucherModalOpen(true),
+          style: { padding: '0.5rem 1.25rem', borderRadius: '8px' }
+        }, '➕ Tạo Mã Ngay')
+      ) :
+      h('div', { className: 'events-table-wrapper' },
+        h('table', { className: 'organizer-table' },
+          h('thead', null,
+            h('tr', null,
+              h('th', null, 'Mã Code'),
+              h('th', null, 'Mức Giảm'),
+              h('th', null, 'Đơn Tối Thiểu'),
+              h('th', null, 'Giảm Tối Đa'),
+              h('th', null, 'Đã Dùng / Giới Hạn'),
+              h('th', null, 'Thời Gian Áp Dụng'),
+              h('th', null, 'Trạng Thái')
+            )
+          ),
+          h('tbody', null,
+            vouchersList.map(v => h('tr', { key: v.id },
+              h('td', null, h('strong', { style: { color: '#4338ca', fontSize: '1rem', letterSpacing: '0.05em' } }, v.code)),
+              h('td', null, v.discountType === 'PERCENTAGE' ? `${v.discountValue}%` : vnd(v.discountValue)),
+              h('td', null, vnd(v.minOrderAmountVnd)),
+              h('td', null, v.maxDiscountAmountVnd ? vnd(v.maxDiscountAmountVnd) : 'Không giới hạn'),
+              h('td', null, `${v.usedCount} / ${v.maxUses} lượt`),
+              h('td', { style: { fontSize: '0.85rem' } }, `${formatDateTime(v.validFrom)} → ${formatDateTime(v.validTo)}`),
+              h('td', null, v.isActive ? h('span', { style: { color: '#059669', fontWeight: 600 } }, '🟢 Đang hoạt động') : h('span', { style: { color: '#64748b' } }, '⚪ Tạm ngừng'))
+            ))
           )
         )
       )

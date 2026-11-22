@@ -40,8 +40,18 @@ class OrganizerIntegrationTest {
     private DemoPrincipal orgBPrincipal;
     private DemoPrincipal adminPrincipal;
 
+    private static boolean isDbAvailable() {
+        try (var socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress("localhost", 5432), 150);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @BeforeEach
     void setUp() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(isDbAvailable(), "PostgreSQL is not reachable on localhost:5432");
         var ds = new DriverManagerDataSource(URL, USER, PASS);
         jdbc = new JdbcTemplate(ds);
         securityService = new EventSecurityService(jdbc);

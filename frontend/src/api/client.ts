@@ -51,6 +51,174 @@ export type User={
   roles?:Role[];
 };
 
+export type OAuthDemoAccount={
+  id:string;
+  email:string;
+  name:string;
+  avatarUrl:string;
+};
+
+export type OAuthProviderConfig={
+  provider:string;
+  mode:'LIVE'|'DEMO';
+  clientId:string;
+  demoAccounts:OAuthDemoAccount[];
+};
+
+export type OAuthCallbackRequest={
+  code?:string;
+  idToken?:string;
+  demoAccountId?:string;
+};
+
+export type SeatView={
+  seatId:string;
+  eventId:string;
+  seatLabel:string;
+  rowLabel:string;
+  seatNumber:number;
+  distanceMeters:number;
+  elevationAngle:number;
+  viewQualityScore:number;
+  viewNotes:string;
+  perspectiveSvg:string;
+  status:'AVAILABLE'|'HELD'|'SOLD';
+  priceVnd:number;
+  ticketTypeName:string;
+};
+
+export type EventReminder={
+  id:string;
+  eventId:string;
+  eventTitle:string;
+  startsAt:string;
+  remindBeforeMinutes:number;
+  status:'PENDING'|'NOTIFIED'|'CANCELLED';
+  createdAt:string;
+};
+
+export type RefundStep={
+  stepNumber:number;
+  title:string;
+  status:'COMPLETED'|'IN_PROGRESS'|'PENDING'|'REJECTED';
+  timestamp:string;
+  description:string;
+};
+
+export type RefundProgress={
+  bookingId:string;
+  bookingStatus:string;
+  amountVnd:number;
+  reason:string;
+  currentStage:string;
+  steps:RefundStep[];
+};
+
+export type TransferItem={
+  id:string;
+  ticketId:string;
+  ticketCode:string;
+  eventTitle:string;
+  toEmail:string;
+  status:'PENDING'|'ACCEPTED'|'CANCELLED'|'EXPIRED';
+  transferToken:string;
+  note?:string;
+  expiresAt:string;
+  createdAt:string;
+};
+
+export type TransferDetail={
+  id:string;
+  ticketId:string;
+  ticketCode:string;
+  eventTitle:string;
+  startsAt:string;
+  seatLabel?:string;
+  fromEmail:string;
+  fromName:string;
+  toEmail:string;
+  note?:string;
+  status:'PENDING'|'ACCEPTED'|'CANCELLED'|'EXPIRED';
+  transferToken:string;
+  expiresAt:string;
+  createdAt:string;
+};
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  avatarUrl?: string;
+  demoRole: string;
+  roles: string[];
+  googleLinked: boolean;
+}
+
+export interface ActiveSession {
+  familyId: string;
+  userAgent: string;
+  ipAddress: string;
+  createdAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export interface VatDefaults {
+  companyName?: string;
+  taxCode?: string;
+  companyAddress?: string;
+  recipientEmail?: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword?: string;
+  newPassword: string;
+}
+
+export type AcceptTransferResult={
+  transferId:string;
+  oldTicketId:string;
+  newTicketId:string;
+  newTicketCode:string;
+  status:string;
+  message:string;
+};
+
+export type ResaleListingItem={
+  id:string;
+  ticketId:string;
+  ticketCode:string;
+  eventId:string;
+  eventTitle:string;
+  ticketTypeTitle:string;
+  seatLabel?:string|null;
+  sellerUserId:string;
+  sellerName:string;
+  originalPriceVnd:number;
+  askingPriceVnd:number;
+  status:'LISTED'|'RESERVED'|'SOLD'|'CANCELLED';
+  lockedByUserId?:string|null;
+  lockExpiresAt?:string|null;
+  createdAt:string;
+  soldAt?:string|null;
+};
+
+export type ReserveResaleResult={
+  listingId:string;
+  lockExpiresAt:string;
+  status:string;
+  message:string;
+};
+
+export type SettleResaleResult={
+  listingId:string;
+  newTicketId:string;
+  newTicketCode:string;
+  status:string;
+  message:string;
+};
+
 export type OrganizerProfile={
   id:string;
   userId:string;
@@ -259,6 +427,167 @@ export type AiAdminDiagnoseResponse={
   evidence:Record<string,unknown>;
 };
 
+export interface VoucherValidationResult {
+  valid: boolean;
+  voucherId?: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  discountAmountVnd: number;
+  finalAmountVnd: number;
+  message: string;
+}
+
+export interface ApplyVoucherResponse {
+  bookingId: string;
+  voucherId: string;
+  code: string;
+  originalAmountVnd: number;
+  discountAmountVnd: number;
+  finalAmountVnd: number;
+  message: string;
+}
+
+export interface VoucherItem {
+  id: string;
+  organizerId?: string;
+  eventId?: string;
+  ticketTypeId?: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minOrderAmountVnd: number;
+  maxDiscountAmountVnd?: number;
+  maxUses: number;
+  usedCount: number;
+  validFrom: string;
+  validTo: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateVoucherRequest {
+  eventId?: string;
+  ticketTypeId?: string;
+  code: string;
+  discountType: 'PERCENTAGE' | 'FIXED_VND';
+  discountValue: number;
+  minOrderAmountVnd: number;
+  maxDiscountAmountVnd?: number;
+  maxUses: number;
+  validFrom: string;
+  validTo: string;
+}
+
+export interface EInvoiceItem {
+  id: string;
+  bookingId: string;
+  accountId: string;
+  taxCode: string;
+  companyName: string;
+  companyAddress: string;
+  recipientEmail: string;
+  invoiceLookupCode: string;
+  totalAmountVnd: number;
+  vatRate: number;
+  vatAmountVnd: number;
+  status: string;
+  issuedAt: string;
+}
+
+export interface PayoutSummary {
+  eventId: string;
+  eventTitle: string;
+  saasPlan: string;
+  platformFeePercent: number;
+  grossRevenueVnd: number;
+  totalTicketsSold: number;
+  platformFeeVnd: number;
+  netPayoutTotalVnd: number;
+  totalPayoutsRequestedVnd: number;
+  availableBalanceVnd: number;
+}
+
+export interface OrganizerPayoutItem {
+  id: string;
+  organizerId: string;
+  organizationName: string;
+  eventId: string;
+  eventTitle: string;
+  grossRevenueVnd: number;
+  platformFeePercent: number;
+  platformFeeVnd: number;
+  netPayoutVnd: number;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountHolder: string;
+  status: 'REQUESTED' | 'APPROVED' | 'PAID' | 'REJECTED';
+  requestedAt: string;
+  processedAt?: string;
+  adminNotes?: string;
+}
+
+export interface OfflineTicketItem {
+  ticketId: string;
+  ticketCode: string;
+  attendeeName: string;
+  ticketType: string;
+  seatLabel: string;
+  qrToken: string;
+  checkedIn: boolean;
+  checkedInAt: string | null;
+}
+
+export interface OfflineManifest {
+  eventId: string;
+  title: string;
+  asOf: string;
+  totalTickets: number;
+  tickets: OfflineTicketItem[];
+}
+
+export interface OfflineSyncItem {
+  clientSyncId: string;
+  ticketId?: string;
+  ticketCode?: string;
+  qrToken?: string;
+  gateName?: string;
+  clientTimestamp?: string;
+  deviceInfo?: string;
+}
+
+export interface OfflineSyncResultItem {
+  clientSyncId: string;
+  ticketId: string | null;
+  ticketCode: string;
+  status: string;
+  gateName: string;
+  checkedInAt: string | null;
+  message: string;
+}
+
+export interface BatchSyncResponse {
+  eventId: string;
+  syncedAt: string;
+  total: number;
+  syncedCount: number;
+  conflictCount: number;
+  results: OfflineSyncResultItem[];
+}
+
+export interface AntiBotChallenge {
+  challengeToken: string;
+  question: string;
+  expiresInSeconds: number;
+}
+
+export interface AntiBotVerifyResponse {
+  verified: boolean;
+  admissionToken: string | null;
+  message: string;
+  expiresInSeconds: number;
+}
+
 export type AuthResponse={
   token:string;
   user:User;
@@ -299,12 +628,26 @@ export function clearStoredAuth():void{
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(AUTH_USER_KEY);
     }
+    if(typeof window!=='undefined'){
+      window.dispatchEvent(new CustomEvent('eventflow:auth-cleared'));
+    }
   }catch{/* ignore */}
 }
 
 export class ApiError extends Error{
   code:string;status:number;correlationId?:string;
   constructor(code:string,message:string,status=0,correlationId?:string){super(message);this.name='ApiError';this.code=code;this.status=status;this.correlationId=correlationId;}
+}
+
+export interface OnboardingStatusResponse {
+  hasSubmitted: boolean;
+  status?: string;
+  statusDisplay?: string;
+  organizationName?: string;
+  contactEmail?: string;
+  saasPlan?: string;
+  notes?: string;
+  submittedAt?: string;
 }
 
 export interface Api{
@@ -323,6 +666,10 @@ export interface Api{
     refresh():Promise<AuthResponse>;
     logout():Promise<{success:boolean;message?:string}>;
     me():Promise<User>;
+  };
+  oauth?:{
+    getGoogleConfig():Promise<OAuthProviderConfig>;
+    googleCallback(data:OAuthCallbackRequest):Promise<AuthResponse>;
   };
   contact?:{
     submitLead(data:{fullName:string;email:string;phone:string;companyName?:string;eventScale?:string;message?:string}):Promise<{id:string;message:string}>;
@@ -348,6 +695,8 @@ export interface Api{
     checkIn(eventId:string,data:CheckInRequest):Promise<CheckInResult>;
     stats(eventId:string):Promise<CheckInStats>;
     history(eventId:string,limit?:number):Promise<CheckInHistoryItem[]>;
+    getOfflineManifest(eventId:string):Promise<OfflineManifest>;
+    batchSync(data:{eventId:string;items:OfflineSyncItem[]}):Promise<BatchSyncResponse>;
   };
   v3?:{
     discoverEvents(params?:{q?:string;format?:string;categoryId?:string;minPrice?:number;maxPrice?:number}):Promise<{items:EventV3Item[];totalElements:number}>;
@@ -367,6 +716,68 @@ export interface Api{
     conciergeChat(data:{conversationId?:string;message:string}):Promise<AiConciergeResponse>;
     organizerGenerate(data:{keywords:string;category?:string;targetCapacity?:number;basePriceVnd?:number}):Promise<AiOrganizerResponse>;
     adminDiagnose(data?:{bookingId?:string;failureId?:string}):Promise<AiAdminDiagnoseResponse>;
+  };
+  vouchers?: {
+    validate(data: { code: string; eventId?: string; ticketTypeId?: string; orderAmountVnd: number }): Promise<VoucherValidationResult>;
+    apply(bookingId: string, code: string): Promise<ApplyVoucherResponse>;
+    list(): Promise<VoucherItem[]>;
+    create(data: CreateVoucherRequest): Promise<VoucherItem>;
+  };
+  invoices?: {
+    issue(bookingId: string, data: { taxCode: string; companyName: string; companyAddress: string; recipientEmail: string }): Promise<EInvoiceItem>;
+    get(bookingId: string): Promise<EInvoiceItem>;
+    lookup(lookupCode: string): Promise<{ found: boolean; invoice?: EInvoiceItem; message: string }>;
+  };
+  payouts?: {
+    summary(eventId: string): Promise<PayoutSummary>;
+    request(data: { eventId: string; amountVnd: number; bankName: string; bankAccountNumber: string; bankAccountHolder: string }): Promise<OrganizerPayoutItem>;
+    list(): Promise<OrganizerPayoutItem[]>;
+  };
+  onboard?: {
+    status(): Promise<OnboardingStatusResponse>;
+    submit(data: { organizationName: string; contactEmail?: string; phone: string; taxCode?: string; saasPlan?: string; message?: string }): Promise<{ leadId: string; message: string }>;
+  };
+  antiBot?: {
+    getChallenge(eventId?: string): Promise<AntiBotChallenge>;
+    verify(challengeToken: string, solution: string): Promise<AntiBotVerifyResponse>;
+    getStatus(eventId: string): Promise<{ eventId: string; antiBotRequired: boolean }>;
+  };
+  seats?: {
+    getView(eventId: string, seatId: string): Promise<SeatView>;
+  };
+  reminders?: {
+    register(eventId: string, minutes?: number): Promise<{ id: string; eventId: string; remindBeforeMinutes: number; status: string; message: string }>;
+    list(): Promise<{ items: EventReminder[]; total: number }>;
+    cancel(eventId: string): Promise<{ success: boolean; message: string }>;
+  };
+  refunds?: {
+    getProgress(bookingId: string): Promise<RefundProgress>;
+  };
+  transfers?: {
+    initiate(data: { ticketId: string; toEmail: string; note?: string }): Promise<TransferItem>;
+    lookup(token: string): Promise<TransferDetail>;
+    accept(token: string): Promise<AcceptTransferResult>;
+    cancel(id: string): Promise<{ success: boolean; message: string }>;
+    sent(): Promise<{ items: TransferItem[]; total: number }>;
+    received(): Promise<{ items: TransferItem[]; total: number }>;
+  };
+  profile?: {
+    get(): Promise<UserProfile>;
+    update(data: { displayName: string; phone?: string; avatarUrl?: string }): Promise<UserProfile>;
+    changePassword(data: ChangePasswordRequest): Promise<{ success: boolean; message: string }>;
+    vatDefaults(): Promise<VatDefaults>;
+    updateVatDefaults(data: VatDefaults): Promise<VatDefaults>;
+    sessions(): Promise<{ sessions: ActiveSession[]; total: number }>;
+    revokeSession(familyId: string): Promise<{ success: boolean; message: string }>;
+    revokeOtherSessions(): Promise<{ success: boolean; message: string }>;
+  };
+  resale?: {
+    create(data: { ticketId: string; askingPriceVnd: number }): Promise<ResaleListingItem>;
+    listForEvent(eventId: string): Promise<{ items: ResaleListingItem[]; total: number }>;
+    reserve(listingId: string): Promise<ReserveResaleResult>;
+    settle(listingId: string): Promise<SettleResaleResult>;
+    cancel(listingId: string): Promise<{ success: boolean; message: string }>;
+    myListings(): Promise<{ items: ResaleListingItem[]; total: number }>;
   };
 }
 
@@ -425,6 +836,23 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
             'Authorization':'Bearer '+refreshedToken
           };
           response=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
+        }else{
+          // Stored token was expired or invalid and refresh failed (stored auth was cleared).
+          // Fallback retry using current tokenProvider() or clean anonymous headers for public endpoints.
+          const fallbackToken=typeof token==='function'?token():null;
+          const retryHeaders:Record<string,string>={
+            ...(init.headers as Record<string,string>|undefined)
+          };
+          if(fallbackToken&&fallbackToken!==resolvedToken){
+            retryHeaders['Authorization']='Bearer '+fallbackToken;
+          }else{
+            delete retryHeaders['Authorization'];
+            delete retryHeaders['authorization'];
+          }
+          const retryResponse=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
+          if(retryResponse.ok||retryResponse.status!==401){
+            response=retryResponse;
+          }
         }
       }
 
@@ -458,6 +886,10 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
       refresh:()=>call('/api/auth/refresh',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
       logout:()=>call('/api/auth/logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}),
       me:()=>call('/api/auth/me')
+    },
+    oauth:{
+      getGoogleConfig:()=>call('/api/auth/oauth/google/config'),
+      googleCallback:(data)=>call('/api/auth/oauth/google/callback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
     },
     contact:{
       submitLead:(data)=>call('/api/contact/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
@@ -494,7 +926,13 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         body:JSON.stringify(data)
       }),
       stats:(eventId)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/stats'),
-      history:(eventId,limit=50)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/history?limit='+limit)
+      history:(eventId,limit=50)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/history?limit='+limit),
+      getOfflineManifest:(eventId)=>call('/api/staff/events/'+encodeURIComponent(eventId)+'/offline-manifest'),
+      batchSync:(data)=>call('/api/staff/check-ins/batch-sync',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+      })
     },
     v3:{
       discoverEvents:(params={})=>{
@@ -555,6 +993,124 @@ export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=glob
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(data)
       })
+    },
+    vouchers: {
+      validate: (data) => call('/api/vouchers/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      apply: (bookingId, code) => call('/api/bookings/' + encodeURIComponent(bookingId) + '/apply-voucher', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      }),
+      list: () => call('/api/organizer/vouchers'),
+      create: (data) => call('/api/organizer/vouchers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+    },
+    invoices: {
+      issue: (bookingId, data) => call('/api/me/bookings/' + encodeURIComponent(bookingId) + '/e-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      get: (bookingId) => call('/api/me/bookings/' + encodeURIComponent(bookingId) + '/e-invoice'),
+      lookup: (lookupCode) => call('/api/e-invoices/lookup/' + encodeURIComponent(lookupCode))
+    },
+    payouts: {
+      summary: (eventId) => call('/api/organizer/payouts/summary?eventId=' + encodeURIComponent(eventId)),
+      request: (data) => call('/api/organizer/payouts/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      list: () => call('/api/organizer/payouts')
+    },
+    onboard: {
+      status: () => call('/api/organizer/onboard/status'),
+      submit: (data) => call('/api/organizer/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+    },
+    antiBot: {
+      getChallenge: (eventId) => call('/api/security/anti-bot/challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventId ? { eventId } : {})
+      }),
+      verify: (challengeToken, solution) => call('/api/security/anti-bot/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeToken, solution })
+      }),
+      getStatus: (eventId) => call('/api/security/anti-bot/events/' + encodeURIComponent(eventId) + '/status')
+    },
+    seats: {
+      getView: (eventId, seatId) => call('/api/events/' + encodeURIComponent(eventId) + '/seats/' + encodeURIComponent(seatId) + '/view')
+    },
+    reminders: {
+      register: (eventId, minutes = 15) => call('/api/events/' + encodeURIComponent(eventId) + '/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remindBeforeMinutes: minutes })
+      }),
+      list: () => call('/api/me/reminders'),
+      cancel: (eventId) => call('/api/events/' + encodeURIComponent(eventId) + '/reminders', { method: 'DELETE' })
+    },
+    refunds: {
+      getProgress: (bookingId) => call('/api/me/bookings/' + encodeURIComponent(bookingId) + '/refund-progress')
+    },
+    transfers: {
+      initiate: (data) => call('/api/transfers/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      lookup: (token) => call('/api/transfers/lookup/' + encodeURIComponent(token)),
+      accept: (token) => call('/api/transfers/accept/' + encodeURIComponent(token), { method: 'POST' }),
+      cancel: (id) => call('/api/transfers/' + encodeURIComponent(id) + '/cancel', { method: 'POST' }),
+      sent: () => call('/api/me/transfers/sent'),
+      received: () => call('/api/me/transfers/received')
+    },
+    profile: {
+      get: () => call('/api/me/profile'),
+      update: (data) => call('/api/me/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      changePassword: (data) => call('/api/me/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      vatDefaults: () => call('/api/me/vat-defaults'),
+      updateVatDefaults: (data) => call('/api/me/vat-defaults', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      sessions: () => call('/api/me/sessions', { credentials: 'include' }),
+      revokeSession: (familyId) => call('/api/me/sessions/' + encodeURIComponent(familyId), { method: 'DELETE' }),
+      revokeOtherSessions: () => call('/api/me/sessions/revoke-others', { method: 'DELETE', credentials: 'include' })
+    },
+    resale: {
+      create: (data) => call('/api/resale/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      listForEvent: (eventId) => call('/api/events/' + encodeURIComponent(eventId) + '/resale-listings'),
+      reserve: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/reserve', { method: 'POST' }),
+      settle: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/settle', { method: 'POST' }),
+      cancel: (listingId) => call('/api/resale/listings/' + encodeURIComponent(listingId) + '/cancel', { method: 'POST' }),
+      myListings: () => call('/api/me/resale/listings')
     }
   };
 }

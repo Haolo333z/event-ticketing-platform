@@ -158,3 +158,193 @@ test('v3 api adapter builds best-seats, stream, calendar and discovery URLs accu
   await api.v3!.discoverEvents({format:'ONLINE',minPrice:100000,maxPrice:500000,q:'AI'});
   assert.equal(calls[1],'http://api.test/api/v3/events?q=AI&format=ONLINE&minPrice=100000&maxPrice=500000');
 });
+
+test('oauth api adapter retrieves google config and calls callback correctly',async()=>{
+  const calls:{url:string;method?:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).endsWith('/oauth/google/config')){
+      return new Response(JSON.stringify({
+        provider:'GOOGLE',
+        mode:'DEMO',
+        clientId:'',
+        demoAccounts:[{id:'google-demo-customer',email:'customer.google@eventflow.vn',name:'Nguyen Van Google',avatarUrl:''}]
+      }),{status:200});
+    }
+    if(String(url).endsWith('/oauth/google/callback')){
+      return new Response(JSON.stringify({
+        token:'oauth-access-token',
+        user:{id:'user-oauth',displayName:'Nguyen Van Google',email:'customer.google@eventflow.vn',role:'CUSTOMER',roles:['CUSTOMER']}
+      }),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const config=await api.oauth!.getGoogleConfig();
+  assert.equal(config.provider,'GOOGLE');
+  assert.equal(config.mode,'DEMO');
+  assert.equal(config.demoAccounts.length,1);
+  assert.equal(calls[0].url,'http://api.test/api/auth/oauth/google/config');
+
+  const auth=await api.oauth!.googleCallback({demoAccountId:'google-demo-customer'});
+  assert.equal(auth.token,'oauth-access-token');
+  assert.equal(auth.user.email,'customer.google@eventflow.vn');
+  assert.equal(calls[1].method,'POST');
+  assert.equal(calls[1].body.demoAccountId,'google-demo-customer');
+});
+
+test('seatview, reminders and refundProgress api adapters dispatch correct endpoints',async()=>{
+  const calls:{url:string;method?:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).includes('/seats/s1/view')){
+      return new Response(JSON.stringify({seatId:'s1',seatLabel:'A5',distanceMeters:10.5,viewQualityScore:96}),{status:200});
+    }
+    if(String(url).endsWith('/reminders')&&init?.method==='POST'){
+      return new Response(JSON.stringify({id:'r1',message:'OK'}),{status:200});
+    }
+    if(String(url).includes('/refund-progress')){
+      return new Response(JSON.stringify({bookingId:'b1',bookingStatus:'REFUND_REQUIRED',steps:[{stepNumber:1,title:'Tiếp nhận',status:'COMPLETED'}]}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const seatView=await api.seats!.getView('e1','s1');
+  assert.equal(seatView.seatLabel,'A5');
+  assert.equal(seatView.viewQualityScore,96);
+  assert.equal(calls[0].url,'http://api.test/api/events/e1/seats/s1/view');
+
+  const reminder=await api.reminders!.register('e1',15);
+  assert.equal(reminder.id,'r1');
+  assert.equal(calls[1].method,'POST');
+  assert.equal(calls[1].body.remindBeforeMinutes,15);
+
+  const refund=await api.refunds!.getProgress('b1');
+  assert.equal(refund.bookingStatus,'REFUND_REQUIRED');
+  assert.equal(refund.steps.length,1);
+  assert.equal(calls[2].url,'http://api.test/api/me/bookings/b1/refund-progress');
+});
+
+test('ticket transfer api adapter handles initiate, lookup and accept correctly',async()=>{
+  const calls:{url:string;method?:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).endsWith('/transfers/initiate')){
+      return new Response(JSON.stringify({id:'trf-1',transferToken:'TRF-TESTTOKEN',status:'PENDING',toEmail:'friend@test.com'}),{status:200});
+    }
+    if(String(url).includes('/transfers/lookup/TRF-TESTTOKEN')){
+      return new Response(JSON.stringify({id:'trf-1',transferToken:'TRF-TESTTOKEN',ticketCode:'EF-OLD',eventTitle:'Rock Concert'}),{status:200});
+    }
+    if(String(url).includes('/transfers/accept/TRF-TESTTOKEN')){
+      return new Response(JSON.stringify({transferId:'trf-1',status:'ACCEPTED',newTicketCode:'EF-TRF-NEW'}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const initiated=await api.transfers!.initiate({ticketId:'t1',toEmail:'friend@test.com'});
+  assert.equal(initiated.id,'trf-1');
+  assert.equal(initiated.transferToken,'TRF-TESTTOKEN');
+  assert.equal(calls[0].url,'http://api.test/api/transfers/initiate');
+
+  const detail=await api.transfers!.lookup('TRF-TESTTOKEN');
+  assert.equal(detail.ticketCode,'EF-OLD');
+
+  const accepted=await api.transfers!.accept('TRF-TESTTOKEN');
+  assert.equal(accepted.status,'ACCEPTED');
+  assert.equal(accepted.newTicketCode,'EF-TRF-NEW');
+});
+
+test('resale api adapter handles create, list, reserve and settle correctly',async()=>{
+  const calls:{url:string;method?:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).endsWith('/resale/listings')&&init?.method==='POST'){
+      return new Response(JSON.stringify({id:'rsl-1',ticketId:'t1',askingPriceVnd:450000,status:'LISTED'}),{status:200});
+    }
+    if(String(url).includes('/resale-listings')){
+      return new Response(JSON.stringify({items:[{id:'rsl-1',askingPriceVnd:450000}],total:1}),{status:200});
+    }
+    if(String(url).includes('/reserve')){
+      return new Response(JSON.stringify({listingId:'rsl-1',status:'RESERVED'}),{status:200});
+    }
+    if(String(url).includes('/settle')){
+      return new Response(JSON.stringify({listingId:'rsl-1',status:'SOLD',newTicketCode:'EF-RSL-NEW'}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const created=await api.resale!.create({ticketId:'t1',askingPriceVnd:450000});
+  assert.equal(created.id,'rsl-1');
+  assert.equal(created.status,'LISTED');
+
+  const list=await api.resale!.listForEvent('ev-1');
+  assert.equal(list.total,1);
+
+  const reserved=await api.resale!.reserve('rsl-1');
+  assert.equal(reserved.status,'RESERVED');
+
+  const settled=await api.resale!.settle('rsl-1');
+  assert.equal(settled.status,'SOLD');
+  assert.equal(settled.newTicketCode,'EF-RSL-NEW');
+});
+
+test('profile and received transfers api adapters dispatch correct endpoints and payloads',async()=>{
+  const calls:{url:string;method?:string;body?:any}[]=[];
+  const api=createApi('http://api.test',async(url,init)=>{
+    calls.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):undefined});
+    if(String(url).endsWith('/api/me/profile')&&!init?.method){
+      return new Response(JSON.stringify({id:'u-1',email:'user@test.com',displayName:'Test User',roles:['CUSTOMER']}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/profile')&&init?.method==='PUT'){
+      return new Response(JSON.stringify({id:'u-1',displayName:'Updated User'}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/change-password')){
+      return new Response(JSON.stringify({success:true,message:'Đổi mật khẩu thành công'}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/vat-defaults')&&!init?.method){
+      return new Response(JSON.stringify({companyName:'Công ty ABC',taxCode:'0101234567'}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/sessions')&&!init?.method){
+      return new Response(JSON.stringify({sessions:[{familyId:'f-1',userAgent:'Chrome',current:true}],total:1}),{status:200});
+    }
+    if(String(url).includes('/api/me/sessions/f-1')&&init?.method==='DELETE'){
+      return new Response(JSON.stringify({success:true}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/sessions/revoke-others')&&init?.method==='DELETE'){
+      return new Response(JSON.stringify({success:true}),{status:200});
+    }
+    if(String(url).endsWith('/api/me/transfers/received')){
+      return new Response(JSON.stringify({items:[{id:'trf-2',ticketCode:'EF-REC'}],total:1}),{status:200});
+    }
+    return new Response('{}',{status:200});
+  });
+
+  const prof=await api.profile!.get();
+  assert.equal(prof.email,'user@test.com');
+  assert.equal(calls[0].url,'http://api.test/api/me/profile');
+
+  const updated=await api.profile!.update({displayName:'Updated User'});
+  assert.equal(updated.displayName,'Updated User');
+  assert.equal(calls[1].method,'PUT');
+
+  const cp=await api.profile!.changePassword({newPassword:'newPassword123'});
+  assert.equal(cp.success,true);
+  assert.equal(calls[2].method,'POST');
+
+  const vat=await api.profile!.vatDefaults();
+  assert.equal(vat.taxCode,'0101234567');
+
+  const sess=await api.profile!.sessions();
+  assert.equal(sess.total,1);
+  assert.equal(sess.sessions[0].current,true);
+
+  await api.profile!.revokeSession('f-1');
+  assert.equal(calls[5].method,'DELETE');
+
+  await api.profile!.revokeOtherSessions();
+  assert.equal(calls[6].method,'DELETE');
+
+  const received=await api.transfers!.received();
+  assert.equal(received.total,1);
+  assert.equal(received.items[0].ticketCode,'EF-REC');
+});

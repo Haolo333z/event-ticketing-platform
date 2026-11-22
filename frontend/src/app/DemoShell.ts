@@ -10,7 +10,10 @@ import { MyBookingsPage } from './MyBookingsPage.ts';
 import { PaymentReturnPage } from './PaymentReturnPage.ts';
 import { OrganizerDashboard } from './OrganizerDashboard.ts';
 import { StaffCheckInPage } from './StaffCheckInPage.ts';
+import { TransferAcceptPage } from './TransferAcceptPage.ts';
 import { AiConciergeWidget } from './AiConciergeWidget.ts';
+import { OrganizerOnboardingModal } from './OrganizerOnboardingModal.ts';
+import { AccountProfilePage } from './AccountProfilePage.ts';
 import type { Api, Store, User } from '../api/client.ts';
 import { getStoredUser, clearStoredAuth } from '../api/client.ts';
 import type { AdminApi } from '../api/admin.ts';
@@ -30,6 +33,8 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     if (path === '/payment-return') return '/payment-return';
     if (path === '/organizer') return '/organizer';
     if (path === '/staff') return '/staff';
+    if (path === '/tai-khoan') return '/tai-khoan';
+    if (path.startsWith('/transfer/accept') || path === '/transfer/accept') return '/transfer/accept';
     if (path === '/lien-he') return '/lien-he';
     if (path === '/dat-ve' || path === '/events') return '/dat-ve';
     return '/';
@@ -68,11 +73,53 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(initialDropdown);
   const [pendingBookingAction, setPendingBookingAction] = useState<(() => void) | null>(null);
   const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
+  const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
+  const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && !target.closest('.user-profile-widget')) {
+        setAvatarDropdownOpen(false);
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('click', handleClickOutside);
+      return () => window.removeEventListener('click', handleClickOutside);
+    }
+  }, []);
+
+  function handleCreateEventClick() {
+    if (!user) {
+      setAuthModalTab('login');
+      setGateNotice('Vui lòng đăng nhập để tạo và quản lý sự kiện.');
+      setAuthModalOpen(true);
+      return;
+    }
+    const userRoles = (user.roles && user.roles.length > 0) ? user.roles : [user.role];
+    if (userRoles.includes('ORGANIZER') || userRoles.includes('ADMIN') || user.role === 'ORGANIZER' || user.role === 'ADMIN') {
+      navigate('/organizer');
+    } else {
+      setOnboardingModalOpen(true);
+    }
+  }
 
   useEffect(() => {
     if (!mockCustomer && !mockAdmin) {
       const u = getStoredUser();
       if (u) setUser(u);
+    }
+  }, [mockCustomer, mockAdmin]);
+
+  useEffect(() => {
+    function onAuthCleared() {
+      if (!mockCustomer && !mockAdmin) {
+        setUser(null);
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('eventflow:auth-cleared', onAuthCleared);
+      return () => window.removeEventListener('eventflow:auth-cleared', onAuthCleared);
     }
   }, [mockCustomer, mockAdmin]);
 
@@ -137,20 +184,22 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   }
 
   return h('div', { className: 'eventflow-app-shell' },
+    h('div', { className: 'topbar-utility-strip' },
+      h('div', { className: 'topbar-utility-container' },
+        h('div', { className: 'utility-badge-demo' }, '⚡ DEMO LOCAL · KHÔNG THU TIỀN THẬT'),
+        h('div', { className: 'system-status-indicator' },
+          h('span', { className: 'status-dot pulse' }),
+          'Live PostgreSQL & Kafka EDA'
+        )
+      )
+    ),
     h('header', { className: 'demo-topbar shell' },
       h('div', { className: 'brand-container' },
         h('a', {
           href: '/',
           className: 'brand',
           onClick: (e) => { e.preventDefault(); navigate('/'); }
-        },
-          'EventFlow',
-          h('span', null, 'Demo local · Không thu tiền thật')
-        ),
-        h('span', { className: 'system-status-indicator' },
-          h('span', { className: 'status-dot pulse' }),
-          'Live PostgreSQL & Kafka EDA'
-        )
+        }, 'EventFlow')
       ),
 
       // Corporate Navigation Links with Multi-Page Router & Active Indicators
@@ -310,89 +359,99 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           href: '/lien-he',
           className: 'nav-link' + (currentPath === '/lien-he' ? ' active' : ''),
           onClick: (e) => { e.preventDefault(); navigate('/lien-he'); }
-        }, 'Liên hệ'),
-        (user && (user.roles?.includes('ORGANIZER') || user.roles?.includes('ADMIN') || user.role === 'ORGANIZER' || user.role === 'ADMIN')) ? h('a', {
-          href: '/organizer',
-          className: 'nav-link' + (currentPath === '/organizer' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/organizer'); }
-        }, '🎪 Khu vực Tổ chức') : null,
-        (user && (user.roles?.includes('STAFF') || user.roles?.includes('ADMIN') || user.role === 'STAFF' || user.role === 'ADMIN')) ? h('a', {
-          href: '/staff',
-          className: 'nav-link' + (currentPath === '/staff' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/staff'); }
-        }, '📱 Soát Vé') : null
+        }, 'Liên hệ')
       ),
 
       h('div', { className: 'topbar-actions' },
         h('button', {
           type: 'button',
-          className: 'topbar-cta-btn corporate-cta-btn',
-          onClick: () => navigate('/lien-he')
-        }, 'Đặt lịch tư vấn'),
+          className: 'topbar-cta-btn btn-create-event',
+          onClick: handleCreateEventClick,
+          title: 'Tạo và xuất bản sự kiện mới'
+        }, '+ Tạo sự kiện'),
 
-        // Real Auth Section (4-Role RBAC Support)
+        // Real Auth Section (4-Role RBAC Support & High-Contrast Avatar Dropdown)
         user ? (() => {
           const userRoles = (user.roles && user.roles.length > 0) ? user.roles : [user.role];
-          const hasCustomer = userRoles.includes('CUSTOMER');
           const hasAdmin = userRoles.includes('ADMIN');
           const hasStaff = userRoles.includes('STAFF');
           const hasOrganizer = userRoles.includes('ORGANIZER');
 
-          const roleLabels: Record<string, string> = {
-            ADMIN: 'Quản trị viên',
-            ORGANIZER: 'Nhà tổ chức',
-            STAFF: 'Soát vé',
-            CUSTOMER: 'Khách hàng'
-          };
-          const primaryRole = userRoles[0] || user.role;
-          const primaryRoleText = roleLabels[primaryRole] || (user.role === 'ADMIN' ? 'Quản trị viên' : 'Khách hàng');
-          const roleClass = 'role-' + (primaryRole ? primaryRole.toLowerCase() : 'customer');
-
           return h('div', { className: 'user-profile-widget' },
-            hasCustomer ? h('button', {
-              type: 'button',
-              className: 'btn-my-bookings' + (currentPath === '/ve-cua-toi' ? ' active' : ''),
-              onClick: () => navigate('/ve-cua-toi'),
-              title: 'Xem vé đã mua của bạn'
-            }, '🎟️ Vé của tôi') : null,
-            (hasStaff || hasAdmin) ? h('button', {
-              type: 'button',
-              className: 'btn-staff-view' + (currentPath === '/staff' ? ' active' : ''),
-              onClick: () => navigate('/staff'),
-              title: 'Vào Cổng Soát Vé Nhân Viên'
-            }, '📱 Soát vé') : null,
-            (hasOrganizer || hasAdmin) ? h('button', {
-              type: 'button',
-              className: 'btn-organizer-view' + (currentPath === '/organizer' ? ' active' : ''),
-              onClick: () => navigate('/organizer'),
-              title: 'Vào Bàn Làm Việc Nhà Tổ Chức'
-            }, '🎪 Tổ chức') : null,
-            h('div', { className: 'user-avatar', title: user.displayName },
-              user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'
-            ),
-            h('div', { className: 'user-info-text' },
-              h('span', { className: 'user-name' }, user.displayName),
-              h('span', { className: 'user-role-badge ' + roleClass, title: 'Vai trò: ' + userRoles.join(', ') },
-                primaryRoleText
-              )
-            ),
-            hasAdmin && h('button', {
-              type: 'button',
-              className: 'btn-switch-view ' + (currentPath === '/admin' ? 'active' : ''),
-              onClick: () => {
-                if (currentPath === '/admin') {
-                  navigate('/');
-                } else {
-                  navigate('/admin');
-                }
-              }
-            }, currentPath === '/admin' ? 'Xem Website' : 'Bảng Quản Trị'),
             h('button', {
               type: 'button',
-              className: 'btn-logout',
-              onClick: handleLogout,
-              title: 'Đăng xuất'
-            }, 'Đăng xuất')
+              className: 'user-avatar-trigger' + (avatarDropdownOpen ? ' active' : ''),
+              onClick: (e) => {
+                e.stopPropagation();
+                setAvatarDropdownOpen(!avatarDropdownOpen);
+              },
+              title: 'Tài khoản: ' + user.displayName
+            },
+              h('div', { className: 'user-avatar-circle' },
+                user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'
+              ),
+              h('span', { className: 'user-name-label' }, user.displayName),
+              h('span', { className: 'avatar-dropdown-caret' }, avatarDropdownOpen ? '▴' : '▾')
+            ),
+            avatarDropdownOpen && h('div', { className: 'avatar-dropdown-menu' },
+              h('div', { className: 'dropdown-user-header' },
+                h('div', { className: 'dropdown-user-name' }, user.displayName),
+                h('div', { className: 'dropdown-user-email' }, user.email),
+                h('div', { className: 'dropdown-roles-badges' },
+                  userRoles.map(r => h('span', { key: r, className: 'badge-role-pill role-' + r.toLowerCase() }, r))
+                )
+              ),
+              h('div', { className: 'dropdown-divider' }),
+              h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item' + (currentPath === '/tai-khoan' ? ' active' : ''),
+                onClick: () => { setAvatarDropdownOpen(false); navigate('/tai-khoan'); }
+              },
+                h('span', { className: 'item-icon' }, '👤'),
+                h('span', { className: 'item-text' }, 'Thông tin tài khoản')
+              ),
+              h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item' + (currentPath === '/ve-cua-toi' ? ' active' : ''),
+                onClick: () => { setAvatarDropdownOpen(false); navigate('/ve-cua-toi'); }
+              },
+                h('span', { className: 'item-icon' }, '🎟️'),
+                h('span', { className: 'item-text' }, 'Vé của tôi & Lịch sử đơn')
+              ),
+              (hasOrganizer || hasAdmin) && h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item' + (currentPath === '/organizer' ? ' active' : ''),
+                onClick: () => { setAvatarDropdownOpen(false); navigate('/organizer'); }
+              },
+                h('span', { className: 'item-icon' }, '🎪'),
+                h('span', { className: 'item-text' }, 'Quản trị Sự kiện')
+              ),
+              (hasStaff || hasAdmin) && h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item' + (currentPath === '/staff' ? ' active' : ''),
+                onClick: () => { setAvatarDropdownOpen(false); navigate('/staff'); }
+              },
+                h('span', { className: 'item-icon' }, '📱'),
+                h('span', { className: 'item-text' }, 'Cổng Soát vé')
+              ),
+              hasAdmin && h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item' + (currentPath === '/admin' ? ' active' : ''),
+                onClick: () => { setAvatarDropdownOpen(false); navigate('/admin'); }
+              },
+                h('span', { className: 'item-icon' }, '🛡️'),
+                h('span', { className: 'item-text' }, 'Quản trị Sàn')
+              ),
+              h('div', { className: 'dropdown-divider' }),
+              h('button', {
+                type: 'button',
+                className: 'dropdown-menu-item item-logout',
+                onClick: () => { setAvatarDropdownOpen(false); handleLogout(); }
+              },
+                h('span', { className: 'item-icon' }, '🚪'),
+                h('span', { className: 'item-text' }, 'Đăng xuất')
+              )
+            )
           );
         })() : h('div', { className: 'auth-buttons-group' },
           h('button', {
@@ -491,6 +550,12 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         onNavigate: navigate,
         onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
       }) : null,
+      currentPath.startsWith('/transfer/accept') && persona !== 'admin' ? h(TransferAcceptPage, {
+        api: customer,
+        user,
+        onNavigate: navigate,
+        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+      }) : null,
       currentPath === '/payment-return' && persona !== 'admin' ? h(PaymentReturnPage, {
         api: customer,
         onNavigate: navigate
@@ -504,6 +569,13 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           setActiveBookingId(id);
           navigate('/dat-ve');
         }
+      }) : null,
+      currentPath === '/tai-khoan' && persona !== 'admin' ? h(AccountProfilePage, {
+        api: customer,
+        user,
+        onNavigate: navigate,
+        onOpenOnboardingModal: () => setOnboardingModalOpen(true),
+        onUserUpdated: (updated) => setUser(updated)
       }) : null
     ),
 
@@ -549,6 +621,15 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         setActiveBookingId(id);
         navigate('/dat-ve');
       }
+    }),
+
+    // Organizer Onboarding Modal
+    h(OrganizerOnboardingModal, {
+      isOpen: onboardingModalOpen,
+      onClose: () => setOnboardingModalOpen(false),
+      user,
+      api: customer,
+      onNavigateToOrganizer: () => navigate('/organizer')
     })
   );
 }

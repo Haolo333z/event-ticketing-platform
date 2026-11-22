@@ -47,4 +47,18 @@ public class StaffCheckInController {
             @AuthenticationPrincipal DemoPrincipal principal) {
         return ResponseEntity.ok(service.getRecentHistory(principal, eventId, Math.min(100, Math.max(1, limit))));
     }
+
+    @GetMapping("/events/{eventId}/offline-manifest")
+    public ResponseEntity<OfflineManifestDto> getOfflineManifest(
+            @PathVariable UUID eventId,
+            @AuthenticationPrincipal DemoPrincipal principal) {
+        return ResponseEntity.ok(service.getOfflineManifest(principal, eventId));
+    }
+
+    @PostMapping("/check-ins/batch-sync")
+    public ResponseEntity<BatchSyncResponse> batchSync(
+            @RequestBody OfflineSyncRequest req,
+            @AuthenticationPrincipal DemoPrincipal principal) {
+        return ResponseEntity.ok(service.batchSync(principal, req));
+    }
 }

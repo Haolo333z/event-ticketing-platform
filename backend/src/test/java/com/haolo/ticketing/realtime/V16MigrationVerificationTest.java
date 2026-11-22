@@ -16,8 +16,18 @@ class V16MigrationVerificationTest {
     private static final String USER = "ticketing";
     private static final String PASS = "1454158d66ab469493b8bbca1669b0681465533ede684524a1919126f88b3b0b";
 
+    private static boolean isDbAvailable() {
+        try (var socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress("localhost", 5432), 150);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Test
     void applyAndVerifyV16Migration() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(isDbAvailable(), "PostgreSQL is not reachable on localhost:5432");
         Flyway flyway = Flyway.configure()
             .dataSource(URL, USER, PASS)
             .defaultSchema("public")

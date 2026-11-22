@@ -29,23 +29,34 @@ public class RefreshTokenService {
 
     public record TokenRecord(UUID id, UUID userId, UUID familyId, boolean isRevoked, Instant expiresAt, UUID replacedBy) {}
     public record RotationResult(UUID userId, String newRawToken) {}
+    public record ActiveSessionDto(UUID familyId, String userAgent, String ipAddress, Instant createdAt, Instant expiresAt, boolean current) {}
 
     @Transactional
     public String createRefreshToken(UUID userId) {
+        return createRefreshToken(userId, null, null);
+    }
+
+    @Transactional
+    public String createRefreshToken(UUID userId, String userAgent, String ipAddress) {
         UUID familyId = UUID.randomUUID();
         String rawToken = generateRandomHex(32);
         String tokenHash = hashToken(rawToken);
         Instant expiresAt = Instant.now().plus(validityDays, ChronoUnit.DAYS);
 
         jdbc.update(
-            "INSERT INTO ticketing.refresh_tokens(id, user_id, token_hash, family_id, is_revoked, expires_at) VALUES (?, ?, ?, ?, false, ?)",
-            UUID.randomUUID(), userId, tokenHash, familyId, expiresAt
+            "INSERT INTO ticketing.refresh_tokens(id, user_id, token_hash, family_id, is_revoked, expires_at, user_agent, ip_address) VALUES (?, ?, ?, ?, false, ?, ?, ?)",
+            UUID.randomUUID(), userId, tokenHash, familyId, java.sql.Timestamp.from(expiresAt), userAgent, ipAddress
         );
         return rawToken;
     }
 
     @Transactional
     public RotationResult rotateRefreshToken(String rawToken) {
+        return rotateRefreshToken(rawToken, null, null);
+    }
+
+    @Transactional
+    public RotationResult rotateRefreshToken(String rawToken, String userAgent, String ipAddress) {
         if (rawToken == null || rawToken.isBlank()) {
             throw new ApiException(401, "INVALID_REFRESH_TOKEN", "Refresh token không được để trống");
         }
@@ -86,19 +97,64 @@ public class RefreshTokenService {
         String newTokenHash = hashToken(newRawToken);
         Instant newExpiresAt = Instant.now().plus(validityDays, ChronoUnit.DAYS);
 
+        // Insert new token first so foreign key constraint (replaced_by -> id) is satisfied
+        jdbc.update(
+            "INSERT INTO ticketing.refresh_tokens(id, user_id, token_hash, family_id, is_revoked, expires_at, user_agent, ip_address) VALUES (?, ?, ?, ?, false, ?, ?, ?)",
+            newId, current.userId(), newTokenHash, current.familyId(), java.sql.Timestamp.from(newExpiresAt), userAgent, ipAddress
+        );
+
         // Mark current token replaced
         jdbc.update(
             "UPDATE ticketing.refresh_tokens SET is_revoked = true, replaced_by = ? WHERE id = ?",
             newId, current.id()
         );
 
-        // Insert new token
-        jdbc.update(
-            "INSERT INTO ticketing.refresh_tokens(id, user_id, token_hash, family_id, is_revoked, expires_at) VALUES (?, ?, ?, ?, false, ?)",
-            newId, current.userId(), newTokenHash, current.familyId(), newExpiresAt
-        );
-
         return new RotationResult(current.userId(), newRawToken);
+    }
+
+    public List<ActiveSessionDto> getActiveSessions(UUID userId, UUID currentFamilyId) {
+        String sql = """
+            SELECT DISTINCT ON (family_id) family_id, user_agent, ip_address, created_at, expires_at
+            FROM ticketing.refresh_tokens
+            WHERE user_id = ? AND is_revoked = false AND expires_at > NOW()
+            ORDER BY family_id, created_at DESC
+            """;
+        return jdbc.query(sql, (rs, rowNum) -> {
+            UUID familyId = rs.getObject("family_id", UUID.class);
+            return new ActiveSessionDto(
+                familyId,
+                rs.getString("user_agent"),
+                rs.getString("ip_address"),
+                rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("expires_at").toInstant(),
+                currentFamilyId != null && currentFamilyId.equals(familyId)
+            );
+        }, userId);
+    }
+
+    public UUID findFamilyIdByRawToken(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) return null;
+        String tokenHash = hashToken(rawToken);
+        var families = jdbc.query(
+            "SELECT family_id FROM ticketing.refresh_tokens WHERE token_hash = ?",
+            (rs, rowNum) -> rs.getObject("family_id", UUID.class),
+            tokenHash
+        );
+        return families.isEmpty() ? null : families.getFirst();
+    }
+
+    @Transactional
+    public void revokeFamily(UUID userId, UUID familyId) {
+        jdbc.update("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id = ?", userId, familyId);
+    }
+
+    @Transactional
+    public void revokeOtherFamilies(UUID userId, UUID currentFamilyId) {
+        if (currentFamilyId == null) {
+            revokeAllForUser(userId);
+            return;
+        }
+        jdbc.update("UPDATE ticketing.refresh_tokens SET is_revoked = true WHERE user_id = ? AND family_id <> ?", userId, currentFamilyId);
     }
 
     @Transactional
