@@ -10,6 +10,21 @@ const formatDateTime = (isoString?: string) => {
   });
 };
 
+const DEFAULT_CATEGORIES: EventCategory[] = [
+  { id: 'CONCERT', name: 'Đại nhạc hội & Concert', description: 'Đại nhạc hội, liveshow, EDM và biểu diễn âm nhạc trực tiếp' },
+  { id: 'THEATER', name: 'Nhà hát & Nghệ thuật Hàn lâm', description: 'Kịch nói, nhạc kịch, múa rối, hòa nhạc thính phòng' },
+  { id: 'CONFERENCE', name: 'Hội nghị Công nghệ & Triển lãm', description: 'Hội thảo công nghệ, diễn đàn kinh tế, triển lãm thương mại' },
+  { id: 'SPORTS', name: 'Sự kiện Thể thao & Giải đấu', description: 'Bóng đá, marathon, esports, võ thuật và giải đấu thể thao' },
+  { id: 'WORKSHOP', name: 'Hội thảo & Workshop Đào tạo', description: 'Khóa đào tạo chuyên sâu, workshop hướng dẫn thực hành' }
+];
+
+const DEFAULT_VENUES: Venue[] = [
+  { id: 'venue-hn-01', name: 'Nhà hát Lớn Hà Nội', address: 'Số 1 Tràng Tiền, Hoàn Kiếm, Hà Nội', city: 'Hà Nội', country: 'Việt Nam', capacity: 600 },
+  { id: 'venue-hn-02', name: 'Trung tâm Hội nghị Quốc gia', address: 'Đại lộ Thăng Long, Mễ Trì, Nam Từ Liêm, Hà Nội', city: 'Hà Nội', country: 'Việt Nam', capacity: 3500 },
+  { id: 'venue-hcm-01', name: 'Nhà hát Thành phố Hồ Chí Minh', address: 'Số 7 Công Trường Lam Sơn, Bến Nghé, Quận 1, TP. HCM', city: 'TP. Hồ Chí Minh', country: 'Việt Nam', capacity: 500 },
+  { id: 'venue-hn-03', name: 'Sân vận động Quốc gia Mỹ Đình', address: 'Đường Lê Đức Thọ, Mỹ Đình 1, Nam Từ Liêm, Hà Nội', city: 'Hà Nội', country: 'Việt Nam', capacity: 40000 }
+];
+
 export function OrganizerDashboard({
   api,
   user,
@@ -23,8 +38,8 @@ export function OrganizerDashboard({
 }) {
   const [profile, setProfile] = useState<OrganizerProfile | null>(null);
   const [events, setEvents] = useState<OrganizerEvent[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [venues, setVenues] = useState<Venue[]>(DEFAULT_VENUES);
+  const [categories, setCategories] = useState<EventCategory[]>(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -214,13 +229,13 @@ export function OrganizerDashboard({
     try {
       const [p, v, c, evts] = await Promise.all([
         api.organizer.getProfile().catch(() => null),
-        api.organizer.venues().catch(() => []),
-        api.organizer.categories().catch(() => []),
+        api.organizer.venues().catch(() => DEFAULT_VENUES),
+        api.organizer.categories().catch(() => DEFAULT_CATEGORIES),
         api.organizer.events().catch(() => [])
       ]);
       setProfile(p);
-      setVenues(v);
-      setCategories(c);
+      setVenues((v && v.length > 0) ? v : DEFAULT_VENUES);
+      setCategories((c && c.length > 0) ? c : DEFAULT_CATEGORIES);
       setEvents(evts);
       if (p) {
         setOrgName(p.organizationName);

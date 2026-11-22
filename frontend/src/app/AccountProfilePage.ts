@@ -62,47 +62,79 @@ export function AccountProfilePage({ api, user, onNavigate, onOpenOnboardingModa
   async function loadAllData() {
     setLoading(true);
     try {
-      if (api.profile) {
-        const prof = await api.profile.get();
-        setProfile(prof);
-        setDisplayName(prof.displayName || '');
-        setPhone(prof.phone || '');
-        setAvatarUrl(prof.avatarUrl || '');
+      const tasks: Promise<unknown>[] = [];
 
-        const vat = await api.profile.vatDefaults();
+      // 1. Profile Core
+      const pProfile = api.profile?.get ? api.profile.get().then(prof => {
+        if (prof) {
+          setProfile(prof);
+          setDisplayName(prof.displayName || '');
+          setPhone(prof.phone || '');
+          setAvatarUrl(prof.avatarUrl || '');
+        }
+      }).catch(err => {
+        console.warn('Could not load profile:', err);
+      }) : Promise.resolve();
+      tasks.push(pProfile);
+
+      // 2. VAT Defaults
+      const pVat = api.profile?.vatDefaults ? api.profile.vatDefaults().then(vat => {
         if (vat) setVatDefaults(vat);
+      }).catch(err => {
+        console.warn('Could not load VAT defaults:', err);
+      }) : Promise.resolve();
+      tasks.push(pVat);
 
-        const sess = await api.profile.sessions();
-        if (sess && sess.sessions) setSessions(sess.sessions);
-      }
+      // 3. Sessions
+      const pSessions = api.profile?.sessions ? api.profile.sessions().then(sess => {
+        if (sess?.sessions) setSessions(sess.sessions);
+      }).catch(err => {
+        console.warn('Could not load sessions:', err);
+      }) : Promise.resolve();
+      tasks.push(pSessions);
 
-      // Load Waitlists
-      if (api.v3?.myWaitlists) {
-        const wl = await api.v3.myWaitlists();
+      // 4. Waitlists
+      const pWaitlists = api.v3?.myWaitlists ? api.v3.myWaitlists().then(wl => {
         if (wl?.items) setWaitlists(wl.items);
-      }
+      }).catch(err => {
+        console.warn('Could not load waitlists:', err);
+      }) : Promise.resolve();
+      tasks.push(pWaitlists);
 
-      // Load Reminders
-      if (api.reminders?.list) {
-        const rm = await api.reminders.list();
+      // 5. Reminders
+      const pReminders = api.reminders?.list ? api.reminders.list().then(rm => {
         if (rm?.items) setReminders(rm.items);
-      }
+      }).catch(err => {
+        console.warn('Could not load reminders:', err);
+      }) : Promise.resolve();
+      tasks.push(pReminders);
 
-      // Load Transfers
-      if (api.transfers?.sent) {
-        const st = await api.transfers.sent();
+      // 6. Transfers Sent
+      const pTransfersSent = api.transfers?.sent ? api.transfers.sent().then(st => {
         if (st?.items) setSentTransfers(st.items);
-      }
-      if (api.transfers?.received) {
-        const rt = await api.transfers.received();
-        if (rt?.items) setReceivedTransfers(rt.items);
-      }
+      }).catch(err => {
+        console.warn('Could not load sent transfers:', err);
+      }) : Promise.resolve();
+      tasks.push(pTransfersSent);
 
-      // Load Onboard status
-      if (api.onboard?.status) {
-        const ob = await api.onboard.status();
-        setOnboardingStatus(ob);
-      }
+      // 7. Transfers Received
+      const pTransfersReceived = api.transfers?.received ? api.transfers.received().then(rt => {
+        if (rt?.items) setReceivedTransfers(rt.items);
+      }).catch(err => {
+        console.warn('Could not load received transfers:', err);
+      }) : Promise.resolve();
+      tasks.push(pTransfersReceived);
+
+      // 8. B2B Organizer Onboard status
+      const pOnboard = api.onboard?.status ? api.onboard.status().then(ob => {
+        if (ob) setOnboardingStatus(ob);
+      }).catch(err => {
+        console.warn('Could not load onboarding status:', err);
+        setOnboardingStatus({ hasSubmitted: false, status: 'NONE' });
+      }) : Promise.resolve();
+      tasks.push(pOnboard);
+
+      await Promise.allSettled(tasks);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải thông tin hồ sơ';
       showToast(msg, 'error');

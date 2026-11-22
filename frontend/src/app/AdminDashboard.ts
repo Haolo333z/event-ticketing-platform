@@ -1,6 +1,6 @@
 import {createElement as h,useEffect,useRef,useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {ApiError} from '../api/client.ts';
+import {ApiError, getStoredUser} from '../api/client.ts';
 import type {Booking,Status} from '../api/client.ts';
 import type {AdminApi,AdminEvent,AdminInventory,CreateEvent,PatchEvent,Page,Outbox,AdminUser,ContactLeadItem,AdminRefundItem,PlatformSummary,EventReport,CircuitBreakerStatus,ReconciliationRunSummary,ReconciliationRunDetail,ScalpingAlert,SellOutForecast} from '../api/admin.ts';
 import {EventEditor} from './EventEditor.ts';
@@ -212,6 +212,11 @@ export function AdminDashboard({api}:{api:AdminApi}){
 
   async function handleRoleAction(userId:string,role:string,action:'GRANT'|'REVOKE'){
     if(!api.updateUserRole)return;setError('');setNotice('');
+    const currentAdmin = getStoredUser();
+    if(currentAdmin && currentAdmin.id === userId && role === 'ADMIN' && action === 'REVOKE'){
+      setError('Không thể tự hạ quyền Admin của chính mình.');
+      return;
+    }
     try{
       await api.updateUserRole(userId,role,action);
       setNotice(action==='GRANT'?`Đã cấp quyền ${role} thành công.`:`Đã thu hồi quyền ${role} thành công.`);
@@ -221,6 +226,11 @@ export function AdminDashboard({api}:{api:AdminApi}){
 
   async function handleStatusAction(userId:string,status:'ACTIVE'|'LOCKED'){
     if(!api.updateUserStatus)return;setError('');setNotice('');
+    const currentAdmin = getStoredUser();
+    if(currentAdmin && currentAdmin.id === userId && status === 'LOCKED'){
+      setError('Không thể tự khóa tài khoản Admin đang đăng nhập của chính mình.');
+      return;
+    }
     try{
       await api.updateUserStatus(userId,status);
       setNotice(status==='LOCKED'?'Đã khóa tài khoản người dùng thành công.':'Đã kích hoạt lại tài khoản thành công.');
@@ -423,8 +433,10 @@ export function AdminDashboard({api}:{api:AdminApi}){
     !loading&&!error&&data&&tab==='users'&&table('Danh sách người dùng đăng ký trong hệ thống & Phân quyền',['Họ và tên','Email / SĐT','Trạng thái','Vai trò','Phân quyền & Thao tác'],(data.items as AdminUser[]).map(u=>{
       const rolesList = (u.roles && u.roles.length>0) ? u.roles : (u.role ? [u.role] : ['CUSTOMER']);
       const isLocked = u.status === 'LOCKED';
+      const currentAdmin = getStoredUser();
+      const isSelf = !!(currentAdmin && (currentAdmin.id === u.id || (currentAdmin.email && u.email && currentAdmin.email.toLowerCase() === u.email.toLowerCase())));
       return h('tr',{key:u.id},
-        h('td',null,h('strong',null,u.displayName),h('br',null),h('small',{className:'muted'},u.id)),
+        h('td',null,h('strong',null,u.displayName),isSelf&&h('span',{className:'badge-self',style:{marginLeft:'0.4rem',fontSize:'0.75rem',padding:'0.1rem 0.4rem',borderRadius:'4px',background:'#4f46e5',color:'#fff'}},'Bạn'),h('br',null),h('small',{className:'muted'},u.id)),
         h('td',null,h('div',null,u.email||h('em',{className:'muted'},'Chưa có email')),h('small',{className:'muted'},u.phone||'')),
         h('td',null,h('span',{className:'status-badge '+(isLocked?'badge-locked':'badge-active')},isLocked?'🔒 ĐÃ KHÓA':'🟢 HOẠT ĐỘNG')),
         h('td',null,h('div',{className:'roles-tags-container'},...rolesList.map(r=>h('span',{key:r,className:'user-role-badge role-'+r.toLowerCase()},r)))),
@@ -436,9 +448,9 @@ export function AdminDashboard({api}:{api:AdminApi}){
             !rolesList.includes('ORGANIZER')&&h('button',{type:'button',className:'btn-role-action',onClick:()=>void handleRoleAction(u.id,'ORGANIZER','GRANT')},'+ ORGANIZER'),
             rolesList.includes('ORGANIZER')&&h('button',{type:'button',className:'btn-role-action revoke',onClick:()=>void handleRoleAction(u.id,'ORGANIZER','REVOKE')},'- ORGANIZER'),
             !rolesList.includes('ADMIN')&&h('button',{type:'button',className:'btn-role-action',onClick:()=>void handleRoleAction(u.id,'ADMIN','GRANT')},'+ ADMIN'),
-            rolesList.includes('ADMIN')&&h('button',{type:'button',className:'btn-role-action revoke',onClick:()=>void handleRoleAction(u.id,'ADMIN','REVOKE')},'- ADMIN'),
+            rolesList.includes('ADMIN')&&h('button',{type:'button',className:'btn-role-action revoke',disabled:isSelf,title:isSelf?'Không thể tự hạ quyền Admin của chính mình':undefined,style:isSelf?{opacity:0.5,cursor:'not-allowed'}:undefined,onClick:()=>void handleRoleAction(u.id,'ADMIN','REVOKE')},'- ADMIN'),
             // Lock / Unlock toggle
-            isLocked?h('button',{type:'button',className:'btn-status-toggle unlock',onClick:()=>void handleStatusAction(u.id,'ACTIVE')},'Mở khóa'):h('button',{type:'button',className:'btn-status-toggle lock',onClick:()=>void handleStatusAction(u.id,'LOCKED')},'Khóa')
+            isLocked?h('button',{type:'button',className:'btn-status-toggle unlock',disabled:isSelf,title:isSelf?'Không thể tự thao tác tài khoản của chính mình':undefined,style:isSelf?{opacity:0.5,cursor:'not-allowed'}:undefined,onClick:()=>void handleStatusAction(u.id,'ACTIVE')},'Mở khóa'):h('button',{type:'button',className:'btn-status-toggle lock',disabled:isSelf,title:isSelf?'Không thể tự khóa tài khoản của chính mình':undefined,style:isSelf?{opacity:0.5,cursor:'not-allowed'}:undefined,onClick:()=>void handleStatusAction(u.id,'LOCKED')},'Khóa')
           )
         )
       );

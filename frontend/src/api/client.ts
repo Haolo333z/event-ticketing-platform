@@ -1,5 +1,5 @@
 export type TicketType={id:string;name:string;mode:'GA'|'SEATED';priceVnd:number;active:boolean};
-export type Event={id:string;title:string;description:string;venue:string;startsAt:string;ticketTypes:TicketType[]};
+export type Event={id:string;title:string;description:string;venue:string;saleStartAt?:string;saleEndAt?:string;startsAt:string;status?:string;ticketTypes:TicketType[]};
 export type Status='PENDING_PAYMENT'|'CONFIRMED'|'PAYMENT_FAILED'|'CANCELLED'|'EXPIRED'|'REFUND_REQUIRED';
 export type Booking={bookingId:string;eventId?:string;status:Status;expiresAt:string;totalAmountVnd:number;history?:{fromStatus:Status|null;toStatus:Status;occurredAt:string}[]};
 export type Scenario='SUCCESS'|'FAILURE'|'DELAY_TIMEOUT';

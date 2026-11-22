@@ -63,9 +63,29 @@ public class AiTicketingService {
         saveMessage(convId, "USER", message, "USER_INPUT");
 
         String lower = message.toLowerCase(Locale.ROOT);
-        boolean wantsOrderLookup = lower.contains("đơn") || lower.contains("don hang") || lower.contains("hoàn tiền")
-            || lower.contains("hoan tien") || lower.contains("hết hạn") || lower.contains("het han") || lower.contains("trạng thái");
-        boolean wantsHelpOrGreeting = !wantsOrderLookup && (
+        boolean wantsRefundPolicy = lower.contains("chính sách hoàn") || lower.contains("chinh sach hoan")
+            || lower.contains("chính sách huỷ") || lower.contains("chinh sach huy") || lower.contains("quy định hoàn")
+            || lower.contains("quy dinh hoan") || lower.contains("hoàn vé") || lower.contains("hoan ve")
+            || lower.contains("đổi trả") || lower.contains("doi tra") || lower.contains("hủy vé") || lower.contains("huy ve")
+            || lower.contains("refund policy");
+
+        boolean wantsVatPolicy = lower.contains("vat") || lower.contains("hóa đơn") || lower.contains("hoa don")
+            || lower.contains("hóa đơn đỏ") || lower.contains("mã số thuế") || lower.contains("ma so thue")
+            || lower.contains("mst") || lower.contains("thuế gtgt");
+
+        boolean wantsGuide = lower.contains("cách mua") || lower.contains("cach mua") || lower.contains("cách đặt")
+            || lower.contains("cach dat") || lower.contains("quy trình") || lower.contains("thanh toán như thế nào")
+            || lower.contains("thanh toan nhu the nao");
+
+        boolean wantsOrderLookup = !wantsRefundPolicy && !wantsVatPolicy && (
+            lower.contains("đơn hàng của tôi") || lower.contains("don hang cua toi") || lower.contains("kiểm tra đơn")
+            || lower.contains("kiem tra don") || lower.contains("tra cứu đơn") || lower.contains("tra cuu don")
+            || lower.contains("tiến độ hoàn") || lower.contains("tien do hoan") || lower.contains("đơn")
+            || lower.contains("don hang") || lower.contains("hoàn tiền") || lower.contains("hoan tien")
+            || lower.contains("hết hạn") || lower.contains("het han") || lower.contains("trạng thái")
+        );
+
+        boolean wantsHelpOrGreeting = !wantsRefundPolicy && !wantsVatPolicy && !wantsGuide && !wantsOrderLookup && (
             lower.contains("giúp gì") || lower.contains("giup gi") || lower.contains("làm được gì") || lower.contains("lam duoc gi")
             || lower.contains("chức năng") || lower.contains("hướng dẫn") || lower.matches("^(xin chào|chào|hello|hi|hey|alo)[!?.\\s]*$")
         );
@@ -74,7 +94,28 @@ public class AiTicketingService {
         List<SeatSuggestionCard> suggestions = new ArrayList<>();
         StringBuilder draft = new StringBuilder();
 
-        if (wantsHelpOrGreeting) {
+        if (wantsRefundPolicy) {
+            draft.append("📄 **Chính sách Hoàn & Hủy vé của EventFlow Enterprise:**\n")
+                .append("1. ⏱️ **Đơn hàng quá hạn 10 phút giữ chỗ:** Nếu thanh toán đến muộn sau khi hết hạn, hệ thống tự động đưa đơn vào trạng thái `REFUND_REQUIRED` và hoàn tiền 100% tự động qua Outbox Worker.\n")
+                .append("2. 🎟️ **Vé đã xác nhận (CONFIRMED):**\n")
+                .append("   • **Gửi tặng bạn bè (Ticket Transfer):** Miễn phí và nguyên tử 100% ngay tại mục \"Vé của tôi\" (thời hạn nhận vé 48 giờ).\n")
+                .append("   • **Chợ vé chính chủ Fan-to-Fan Resale:** Đăng bán lại an toàn với giá cam kết ≤ giá gốc. Vé cũ tự động bị thu hồi và hệ thống phát hành vé mới kèm QR ký số HMAC-SHA256 cho người mua.\n")
+                .append("3. 📞 **Yêu cầu hỗ trợ đặc biệt:** Liên hệ hotline 1900 6868 hoặc email support@eventflow.vn để Ban tổ chức xử lý theo chính sách từng sự kiện.");
+        } else if (wantsVatPolicy) {
+            draft.append("🧾 **Chính sách & Hướng dẫn Xuất Hóa Đơn Điện Tử VAT (10%):**\n")
+                .append("1. ⚖️ **Hóa đơn điện tử hợp pháp:** Hỗ trợ xuất hóa đơn VAT cho toàn bộ đơn đặt vé đã thanh toán thành công (`CONFIRMED`).\n")
+                .append("2. ⚡ **Các cách xuất hóa đơn VAT:**\n")
+                .append("   • **Tại bước Checkout:** Tích chọn \"Yêu cầu xuất hóa đơn điện tử VAT (10%)\" và điền MST, tên công ty.\n")
+                .append("   • **Tại mục \"Vé của tôi\" (/ve-cua-toi):** Chọn đơn hàng và bấm \"Xuất hóa đơn VAT\" bất cứ lúc nào.\n")
+                .append("   • **Lưu sẵn trong Tài khoản cá nhân (/tai-khoan):** Điền sẵn MST mặc định ở tab \"Hóa đơn VAT\", hệ thống sẽ tự động điền cho mọi lần đặt vé sau.\n")
+                .append("3. 📧 **Định dạng nhận:** File hóa đơn chuẩn (.pdf & .xml) sẽ được khởi tạo kèm mã tra cứu hóa đơn điện tử chính thức.");
+        } else if (wantsGuide) {
+            draft.append("🚀 **Quy trình 4 bước đặt vé nhanh chóng trên EventFlow:**\n")
+                .append("1. 🔍 **Chọn sự kiện:** Duyệt danh sách sự kiện nổi bật trên Trang chủ hoặc dùng thanh tìm kiếm.\n")
+                .append("2. 💺 **Chọn hạng vé:** Chọn số lượng vé GA hoặc chọn trực tiếp vị trí ghế ưng ý trên Sơ đồ ghế 3D (tối đa 6 vé/đơn).\n")
+                .append("3. ⏱️ **Khóa chỗ 10 phút:** Bấm \"Giữ vé / Giữ ghế\", hệ thống kích hoạt giao dịch ACID chống bán lố vé (Zero Oversell).\n")
+                .append("4. 💳 **Thanh toán:** Quét mã VNPAY Sandbox hoặc thanh toán mô phỏng. Vé điện tử kèm mã QR ký số HMAC-SHA256 sẽ hiển thị ngay tức thì!");
+        } else if (wantsHelpOrGreeting) {
             draft.append("Chào bạn! Mình là EventFlow AI Concierge, mình có thể hỗ trợ trực tiếp 3 việc sau trên dữ liệu thật của hệ thống:\n")
                 .append("1. 💺 Tìm & gợi ý cụm ghế liền kề đẹp nhất theo ngân sách (VD: \"Tìm 2 ghế liền kề dưới 1 triệu\").\n")
                 .append("2. ⚡ Giữ chỗ tức thì bằng giao dịch ACID chống bán lố vé ngay trong khung chat.\n")

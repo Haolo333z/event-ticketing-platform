@@ -74,6 +74,25 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
     if(booking.status==='CONFIRMED')api.tickets(booking.bookingId).then(value=>{if(active)setTickets(value);}).catch(value=>{if(active)setError(value instanceof ApiError?value:new ApiError('NETWORK_ERROR','Chưa tải được vé. Hãy tải lại.'));});
     return()=>{active=false;};
   },[api,booking.bookingId,booking.status]);
+
+  // Tự động xuất hóa đơn VAT khi booking chuyển sang CONFIRMED và khách đã tích chọn xuất VAT
+  useEffect(()=>{
+    if(booking.status==='CONFIRMED'&&requestVat&&!vatIssued&&vatTaxCode.trim()&&vatCompanyName.trim()&&api.invoices?.issue){
+      setVatIssued(true);
+      api.invoices.issue(booking.bookingId,{
+        taxCode:vatTaxCode.trim(),
+        companyName:vatCompanyName.trim(),
+        companyAddress:vatCompanyAddress.trim(),
+        recipientEmail:vatRecipientEmail.trim()
+      }).then(inv=>{
+        const code = inv.invoiceLookupCode || inv.id.slice(0, 8);
+        setVatNotice(`✓ Đã tự động xuất hóa đơn VAT #${inv.id.slice(0, 8)} (Mã tra cứu: ${code})`);
+      }).catch(err=>{
+        const msg=err instanceof ApiError?err.message:err instanceof Error?err.message:'Không thể xuất hóa đơn VAT tự động';
+        setVatNotice('⚠️ '+msg+'. Bạn có thể xuất lại tại mục Vé của tôi.');
+      });
+    }
+  },[booking.status,requestVat,vatIssued,vatTaxCode,vatCompanyName,vatCompanyAddress,vatRecipientEmail,api.invoices,booking.bookingId]);
   async function refresh(id=booking.bookingId){const current=await api.booking(id);onChange(current);if(current.status==='CONFIRMED')setTickets(await api.tickets(id));}
   async function pay(scenario:Scenario){
     if(sending.current)return;sending.current=true;setBusy(true);setError(null);setNotice('');
@@ -212,6 +231,19 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
     booking.status==='REFUND_REQUIRED'&&h('p',{className:'alert pending'},'Kết quả thành công đến sau khi mất quyền giữ chỗ. Không phát vé; nghĩa vụ bù trừ được worker hoàn tiền mô phỏng xử lý. Trạng thái này được giữ để theo dõi; không có giao dịch tiền thật.'),
     h('section',{'aria-label':'Vé của booking',className:'tickets'},
       h('h3',null,'Vé điện tử của bạn (E-Tickets)'),
+      booking.status==='CONFIRMED'&&vatNotice&&h('div',{
+        className:'alert vat-issued-notice',
+        style:{
+          background:'#f0fdf4',
+          border:'1px solid #86efac',
+          color:'#166534',
+          borderRadius:'8px',
+          padding:'0.65rem 0.85rem',
+          margin:'0.75rem 0',
+          fontSize:'0.85rem',
+          fontWeight:500
+        }
+      },vatNotice),
       booking.status!=='CONFIRMED'?h('p',null,'Chưa có vé. Chỉ booking CONFIRMED được phát vé.'):h('div',null,
         h('button',{type:'button',className:'quiet',disabled:busy,onClick:()=>void refresh().catch(value=>setError(value instanceof ApiError?value:new ApiError('NETWORK_ERROR','Chưa tải được vé')))},'Tải lại vé'),
         tickets.length===0?h('p',{role:'status'},'Chưa tải được vé từ máy chủ.'):h('ul',{className:'ticket-list'},...tickets.map(ticket=>h('li',{key:ticket.id,'data-ticket-id':ticket.id,className:'e-ticket-card'},

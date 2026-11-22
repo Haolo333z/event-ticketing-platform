@@ -4,27 +4,64 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK FIX P0: KHẮC PHỤC DỨT ĐIỂM 4 NHÓM LỖI P0 (BROKEN ACCESS CONTROL ADMIN, CORS PREFLIGHT 403, HTTP 415 VÀ SQL CRASH 500)** (2026-11-22)
-- **Tiến độ:** Khắc phục triệt để 100% 4 nhóm lỗi P0 theo chỉ đạo:
-  - **P0-1 (Broken Access Control / Lộ dữ liệu Admin):**
-    - Cập nhật `createAdminApi` trong `frontend/src/api/admin.ts`: loại bỏ logic tự động cấp token demo (`demo-admin-token`) khi người dùng chưa có tài khoản/vai trò ADMIN (trong môi trường browser trả về `null`).
-    - Bổ sung Route Guard chặt chẽ trên frontend trong `frontend/src/app/DemoShell.ts`: kiểm tra `isUserAdmin(user)` trước khi render `AdminDashboard`; nếu khách hoặc user thường cố truy cập `/admin`, tự động replace URL về `/`, kích hoạt `AuthModal` kèm thông báo *"Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN."*; áp dụng tương tự trên `navigate()` và `onPopState`.
-  - **P0-4 (CORS Preflight 403 trên `/api/me/profile`):**
-    - Cập nhật `SecurityConfiguration.java`: thêm `.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()` ở đầu chuỗi kiểm tra HttpSecurity để preflight request không bị chặn 403.
-    - Cập nhật `RequestPolicyFilter.java`: bổ sung các phương thức `PUT`, `DELETE` vào danh sách cho phép của preflight `OPTIONS` và header `Access-Control-Allow-Methods`, đồng thời bổ sung `PUT` vào `bodyMethod` để các API có body JSON như `PUT /api/me/profile` không bị từ chối 400.
-    - Cập nhật `MockBearerFilter.java`: cho phép request `OPTIONS` luôn được coi là public endpoint, bỏ qua xác thực token.
-  - **P0-5 (HTTP 415 Unsupported Media Type ở `/admin`):**
-    - Cập nhật `convertToOrganizer` và `resetCircuitBreaker` trong `frontend/src/api/admin.ts`: bổ sung header `'Content-Type': 'application/json'` và body `JSON.stringify({})` cho các request POST rỗng, vượt qua kiểm tra nghiêm ngặt của `RequestPolicyFilter`.
-  - **P0-2 & P0-3 (SQL Crash HTTP 500 do truy vấn cột không tồn tại):**
-    - Đã đối chiếu các bản Flyway migrations `V2`, `V8`, `V25`: bảng `ticketing.tickets` không có cột `seat_id` (cột `seat_id` nằm ở bảng `ticketing.booking_items`).
-    - Sửa `ResaleListingService.java` (dòng 79, 90, 221, 366, 399, 524) và `TicketTransferService.java` (dòng 57, 187, 219, 308): JOIN `ticketing.booking_items bi ON t.booking_item_id = bi.id` để lấy đúng `bi.seat_id`, và loại bỏ cột `seat_id` khỏi câu lệnh `INSERT INTO ticketing.tickets`.
-    - Sửa `StaffCheckInService.java` (dòng 35, 56): thay `e.ends_at` thành `NULL AS ends_at` vì bảng `ticketing.events` không có cột `ends_at`.
+- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK FIX P1: KHẮC PHỤC DỨT ĐIỂM 7 NHÓM LỖI P1 (PROFILE TẢI ĐỘC LẬP, SEATED DEDUP, AUTO VAT, FAQ AI CONCIERGE, CHẶN SALE ENDED, MOJIBAKE & TỰ KHÓA ADMIN)** (2026-11-22)
+- **Tiến độ:** Khắc phục triệt để 100% 7 nhóm lỗi P1 theo chỉ đạo:
+  - **P1-1 (`/tai-khoan` - Tách độc lập 8 API tải hồ sơ):** Chuyển sang `Promise.allSettled` cho 8 tác vụ độc lập (`profile`, `vatDefaults`, `sessions`, `waitlists`, `reminders`, `transfersSent`, `transfersReceived`, `onboardStatus`) có `.catch()` riêng biệt trong `frontend/src/app/AccountProfilePage.ts`. Khi API đối tác B2B lỗi được fallback an toàn `{ hasSubmitted: false, status: 'NONE' }`, giúp các tab cá nhân khác vẫn tải mượt mà.
+  - **P1-2 (Lọc "Ghế chỉ định" / Sự kiện SEATED không bị nuốt):** Cập nhật logic `dedup` trong `frontend/src/app/App.ts`, phân biệt key với hậu tố `:seated` và `:ga` (`ev.title.trim().toLowerCase() + (hasSeated ? ':seated' : ':ga')`), đảm bảo sự kiện ghế chỉ định không bao giờ bị che lấp bởi sự kiện GA trùng tên.
+  - **P1-3 (Tự động xuất hóa đơn VAT khi tích chọn ở Checkout):** Bổ sung hook `useEffect` trong `frontend/src/app/Checkout.ts` tự động gọi `api.invoices.issue()` ngay khi booking chuyển sang `CONFIRMED` nếu khách đã tích chọn xuất VAT và điền đầy đủ MST/Tên công ty. Hiển thị thông báo hóa đơn kèm mã tra cứu trực tiếp trong khu vực vé điện tử.
+  - **P1-4 (AI Concierge trả lời đúng intent Chính sách Hoàn vé / Hóa đơn VAT):** Bổ sung 3 intent chuyên biệt trong `backend/src/main/java/com/haolo/ticketing/ai/AiTicketingService.java`: `wantsRefundPolicy`, `wantsVatPolicy`, `wantsGuide`. Cung cấp phản hồi chính xác về chính sách hoàn tiền 100% khi hết hạn giữ chỗ 10 phút, chuyển nhượng vé miễn phí, bán lại Fan-to-Fan Resale, và quy trình xuất hóa đơn VAT điện tử thay vì rơi nhầm vào tìm kiếm vé.
+  - **P1-5 (Chặn đặt vé khi quá hạn `sale_end_at`):** Cập nhật `frontend/src/app/App.ts`: kiểm tra `isSaleEnded = detail?.saleEndAt ? (Date.parse(detail.saleEndAt) <= now) : false`, đưa vào điều kiện `canBook`, disable nút đặt vé kèm thông báo rõ ràng thời gian đóng cổng bán vé và gắn badge `⛔ ĐÃ ĐÓNG CỔNG BÁN VÉ` trên event card.
+  - **P1-6 (Chuẩn hóa tiếng Việt UTF-8 sạch cho Dropdown Thể loại & Địa điểm):** Bổ sung `DEFAULT_CATEGORIES` và `DEFAULT_VENUES` chuẩn UTF-8 trong `frontend/src/app/OrganizerDashboard.ts` với đầy đủ thông tin chuẩn hóa (Nhà hát Lớn Hà Nội, Trung tâm Hội nghị Quốc gia, SVĐ Mỹ Đình, Nhà hát TP. HCM) tránh rỗng hoặc lỗi font khi mạng chậm.
+  - **P1-7 (Chặn Admin tự hạ quyền hoặc tự khóa chính mình):** Cập nhật cả UI lẫn logic xử lý trong `frontend/src/app/AdminDashboard.ts`: so sánh `isSelf` với `getStoredUser()`, vô hiệu hóa nút `- ADMIN` và nút `Khóa`/`Mở khóa` đối với tài khoản admin đang đăng nhập, hiển thị badge "Bạn" và tooltip giải thích trực quan; chặn đồng thời ở cấp handler `handleRoleAction` và `handleStatusAction`.
 - **Kết quả kiểm chứng thực tế:**
   - Database: Chuỗi **28 Flyway migrations (`V1` $\rightarrow$ `V28`)** hợp lệ, đạt chuẩn **44 bảng nghiệp vụ** trong schema `ticketing`.
   - Backend (`.\backend\mvnw.cmd -f backend/pom.xml test`): **357/357 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn).
-  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (237ms)**.
+  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (193ms)**.
   - OpenAPI 3.1 Contracts (`cmd /c "npm test --prefix tools/contracts"`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
   - Git Hygiene: Không commit, không push, bảo toàn nguyên vẹn working tree theo đúng `AGENTS.md` và `docs/RULES.md`.
+
+---
+
+## FIX-P1 — Sửa Dứt Điểm 7 Nhóm Lỗi P1 (Profile Tải Độc Lập, Seated Dedup, Auto VAT, FAQ AI Concierge, Chặn Sale Ended, Mojibake & Tự Khóa Admin) (Done, 2026-11-22)
+
+**Phạm vi và đầu vào:** Sửa nhóm 7 lỗi P1 theo chỉ đạo:
+1. P1-1: `/tai-khoan` tách 8 API bằng `Promise.allSettled`, có fallback an toàn cho B2B onboard.
+2. P1-2: Logic dedup sự kiện ở `App.ts` phân biệt `:seated` và `:ga`.
+3. P1-3: Checkout tự động gọi `api.invoices.issue()` khi `CONFIRMED` và khách tích chọn VAT.
+4. P1-4: Bổ sung 3 intent `wantsRefundPolicy`, `wantsVatPolicy`, `wantsGuide` trong `AiTicketingService.java`.
+5. P1-5: Chặn bấm giữ vé và gắn badge cảnh báo khi quá hạn `sale_end_at` trong `App.ts`.
+6. P1-6: Cung cấp fallback danh mục & địa điểm chuẩn tiếng Việt UTF-8 sạch trong `OrganizerDashboard.ts`.
+7. P1-7: Disable nút hạ quyền ADMIN và khóa tài khoản cho chính admin đang đăng nhập trong `AdminDashboard.ts`.
+
+**Các file đã thay đổi:**
+1. Frontend:
+   - `frontend/src/api/client.ts`
+   - `frontend/src/app/AccountProfilePage.ts`
+   - `frontend/src/app/AdminDashboard.ts`
+   - `frontend/src/app/App.ts`
+   - `frontend/src/app/Checkout.ts`
+   - `frontend/src/app/OrganizerDashboard.ts`
+2. Backend:
+   - `backend/src/main/java/com/haolo/ticketing/ai/AiTicketingService.java`
+3. Tài liệu:
+   - `docs/PROGRESS.md`
+   - `docs/HANDOFF.md`
+   - `docs/TASKS.md`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Full Frontend Test Suite & Production Build
+cmd /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: 84/84 tests PASS 100% (5 suites, 84 cases), built in 193ms (dist/index.html generated, 0 TypeScript errors)
+
+# 2. OpenAPI 3.1 Contract Verification
+cmd /c "npm test --prefix tools/contracts"
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases
+
+# 3. Full Backend Regression Suite
+.\backend\mvnw.cmd -f backend/pom.xml test
+# Kết quả: Tests run: 357, Failures: 0, Errors: 0, Skipped: 121 -> BUILD SUCCESS (22.303s)
+```
 
 ---
 

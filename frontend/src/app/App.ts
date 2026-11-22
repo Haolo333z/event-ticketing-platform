@@ -372,7 +372,9 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   const seatMap=snapshot?.mode==='SEATED'?[...snapshot.seats].sort((a,b)=>a.label.localeCompare(b.label,'vi',{numeric:true})):[];
   const currentPayload=type?.mode==='SEATED'?{eventId:selected,ticketTypeId:typeId,seatIds:[...seatIds].sort()}:{eventId:selected,ticketTypeId:typeId,quantity};
   const validSelection=type?.mode==='SEATED'?seatIds.length>=1&&seatIds.length<=6&&seatIds.every(id=>seatMap.some(s=>s.id===id&&s.status==='AVAILABLE')):quantity>=1&&quantity<=6&&Number.isInteger(quantity)&&available!==null&&available!==0;
-  const canBook=!!pending||!!(detail&&type&&type.active&&validSelection&&completed!==JSON.stringify(currentPayload));
+  const isSaleEnded = detail?.saleEndAt ? (Date.parse(detail.saleEndAt) <= now) : false;
+  const isSaleNotStarted = detail?.saleStartAt ? (Date.parse(detail.saleStartAt) > now) : false;
+  const canBook = !isSaleEnded && !isSaleNotStarted && (!!pending || !!(detail && type && type.active && validSelection && completed !== JSON.stringify(currentPayload)));
   const remaining=booking?Math.max(0,Math.ceil((Date.parse(booking.expiresAt)-now)/1000)):0;
 
   // DỌN RÁC & LỌC TRÙNG SỰ KIỆN TEST CŨ
@@ -383,11 +385,13 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   });
 
   const uniqueEvents: Event[] = [];
-  const seenTitles = new Set<string>();
+  const seenKeys = new Set<string>();
   for (const ev of cleanedEvents) {
-    const norm = ev.title.trim().toLowerCase();
-    if (!seenTitles.has(norm)) {
-      seenTitles.add(norm);
+    // Phân biệt theo mode vé (GA vs SEATED) để sự kiện ghế chỉ định không bị nuốt bởi sự kiện GA trùng tên
+    const hasSeated = ev.ticketTypes.some(t => t.mode === 'SEATED');
+    const norm = ev.title.trim().toLowerCase() + (hasSeated ? ':seated' : ':ga');
+    if (!seenKeys.has(norm)) {
+      seenKeys.add(norm);
       uniqueEvents.push(ev);
     }
   }
@@ -575,7 +579,9 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
             },
               h('div', { className: 'event-image-wrap' },
                 h('img', { src: getEventPoster(event.title, event.id), alt: event.title, className: 'event-poster', loading: 'lazy' }),
-                h('div', { className: 'event-mark' }, event.ticketTypes.some(t => t.mode === 'GA') ? '🎟️ VÉ GA' : '💺 SEATED 3D'),
+                h('div', { className: 'event-mark' + ((event.saleEndAt && Date.parse(event.saleEndAt) <= now) ? ' mark-closed' : '') },
+                  (event.saleEndAt && Date.parse(event.saleEndAt) <= now) ? '⛔ ĐÃ ĐÓNG CỔNG BÁN VÉ' : event.ticketTypes.some(t => t.mode === 'GA') ? '🎟️ VÉ GA' : '💺 SEATED 3D'
+                ),
                 h('div', { className: 'event-category-tag' }, getEventCategory(event.title))
               ),
               h('div', { className: 'event-card-body' },
@@ -665,8 +671,8 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
         // TICKET BANNER HEADER (NGANG 2 PHẦN CHUẨN TICKETBOX)
         detail && h('div', { className: 'ticketbox-detail-banner' },
           h('div', { className: 'banner-content-left' },
-            h('div', { className: 'banner-format-tag' },
-              detail.ticketTypes.some(t => t.mode === 'SEATED') ? '💺 SỰ KIỆN GHẾ CHỈ ĐỊNH 3D' : '🎟️ VÉ VÀO CỬA TỰ DO (GA)'
+            h('div', { className: 'banner-format-tag' + (isSaleEnded ? ' tag-closed' : '') },
+              isSaleEnded ? '⛔ ĐÃ ĐÓNG CỔNG BÁN VÉ' : detail.ticketTypes.some(t => t.mode === 'SEATED') ? '💺 SỰ KIỆN GHẾ CHỈ ĐỊNH 3D' : '🎟️ VÉ VÀO CỬA TỰ DO (GA)'
             ),
             h('h1', { className: 'banner-event-title' }, detail.title),
             h('div', { className: 'banner-event-details' },
@@ -849,12 +855,15 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
                 h('span', { className: 'selected-seats-badge' }, `Đã chọn: ${seatIds.length} ghế`)
               ),
 
+              isSaleEnded && h('div', { className: 'alert warning sale-closed-alert', style: { margin: '0.75rem 0', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.85rem' } },
+                '⛔ Sự kiện đã đóng cổng bán vé vào lúc ' + formatEventDate(detail?.saleEndAt || detail?.startsAt || '') + '. Không thể giữ thêm vé mới.'
+              ),
               h('small', { className: 'muted' }, 'Tối đa 6 vé mỗi booking. Tồn kho được kiểm tra lại khi gửi.'),
               h('button', {
                 type: 'submit',
                 className: 'primary submit-booking-btn',
-                disabled: busy || !canBook
-              }, busy ? 'Đang gửi…' : pending ? 'Thử lại cùng yêu cầu' : type?.mode === 'SEATED' ? 'Giữ ghế đã chọn' : 'Giữ vé GA')
+                disabled: busy || !canBook || isSaleEnded
+              }, busy ? 'Đang gửi…' : pending ? 'Thử lại cùng yêu cầu' : isSaleEnded ? 'Đã đóng cổng bán vé' : isSaleNotStarted ? 'Chưa mở bán' : type?.mode === 'SEATED' ? 'Giữ ghế đã chọn' : 'Giữ vé GA')
             ),
 
             // Resale cho sự kiện đang chọn nếu có
