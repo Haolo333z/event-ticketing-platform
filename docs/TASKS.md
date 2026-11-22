@@ -461,3 +461,29 @@
   - **Hạng mục 3:** Trang Quản Lý Tài Khoản Cá Nhân (`/tai-khoan`) 5 Tab (Profile, Security & Sessions, VAT Invoice Defaults, Notifications/Waitlists/Transfers, Organizer Partner) và tích hợp tự động điền VAT defaults vào `Checkout.ts`.
   - **Flyway V28:** `V28__user_profile_sessions_and_vat_defaults.sql` thêm avatar, VAT defaults vào `users`; thêm user_agent, ip_address vào `refresh_tokens`.
   - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend Vitest PASS 100%, Vite build SUCCESS (179ms), 47 operations / 69 payload cases OpenAPI 3.1 PASS 100%.
+
+- [x] **T29 — Tối Ưu Giao Diện Theo Phong Cách Ticketbox.vn, Tách Trang Chi Tiết & Dọn Lỗi Dữ Liệu Hiển Thị (Done, 2026-11-22):**
+  - **Hạng mục 1 — Sửa 3 lỗi hiển thị & dọn rác dữ liệu:**
+    - Khắc phục triệt để lỗi `Giá từ: ∞ đ` bằng helper an toàn `getEventMinPriceText(ticketTypes)`. Trả về `"Đang cập nhật"` hoặc `"Miễn phí"` khi danh sách vé rỗng hoặc chưa kích hoạt, tuyệt đối không gọi `vnd(Math.min(...[]))`.
+    - Chuẩn hóa định dạng ngày giờ: helper `formatEventDate(value)` chỉ xuất ngày ngắn gọn `DD/MM/YYYY` (ví dụ `28/11/2026`), loại bỏ hoàn toàn phần giây `16:31:45`.
+    - Dọn dữ liệu rác & trùng lặp: bộ lọc tự động loại trừ các sự kiện mang tên test (`Concert Concurrency Check-in`, `Other Event`), kết hợp lọc tiêu đề `uniqueEvents` giữ 1 bản ghi duy nhất, loại bỏ trùng lặp.
+    - Đa dạng hóa 100% hình ảnh poster theo thể loại (`CONCERT`, `THEATER`, `CONFERENCE`, `SPORTS`, `ONLINE`) từ bộ sưu tập Unsplash chất lượng cao 16:9, không lặp lại cùng một ảnh.
+    - Giới hạn hiển thị 8–12 sự kiện/trang kèm nút "Xem thêm sự kiện ↓".
+  - **Hạng mục 2 — Cấu trúc lại Header & Thanh danh mục chuẩn Ticketbox.vn:**
+    - Bỏ thanh `DEMO LOCAL · KHÔNG THU TIỀN THẬT` (`.topbar-utility-strip`) ở đầu trang (chuyển thành một dòng lưu ý Sandbox nhỏ trang trọng trong màn hình Checkout).
+    - Header chính 1 hàng nền tối hiện đại `#1E1E24`, chữ trắng, điểm nhấn xanh `#2DC275`:
+      - Trái: Logo `EventFlow` với chữ trắng đậm và dấu chấm xanh mint `#2DC275`.
+      - Giữa: Thanh tìm kiếm Ticketbox bo tròn (`border-radius: 9999px`) với icon kính lúp 🔍 và placeholder *"Bạn tìm gì hôm nay? Tên concert, nghệ sĩ, địa điểm..."*.
+      - Phải: Menu thả xuống "Dành cho Ban tổ chức ▾" (*Giải pháp*, *Bảng giá*, *Liên hệ*); nút `🎟️ Vé của tôi`; nút nổi bật `+ Tạo sự kiện` (`.btn-create-event`); cụm Avatar Dropdown Menu người dùng phân quyền 4 vai trò.
+    - Thanh danh mục ngang mỏng ngay dưới Header (`.ticketbox-category-strip`, nền `#25252D`): `Tất cả` · `🎸 Nhạc sống` · `🎭 Sân khấu & Nghệ thuật` · `⚽ Thể thao` · `💡 Hội thảo` · `💻 Sự kiện Online` · `🏷️ Vé chuyển nhượng (Resale)`.
+  - **Hạng mục 3 — Tối ưu bố cục Trang chủ `/` (Full-Width 4 cột — Xóa hoàn toàn khoảng trắng bên phải):**
+    - Bỏ hoàn toàn cột đặt vé `.booking-panel` bên cạnh ở màn hình danh sách sự kiện, trả lại 100% chiều rộng màn hình.
+    - Tầng 1: Hero Banner Slider (2 Poster lớn tỷ lệ 16:9 đặt cạnh nhau) có overlay gradient tối sang trọng, tên sự kiện, ngày diễn, địa điểm, nút "Xem chi tiết & Đặt vé →".
+    - Tầng 2: Lưới "Sự kiện nổi bật" Grid 4 cột tràn ngang 100% (`event-grid-4col`), responsive 4/3/2/1 cột. Thẻ sự kiện tối giản Ticketbox: ảnh 16:9 bo góc 12px hover zoom, badge góc trên, 3 dòng sạch sẽ (tên sự kiện, `Giá từ: xxx.xxx đ` màu xanh `#2DC275`, ngày `DD/MM/YYYY` + địa điểm), nút bấm `.event-btn` bảo toàn 100% test `App.test.ts`.
+    - Tầng 3: Khu vực "Vé chuyển nhượng chính chủ (Fan-to-Fan Resale)" dạng 4 thẻ ngang.
+    - Giữ nguyên nút nổi Trợ lý AI Concierge; dock liên hệ thu gọn tinh tế.
+  - **Hạng mục 4 — Trang Chi Tiết Sự Kiện & Đặt Vé riêng biệt (khi chọn sự kiện):**
+    - Nút quay lại danh sách sự kiện: `← Quay lại danh sách sự kiện`.
+    - Ticket Banner Header ngang 2 phần: Trái là Tên sự kiện lớn H1, thời gian `DD/MM/YYYY`, địa điểm, giá từ, nút "Mua vé ngay ↓", nút "🔔 Nhắc tôi trước 15 phút"; Phải là Poster lớn 16:9 sắc nét bo góc 16px.
+    - Thân 2 cột cân đối: Trái là Giới thiệu, Lịch trình, Chọn hạng vé GA/Seated, Sân khấu 3D, Sơ đồ ghế tương tác, Best Seats Picker, Seat View Preview SVG, Smart Waitlist; Phải là Khung Tóm tắt đơn hàng cố định (`.booking-panel` sticky `top: 80px`), danh sách ghế chọn, bộ đếm ngược 10 phút, nhập Voucher, nút "Giữ vé & Thanh toán", cổng VNPAY Sandbox / mô phỏng, xuất hóa đơn VAT.
+  - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (255ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.

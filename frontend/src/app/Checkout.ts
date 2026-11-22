@@ -103,6 +103,10 @@ export function Checkout({api,store,booking,onChange}:{api:Api;store:Store;booki
   return h('section',{className:'checkout','aria-label':'Thanh toán mô phỏng'},
     h('h3',null,'Thanh toán mô phỏng'),
     h('p',{className:'demo-warning'},'Demo — không thu tiền thật. Không nhập thông tin thẻ.'),
+    h('div',{className:'sandbox-notice-strip',style:{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'8px',padding:'8px 12px',marginBottom:'12px',fontSize:'0.8rem',color:'#1e40af',display:'flex',alignItems:'center',gap:'6px'}},
+      h('span',null,'ℹ️'),
+      h('span',null,'Môi trường thanh toán Sandbox mô phỏng — Không phát sinh giao dịch tiền thật.')
+    ),
     error&&h('div',{
       role:'alert',
       className:error.code==='PAYMENT_GATEWAY_CIRCUIT_OPEN'?'alert warning circuit-breaker-alert':'alert error',

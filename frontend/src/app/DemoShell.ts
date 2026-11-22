@@ -75,12 +75,17 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('ALL');
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
       if (target && !target.closest('.user-profile-widget')) {
         setAvatarDropdownOpen(false);
+      }
+      if (target && !target.closest('.nav-dropdown-wrapper')) {
+        setDropdownOpen(null);
       }
     }
     if (typeof window !== 'undefined') {
@@ -184,185 +189,92 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   }
 
   return h('div', { className: 'eventflow-app-shell' },
-    h('div', { className: 'topbar-utility-strip' },
-      h('div', { className: 'topbar-utility-container' },
-        h('div', { className: 'utility-badge-demo' }, '⚡ DEMO LOCAL · KHÔNG THU TIỀN THẬT'),
-        h('div', { className: 'system-status-indicator' },
-          h('span', { className: 'status-dot pulse' }),
-          'Live PostgreSQL & Kafka EDA'
-        )
-      )
-    ),
-    h('header', { className: 'demo-topbar shell' },
+    h('header', { className: 'demo-topbar ticketbox-header' },
       h('div', { className: 'brand-container' },
         h('a', {
           href: '/',
-          className: 'brand',
+          className: 'brand brand-ticketbox',
           onClick: (e) => { e.preventDefault(); navigate('/'); }
-        }, 'EventFlow')
+        },
+          'EventFlow',
+          h('span', { className: 'brand-dot' }, '•')
+        )
       ),
 
-      // Corporate Navigation Links with Multi-Page Router & Active Indicators
-      h('nav', { className: 'corporate-nav-links', 'aria-label': 'Điều hướng chính' },
-        // 0. Trang chủ
-        h('a', {
-          href: '/',
-          className: 'nav-link' + (currentPath === '/' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/'); }
-        }, 'Trang chủ'),
+      // Ticketbox Rounded Search Bar (Center)
+      h('div', { className: 'ticketbox-search-container' },
+        h('span', { className: 'search-icon' }, '🔍'),
+        h('input', {
+          type: 'search',
+          className: 'ticketbox-search-input',
+          placeholder: 'Bạn tìm gì hôm nay? Tên concert, nghệ sĩ, địa điểm...',
+          value: headerSearchQuery,
+          onChange: (e: any) => {
+            const val = e.target.value;
+            setHeaderSearchQuery(val);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('eventflow:search-query', { detail: val }));
+            }
+          },
+          onKeyDown: (e: any) => {
+            if (e.key === 'Enter') {
+              if (currentPath !== '/' && currentPath !== '/dat-ve' && currentPath !== '/events') {
+                navigate('/');
+              }
+            }
+          }
+        })
+      ),
 
-        // 1. Đặt vé
-        h('a', {
-          href: '/dat-ve',
-          className: 'nav-link' + ((currentPath === '/dat-ve' || currentPath === '/events') ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/dat-ve'); }
-        }, 'Đặt vé'),
-
-        // 2. Mega Dropdown: Giải pháp
-        h('div', { className: 'nav-dropdown-wrapper' + (dropdownOpen === 'solutions' ? ' open' : '') },
+      // Ticketbox Actions Right Group
+      h('div', { className: 'topbar-actions ticketbox-actions' },
+        // Dropdown: Dành cho Ban tổ chức ▾
+        h('div', { className: 'nav-dropdown-wrapper' + (dropdownOpen === 'organizer-menu' ? ' open' : '') },
           h('button', {
             type: 'button',
-            className: 'nav-link dropdown-toggle' + (currentPath === '/giai-phap' ? ' active' : ''),
-            onClick: () => setDropdownOpen(curr => curr === 'solutions' ? null : 'solutions')
+            className: 'nav-link dropdown-toggle organizer-menu-btn',
+            onClick: () => setDropdownOpen(curr => curr === 'organizer-menu' ? null : 'organizer-menu')
           },
-            'Giải pháp ',
-            h('span', { className: 'nav-caret' }, '⌵')
+            'Dành cho Ban tổ chức ',
+            h('span', { className: 'nav-caret' }, '▾')
           ),
-          h('div', { className: 'mega-menu-panel solutions-panel' },
-            h('div', { className: 'mega-menu-grid' },
-              h('div', { className: 'mega-menu-col' },
-                h('div', { className: 'mega-col-header' }, 'VẬN HÀNH & BÁN VÉ'),
-                h('a', {
-                  href: '/giai-phap',
-                  className: 'mega-item',
-                  onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-                },
-                  h('span', { className: 'mega-item-icon' }, '⚡'),
-                  h('div', { className: 'mega-item-content' },
-                    h('strong', { className: 'mega-item-title' }, 'Giải pháp Bán vé Tốc độ cao'),
-                    h('span', { className: 'mega-item-desc' }, 'Xử lý hàng vạn booking/giây, độ trễ < 50ms')
-                  )
-                ),
-                h('a', {
-                  href: '/giai-phap',
-                  className: 'mega-item',
-                  onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-                },
-                  h('span', { className: 'mega-item-icon' }, '🎭'),
-                  h('div', { className: 'mega-item-content' },
-                    h('strong', { className: 'mega-item-title' }, 'Quản trị Ghế ngồi Độc quyền'),
-                    h('span', { className: 'mega-item-desc' }, 'Sơ đồ Stage/Sân khấu chuẩn rạp hát, chọn ghế realtime')
-                  )
-                )
-              ),
-              h('div', { className: 'mega-menu-col' },
-                h('div', { className: 'mega-col-header' }, 'CÔNG NGHỆ & BẢO MẬT'),
-                h('a', {
-                  href: '/giai-phap',
-                  className: 'mega-item',
-                  onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-                },
-                  h('span', { className: 'mega-item-icon' }, '🛡️'),
-                  h('div', { className: 'mega-item-content' },
-                    h('strong', { className: 'mega-item-title' }, 'Công nghệ Chống bán lố Zero Oversell'),
-                    h('span', { className: 'mega-item-desc' }, 'Khóa hàng ACID PostgreSQL, bảo vệ 100% tồn kho')
-                  )
-                ),
-                h('a', {
-                  href: '/giai-phap',
-                  className: 'mega-item',
-                  onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-                },
-                  h('span', { className: 'mega-item-icon' }, '🎟️'),
-                  h('div', { className: 'mega-item-content' },
-                    h('strong', { className: 'mega-item-title' }, 'Hệ thống Soát vé QR Code'),
-                    h('span', { className: 'mega-item-desc' }, 'Phát hành E-Ticket tự động kèm mã QR SVG tại cổng')
-                  )
-                )
-              )
+          h('div', { className: 'mega-menu-panel ticketbox-organizer-panel' },
+            h('a', {
+              href: '/giai-phap',
+              className: 'dropdown-menu-item',
+              onClick: (e) => { e.preventDefault(); setDropdownOpen(null); navigate('/giai-phap'); }
+            },
+              h('span', { className: 'item-icon' }, '⚡'),
+              h('span', { className: 'item-text' }, 'Giải pháp công nghệ')
+            ),
+            h('a', {
+              href: '/bang-gia',
+              className: 'dropdown-menu-item',
+              onClick: (e) => { e.preventDefault(); setDropdownOpen(null); navigate('/bang-gia'); }
+            },
+              h('span', { className: 'item-icon' }, '💎'),
+              h('span', { className: 'item-text' }, 'Bảng giá dịch vụ')
+            ),
+            h('a', {
+              href: '/lien-he',
+              className: 'dropdown-menu-item',
+              onClick: (e) => { e.preventDefault(); setDropdownOpen(null); navigate('/lien-he'); }
+            },
+              h('span', { className: 'item-icon' }, '📞'),
+              h('span', { className: 'item-text' }, 'Liên hệ hợp tác')
             )
           )
         ),
 
-        // 3. Dropdown: Ngành nghề
-        h('div', { className: 'nav-dropdown-wrapper' + (dropdownOpen === 'industries' ? ' open' : '') },
-          h('button', {
-            type: 'button',
-            className: 'nav-link dropdown-toggle',
-            onClick: () => setDropdownOpen(curr => curr === 'industries' ? null : 'industries')
-          },
-            'Ngành nghề ',
-            h('span', { className: 'nav-caret' }, '⌵')
-          ),
-          h('div', { className: 'mega-menu-panel industries-panel' },
-            h('div', { className: 'industries-list' },
-              h('a', {
-                href: '/giai-phap',
-                className: 'mega-item',
-                onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-              },
-                h('span', { className: 'mega-item-icon' }, '🎸'),
-                h('div', { className: 'mega-item-content' },
-                  h('strong', { className: 'mega-item-title' }, 'Đại nhạc hội & Concert'),
-                  h('span', { className: 'mega-item-desc' }, 'Quy mô 5.000 - 50.000 khán giả mở bán đồng loạt')
-                )
-              ),
-              h('a', {
-                href: '/giai-phap',
-                className: 'mega-item',
-                onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-              },
-                h('span', { className: 'mega-item-icon' }, '🎻'),
-                h('div', { className: 'mega-item-content' },
-                  h('strong', { className: 'mega-item-title' }, 'Nhà hát & Nghệ thuật Hàn lâm'),
-                  h('span', { className: 'mega-item-desc' }, 'Phân tầng khán phòng & giữ ghế chỉ định chính xác')
-                )
-              ),
-              h('a', {
-                href: '/giai-phap',
-                className: 'mega-item',
-                onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-              },
-                h('span', { className: 'mega-item-icon' }, '💡'),
-                h('div', { className: 'mega-item-content' },
-                  h('strong', { className: 'mega-item-title' }, 'Hội nghị Công nghệ & Triển lãm'),
-                  h('span', { className: 'mega-item-desc' }, 'Soát vé mã QR đa cổng, phân luồng khách VIP')
-                )
-              ),
-              h('a', {
-                href: '/giai-phap',
-                className: 'mega-item',
-                onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-              },
-                h('span', { className: 'mega-item-icon' }, '⚽'),
-                h('div', { className: 'mega-item-content' },
-                  h('strong', { className: 'mega-item-title' }, 'Sự kiện Thể thao & Giải đấu'),
-                  h('span', { className: 'mega-item-desc' }, 'Kiểm soát vé khán đài A, B, C, D tốc độ cao')
-                )
-              )
-            )
-          )
-        ),
+        // Direct: Vé của tôi
+        h('button', {
+          type: 'button',
+          className: 'nav-btn-my-tickets' + (currentPath === '/ve-cua-toi' ? ' active' : ''),
+          onClick: () => navigate('/ve-cua-toi'),
+          title: 'Vé của tôi & Lịch sử đơn'
+        }, '🎟️ Vé của tôi'),
 
-        // Direct Links
-        h('a', {
-          href: '/bang-gia',
-          className: 'nav-link' + (currentPath === '/bang-gia' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/bang-gia'); }
-        }, 'Bảng giá'),
-        h('a', {
-          href: '/giai-phap',
-          className: 'nav-link' + (currentPath === '/giai-phap' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/giai-phap'); }
-        }, 'Về chúng tôi'),
-        h('a', {
-          href: '/lien-he',
-          className: 'nav-link' + (currentPath === '/lien-he' ? ' active' : ''),
-          onClick: (e) => { e.preventDefault(); navigate('/lien-he'); }
-        }, 'Liên hệ')
-      ),
-
-      h('div', { className: 'topbar-actions' },
+        // Nổi bật: + Tạo sự kiện
         h('button', {
           type: 'button',
           className: 'topbar-cta-btn btn-create-event',
@@ -486,6 +398,34 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
             }
           }, 'Quản trị demo')
         )
+      )
+    ),
+
+    // Ticketbox Category Sub-nav (mỏng ngay dưới Header)
+    (currentPath === '/' || currentPath === '/dat-ve' || currentPath === '/events') && h('nav', {
+      className: 'ticketbox-category-strip',
+      'aria-label': 'Danh mục sự kiện Ticketbox'
+    },
+      h('div', { className: 'category-strip-inner' },
+        [
+          { id: 'ALL', label: 'Tất cả' },
+          { id: 'CONCERT', label: '🎸 Nhạc sống' },
+          { id: 'THEATER', label: '🎭 Sân khấu & Nghệ thuật' },
+          { id: 'SPORTS', label: '⚽ Thể thao' },
+          { id: 'CONFERENCE', label: '💡 Hội thảo' },
+          { id: 'ONLINE', label: '💻 Sự kiện Online' },
+          { id: 'RESALE', label: '🏷️ Vé chuyển nhượng (Resale)' }
+        ].map(cat => h('button', {
+          key: cat.id,
+          type: 'button',
+          className: 'category-strip-item' + (activeCategory === cat.id ? ' active' : ''),
+          onClick: () => {
+            setActiveCategory(cat.id);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('eventflow:category-select', { detail: cat.id }));
+            }
+          }
+        }, cat.label))
       )
     ),
 

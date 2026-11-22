@@ -4,48 +4,69 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK T28: SỬA DỨT ĐIỂM TOKEN /DAT-VE, TỐI ƯU NAVBAR AVATAR DROPDOWN & XÂY TRANG TÀI KHOẢN CÁ NHÂN /TAI-KHOAN 5 TAB** (2026-11-22)
-- **Tiến độ:** Hoàn thiện trọn vẹn 3 hạng mục nghiệp vụ thương mại cao cấp:
-  - **Hạng mục 1 — Sửa dứt điểm lỗi Token không hợp lệ trên `/dat-ve`:**
-    - Cập nhật `MockBearerFilter.java`: Thêm method kiểm tra `isPublicEndpoint(req)` đối với toàn bộ các endpoints GET công khai (`/api/events/**`, `/api/v3/events/**`, `/api/categories/**`, `/api/plans/**`, `/api/organizer/venues`, `/api/organizer/categories`, `/api/e-invoices/lookup/**`, `/api/transfers/lookup/**`, `/api/ai/status`, `/actuator/health`, `/error`...) và các API công khai khác (`/api/auth/**`, `/api/security/anti-bot/**`, `/api/contact/leads`, `/api/organizer/onboard/**`, `/api/vouchers/validate`, `/api/ai/concierge/chat`, waiting room enter). Nếu token gửi lên bị lỗi/hết hạn hoặc user không tồn tại nhưng endpoint là công khai, filter bỏ qua token lỗi và cho phép request tiếp tục xử lý như khách vãng lai (anonymous), loại bỏ hoàn toàn mã lỗi 401 chặn dữ liệu sự kiện.
-    - `client.ts`: Interceptor 401 tự động refresh cookie một lần; nếu refresh thất bại thì xóa token lỗi và tự động fallback retry bằng header công khai/token demo, đảm bảo trang chủ và `/dat-ve` luôn hiển thị dữ liệu trơn tru.
-  - **Hạng mục 2 — Tối ưu Navbar & Avatar Dropdown Menu tương phản cao:**
-    - Navbar làm gọn gàng: xóa bỏ link `🎪 Khu vực Tổ chức` và nút `📱 Soát Vé` khỏi direct nav links.
-    - Giữ duy nhất 1 nút cam nổi bật **"+ Tạo sự kiện"** (`.btn-create-event`).
-    - Cụm Avatar trigger: Avatar tròn ký tự viết hoa + Tên người dùng + mũi tên `▾` (`white-space: nowrap !important;`).
-    - Avatar Dropdown Menu: Nền trắng tinh khiết, tương phản cao, chữ đậm rõ nét, shadow sâu, viền bo tròn 14px, click outside tự đóng:
-      1. Header người dùng: Họ tên đậm nét, email, badges danh sách vai trò (`CUSTOMER`, `ORGANIZER`, `STAFF`, `ADMIN`).
-      2. 👤 Thông tin tài khoản (`/tai-khoan`).
-      3. 🎟️ Vé của tôi & Lịch sử đơn (`/ve-cua-toi`).
-      4. 🎪 Quản trị Sự kiện (`/organizer` - khi có vai trò ORGANIZER hoặc ADMIN).
-      5. 📱 Cổng Soát vé (`/staff` - khi có vai trò STAFF hoặc ADMIN).
-      6. 🛡️ Quản trị Sàn (`/admin` - khi có vai trò ADMIN).
-      7. Đường kẻ divider phân tách + 🚪 Đăng xuất (màu đỏ `#dc2626`, hover nền `#fef2f2`).
-  - **Hạng mục 3 — Trang Quản Lý Tài Khoản Cá Nhân (`/tai-khoan`) 5 Tab & Tích hợp VAT Defaults:**
-    - Flyway migration `V28__user_profile_sessions_and_vat_defaults.sql`:
-      - Thêm các cột vào `ticketing.users`: `avatar_url TEXT`, `vat_company_name VARCHAR(255)`, `vat_tax_code VARCHAR(50)`, `vat_company_address TEXT`, `vat_recipient_email VARCHAR(255)`.
-      - Thêm các cột vào `ticketing.refresh_tokens`: `user_agent VARCHAR(500)`, `ip_address VARCHAR(100)`, index `idx_refresh_tokens_user_active`.
-    - Backend:
-      - `RefreshTokenService.java`: Quản lý Token Families có gắn thiết bị & IP, truy vấn active sessions `getActiveSessions`, thu hồi phiên chỉ định `revokeFamily`, thu hồi các phiên khác `revokeOtherFamilies`.
-      - `AuthController.java`: Ghi nhận `User-Agent` và `RemoteAddr` khi đăng nhập, đăng ký và xoay token; tương thích ngược overload với unit test cũ.
-      - `UserProfileController.java`: Endpoints chuẩn Anti-IDOR (`GET /api/me/profile`, `PUT /api/me/profile`, `POST /api/me/change-password`, `GET /api/me/vat-defaults`, `PUT /api/me/vat-defaults`, `GET /api/me/sessions`, `DELETE /api/me/sessions/{familyId}`, `DELETE /api/me/sessions/revoke-others`).
-      - `TicketTransferController.java` & `TicketTransferService.java`: Bổ sung `GET /api/me/transfers/received`.
-      - `SecurityConfiguration.java`: Cấp quyền truy cập authenticated cho toàn bộ `/api/me/**`.
-    - Frontend:
-      - `client.ts`: Bổ sung đầy đủ types (`UserProfile`, `ActiveSession`, `VatDefaults`, `ChangePasswordRequest`), interface `Api.profile` và `Api.transfers.received()`.
-      - `AccountProfilePage.ts`: Component trang cá nhân đầy đủ 5 Tab:
-        1. *Tab 1 — Profile:* Họ tên, SĐT, Avatar URL, Email (read-only), Badges vai trò, Trạng thái liên kết Google OAuth2 1-Chạm.
-        2. *Tab 2 — Security & Sessions:* Đổi mật khẩu (BCrypt), Bảng quản lý thiết bị/phiên hoạt động, Nút "Thu hồi phiên này", Nút "Đăng xuất khỏi mọi thiết bị khác".
-        3. *Tab 3 — VAT Invoice Defaults:* Lưu sẵn thông tin xuất VAT doanh nghiệp (Tên công ty, MST, Địa chỉ ĐKKD, Email nhận hóa đơn).
-        4. *Tab 4 — Notifications & Reminders:* 3 danh sách trực quan: Smart Waitlists (kèm nút hủy), Event Reminders (kèm nút hủy), Ticket Transfers (toggle vé đã gửi / vé đã nhận).
-        5. *Tab 5 — Organizer Partner:* Hiển thị thẻ đối tác: nếu đã là ORGANIZER/ADMIN -> nút vào thẳng `/organizer`; nếu đang chờ duyệt -> badge vàng kèm thông tin hồ sơ; nếu chưa đăng ký -> banner mời gọi kèm nút mở `OrganizerOnboardingModal`.
-      - `Checkout.ts`: Tích hợp checkbox "Xuất hóa đơn VAT (10%)" tự động điền thông tin doanh nghiệp đã lưu sẵn trong tài khoản.
+- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK T29: TỐI ƯU GIAO DIỆN THEO PHONG CÁCH TICKETBOX.VN, TÁCH TRANG CHI TIẾT & DỌN LỖI DỮ LIỆU HIỂN THỊ** (2026-11-22)
+- **Tiến độ:** Hoàn thiện trọn vẹn 4 hạng mục giao diện & dữ liệu thương mại cao cấp:
+  - **Hạng mục 1 — Sửa 3 lỗi hiển thị & dọn rác dữ liệu ngay lập tức:**
+    - Khắc phục triệt để lỗi `Giá từ: ∞ đ` bằng helper an toàn `getEventMinPriceText(ticketTypes)`. Trả về `"Đang cập nhật"` hoặc `"Miễn phí"` khi danh sách vé rỗng hoặc chưa kích hoạt, tuyệt đối không gọi `vnd(Math.min(...[]))`.
+    - Chuẩn hóa định dạng ngày giờ: helper `formatEventDate(value)` chỉ xuất ngày ngắn gọn `DD/MM/YYYY` (ví dụ `28/11/2026`), loại bỏ hoàn toàn phần giây `16:31:45` gây rối mắt.
+    - Dọn dữ liệu rác & trùng lặp: bộ lọc tự động loại trừ các sự kiện mang tên test (`Concert Concurrency Check-in`, `Other Event`), kết hợp lọc tiêu đề `uniqueEvents` giữ 1 bản ghi duy nhất, loại bỏ trùng lặp.
+    - Đa dạng hóa 100% hình ảnh poster theo thể loại (`CONCERT`, `THEATER`, `CONFERENCE`, `SPORTS`, `ONLINE`) từ bộ sưu tập Unsplash chất lượng cao 16:9, không lặp lại cùng một ảnh.
+    - Giới hạn hiển thị 8–12 sự kiện/trang kèm nút "Xem thêm sự kiện ↓" để không kéo dài trang vô tận.
+  - **Hạng mục 2 — Cấu trúc lại Header & Thanh danh mục chuẩn Ticketbox.vn:**
+    - Bỏ thanh `DEMO LOCAL · KHÔNG THU TIỀN THẬT` (`.topbar-utility-strip`) ở đầu trang (chuyển thành một dòng lưu ý Sandbox nhỏ trang trọng trong màn hình Checkout).
+    - Header chính 1 hàng nền tối hiện đại `#1E1E24`, chữ trắng, điểm nhấn xanh `#2DC275`:
+      - Trái: Logo `EventFlow` với chữ trắng đậm và dấu chấm xanh mint `#2DC275`.
+      - Giữa: Thanh tìm kiếm Ticketbox bo tròn (`border-radius: 9999px`) với icon kính lúp 🔍 và placeholder *"Bạn tìm gì hôm nay? Tên concert, nghệ sĩ, địa điểm..."*. Dispatch sự kiện tìm kiếm thời gian thực.
+      - Phải: Menu thả xuống "Dành cho Ban tổ chức ▾" (*Giải pháp*, *Bảng giá*, *Liên hệ*); nút `🎟️ Vé của tôi`; nút nổi bật `+ Tạo sự kiện` (`.btn-create-event`); cụm Avatar Dropdown Menu người dùng phân quyền 4 vai trò.
+    - Thanh danh mục ngang mỏng ngay dưới Header (`.ticketbox-category-strip`, nền `#25252D`): `Tất cả` · `🎸 Nhạc sống` · `🎭 Sân khấu & Nghệ thuật` · `⚽ Thể thao` · `💡 Hội thảo` · `💻 Sự kiện Online` · `🏷️ Vé chuyển nhượng (Resale)`.
+  - **Hạng mục 3 — Tối ưu bố cục Trang chủ `/` (Full-Width 4 cột — Xóa hoàn toàn khoảng trắng bên phải):**
+    - Bỏ hoàn toàn cột đặt vé `.booking-panel` bên cạnh ở màn hình danh sách sự kiện, trả lại 100% chiều rộng màn hình.
+    - Tầng 1: Hero Banner Slider (2 Poster lớn tỷ lệ 16:9 đặt cạnh nhau) có overlay gradient tối sang trọng, tên sự kiện, ngày diễn, địa điểm, nút "Xem chi tiết & Đặt vé →".
+    - Tầng 2: Lưới "Sự kiện nổi bật" Grid 4 cột tràn ngang 100% (`event-grid-4col`), responsive 4/3/2/1 cột. Thẻ sự kiện tối giản Ticketbox: ảnh 16:9 bo góc 12px hover zoom, badge góc trên, 3 dòng sạch sẽ (tên sự kiện, `Giá từ: xxx.xxx đ` màu xanh `#2DC275`, ngày `DD/MM/YYYY` + địa điểm), nút bấm `.event-btn` bảo toàn 100% test `App.test.ts`.
+    - Tầng 3: Khu vực "Vé chuyển nhượng chính chủ (Fan-to-Fan Resale)" dạng 4 thẻ ngang.
+    - Giữ nguyên nút nổi Trợ lý AI Concierge; dock liên hệ thu gọn tinh tế.
+  - **Hạng mục 4 — Trang Chi Tiết Sự Kiện & Đặt Vé riêng biệt (khi chọn sự kiện):**
+    - Nút quay lại danh sách sự kiện: `← Quay lại danh sách sự kiện`.
+    - Ticket Banner Header ngang 2 phần: Trái là Tên sự kiện lớn H1, thời gian `DD/MM/YYYY`, địa điểm, giá từ, nút "Mua vé ngay ↓", nút "🔔 Nhắc tôi trước 15 phút"; Phải là Poster lớn 16:9 sắc nét bo góc 16px.
+    - Thân 2 cột cân đối: Trái là Giới thiệu, Lịch trình, Chọn hạng vé GA/Seated, Sân khấu 3D, Sơ đồ ghế tương tác, Best Seats Picker, Seat View Preview SVG, Smart Waitlist; Phải là Khung Tóm tắt đơn hàng cố định (`.booking-panel` sticky `top: 80px`), danh sách ghế chọn, bộ đếm ngược 10 phút, nhập Voucher, nút "Giữ vé & Thanh toán", cổng VNPAY Sandbox / mô phỏng, xuất hóa đơn VAT.
 - **Kết quả kiểm chứng thực tế:**
   - Database: Chuỗi **28 Flyway migrations (`V1` $\rightarrow$ `V28`)** áp dụng tự động, đạt chuẩn **44 bảng nghiệp vụ** trong schema `ticketing`.
   - Backend (`.\backend\mvnw.cmd -f backend/pom.xml test`): **357/357 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn).
-  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (179ms)**.
+  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (255ms)**.
   - OpenAPI 3.1 Contracts (`cmd /c "npm test --prefix tools/contracts"`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
   - Git Hygiene: Không commit, không push, bảo toàn nguyên vẹn working tree theo đúng `AGENTS.md` và `docs/RULES.md`.
+
+---
+
+## T29 — Tối Ưu Giao Diện Theo Phong Cách Ticketbox.vn, Tách Trang Chi Tiết & Dọn Lỗi Dữ Liệu Hiển Thị (Done, 2026-11-22)
+
+**Phạm vi và đầu vào:** Sửa triệt để 3 lỗi hiển thị & dữ liệu (`Giá từ: ∞ đ`, ngày giờ giây rối mắt, rác test data), thiết kế lại thanh Header tối & Category sub-nav chuẩn Ticketbox.vn, chuyển trang chủ sang layout Full-Width 4 cột xóa bỏ khoảng trắng bên phải, và tách biệt màn hình Chi tiết sự kiện & Đặt vé với Ticket Banner Header 2 phần ngang.
+
+**Các file đã triển khai / cập nhật:**
+1. Frontend:
+   - `frontend/src/app/App.ts`
+   - `frontend/src/app/DemoShell.ts`
+   - `frontend/src/app/Checkout.ts`
+   - `frontend/src/styles.css`
+2. Tài liệu:
+   - `docs/PROGRESS.md`
+   - `docs/HANDOFF.md`
+   - `docs/TASKS.md`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Full Frontend Test Suite & Production Build
+cmd /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: 84/84 tests PASS 100% (5 suites, 84 cases), built in 255ms (dist/index.html generated)
+
+# 2. OpenAPI 3.1 Contract Verification
+cmd /c "npm test --prefix tools/contracts"
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases
+
+# 3. Full Backend Regression Suite
+.\backend\mvnw.cmd -f backend/pom.xml test
+# Kết quả: Tests run: 357, Failures: 0, Errors: 0, Skipped: 121 -> BUILD SUCCESS (23.576s)
+```
 
 ---
 

@@ -2,12 +2,12 @@
 
 Chốt ngày **22/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
-> **Cập nhật 22/11/2026:** Hoàn tất toàn diện **Task T28: Sửa Dứt Điểm Token /dat-ve, Tối Ưu Navbar Avatar Dropdown & Xây Trang Tài Khoản Cá Nhân /tai-khoan 5 Tab**:
-> - **Hạng mục 1:** Khắc phục triệt để lỗi token hết hạn chặn 401 trên các API công khai bằng helper `isPublicEndpoint(req)` trong `MockBearerFilter.java`, kết hợp interceptor tự phục hồi `client.ts` tự động fallback anonymous request.
-> - **Hạng mục 2:** Tối ưu hóa thanh Navbar: gom toàn bộ liên kết phân quyền vào duy nhất 1 cụm **Avatar + Tên + ▾** Dropdown Menu tương phản cao, chữ đậm sắc nét, phân tách rõ ràng 4 vai trò, kèm nút cam `+ Tạo sự kiện` nổi bật.
-> - **Hạng mục 3:** Xây dựng Trang Quản Lý Tài Khoản Cá Nhân (`/tai-khoan`) đầy đủ 5 Tab (Profile, Security & Sessions, VAT Invoice Defaults, Notifications & Reminders / Waitlists / Transfers, Organizer Partner). Tích hợp tự động điền VAT defaults vào `Checkout.ts`.
-> - **Flyway Migration V28:** Bổ sung `avatar_url`, các trường hóa đơn VAT mặc định vào `ticketing.users`; bổ sung `user_agent`, `ip_address` và chỉ mục vào `ticketing.refresh_tokens`.
-> - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (179ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.
+> **Cập nhật 22/11/2026 (Task T29):** Hoàn tất toàn diện **Task T29: Tối Ưu Giao Diện Theo Phong Cách Ticketbox.vn, Tách Trang Chi Tiết & Dọn Lỗi Dữ Liệu Hiển Thị**:
+> - **Hạng mục 1:** Khắc phục triệt để lỗi `Giá từ: ∞ đ` bằng helper an toàn `getEventMinPriceText()`; chuẩn hóa định dạng ngày `DD/MM/YYYY` bỏ hoàn toàn phần giây; dọn dữ liệu rác test và bản trùng lặp; đa dạng hóa 100% poster theo 5 thể loại Unsplash không lặp lại ảnh; phân trang 8–12 sự kiện kèm nút "Xem thêm".
+> - **Hạng mục 2:** Bỏ thanh utility strip cũ ở đầu trang; thiết kế lại Header chính 1 hàng nền tối `#1E1E24` chuẩn Ticketbox với thanh tìm kiếm bo tròn 9999px thời gian thực, menu Dành cho Ban tổ chức ▾, nút `🎟️ Vé của tôi`, nút cam `+ Tạo sự kiện`, và cụm Avatar Dropdown phân quyền 4 vai trò. Thêm thanh danh mục Ticketbox ngang mỏng (`.ticketbox-category-strip`) ngay dưới Header.
+> - **Hạng mục 3:** Chuyển đổi Trang chủ sang layout Full-Width 4 cột tràn ngang 100% (`.event-grid-4col`), xóa bỏ hoàn toàn cột đặt vé `.booking-panel` bên cạnh ở màn hình danh sách sự kiện (không còn khoảng trắng 40% bên phải). Tầng 1 Hero Banner Slider 2 poster lớn 16:9 cạnh nhau; Tầng 2 Lưới sự kiện tối giản Ticketbox; Tầng 3 Chợ vé chuyển nhượng chính chủ Fan-to-Fan Resale.
+> - **Hạng mục 4:** Tách riêng Trang Chi Tiết Sự Kiện & Đặt Vé độc lập với Ticket Banner Header 2 phần ngang (Trái: H1, Ngày, Địa điểm, Giá từ, Mua vé ngay, Nhắc 15 phút; Phải: Poster 16:9 lớn). Thân 2 cột cân đối với cột tóm tắt đơn hàng `.booking-panel` cố định sticky top: 80px, sơ đồ ghế 3D, Best Seats Picker, Seat View Preview SVG, Smart Waitlist, Voucher, xuất VAT và VNPAY Sandbox / mô phỏng.
+> - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (255ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.
 
 ## 1. Git và tiến độ
 

@@ -7509,3 +7509,762 @@ legend {
   padding: 12px 0;
 }
 
+
+/* =========================================================================
+   TICKETBOX.VN MODERN REDESIGN & FULL-WIDTH GRID STYLES
+   ========================================================================= */
+
+/* 1. Ticketbox Modern Dark Header (#1E1E24) */
+.ticketbox-header {
+  background: #1e1e24 !important;
+  border-bottom: 1px solid #2e2e38 !important;
+  color: #ffffff !important;
+  padding: 10px 32px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.brand-ticketbox {
+  color: #ffffff !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.5px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.brand-dot {
+  color: #2dc275 !important;
+  font-size: 28px !important;
+  line-height: 0 !important;
+}
+
+/* Center Rounded Search Bar */
+.ticketbox-search-container {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 20px;
+  background: #2b2b36;
+  border: 1px solid #3d3d4c;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 40px;
+  transition: all 0.2s ease;
+}
+
+.ticketbox-search-container:focus-within {
+  background: #333340;
+  border-color: #2dc275;
+  box-shadow: 0 0 0 3px rgba(45, 194, 117, 0.2);
+}
+
+.ticketbox-search-container .search-icon {
+  font-size: 14px;
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+.ticketbox-search-input {
+  border: none !important;
+  background: transparent !important;
+  color: #ffffff !important;
+  font-size: 13.5px !important;
+  width: 100% !important;
+  outline: none !important;
+  padding: 0 !important;
+}
+
+.ticketbox-search-input::placeholder {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Actions Right */
+.ticketbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.organizer-menu-btn {
+  color: #e2e8f0 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  padding: 8px 12px !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+}
+
+.organizer-menu-btn:hover {
+  color: #2dc275 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.ticketbox-organizer-panel {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
+  padding: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  min-width: 200px !important;
+}
+
+.nav-btn-my-tickets {
+  border: 1px solid #3d3d4c !important;
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 7px 16px !important;
+  border-radius: 9999px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-btn-my-tickets:hover, .nav-btn-my-tickets.active {
+  border-color: #2dc275 !important;
+  color: #2dc275 !important;
+  background: rgba(45, 194, 117, 0.1) !important;
+}
+
+.btn-create-event {
+  background: #2dc275 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  padding: 8px 18px !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 2px 8px rgba(45, 194, 117, 0.35) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-create-event:hover {
+  background: #26ab66 !important;
+  transform: translateY(-1px);
+}
+
+/* 2. Ticketbox Thin Horizontal Category Sub-Nav */
+.ticketbox-category-strip {
+  background: #25252d;
+  border-bottom: 1px solid #33333e;
+  padding: 4px 32px;
+  position: sticky;
+  top: 60px;
+  z-index: 90;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-strip-inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-strip-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.category-strip-item {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.category-strip-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.category-strip-item.active {
+  color: #2dc275;
+  background: rgba(45, 194, 117, 0.14);
+  font-weight: 700;
+}
+
+/* 3. Hero Banner Slider (2 Poster lớn 16:9 cạnh nhau) */
+.hero-banner-slider {
+  margin: 24px 0 28px;
+}
+
+.hero-slider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.hero-slide-card {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  background: #0f172a;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-slide-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.25);
+}
+
+.hero-slide-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.hero-slide-card:hover .hero-slide-bg {
+  transform: scale(1.05);
+}
+
+.hero-slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(15,23,42,0.7) 50%, rgba(15,23,42,0.96) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px 24px;
+  color: #ffffff;
+}
+
+.hero-slide-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.hero-slide-badge.fire {
+  background: rgba(239, 68, 68, 0.9);
+  color: #ffffff;
+}
+
+.hero-slide-badge.star {
+  background: rgba(45, 194, 117, 0.9);
+  color: #ffffff;
+}
+
+.hero-slide-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  color: #ffffff;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero-slide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.hero-slide-price {
+  color: #2dc275;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.hero-slide-btn {
+  border: none;
+  background: #2dc275;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  width: fit-content;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-slide-btn:hover {
+  background: #26ab66;
+}
+
+/* 4. Full-Width 4-Column Event Grid (No Booking Panel) */
+.catalog-full-width {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.section-heading-ticketbox {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.catalog-title-ticketbox {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.event-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 20px !important;
+}
+
+/* Ticketbox Minimalist Event Card */
+.ticketbox-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketbox-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.12);
+  border-color: #cbd5e1;
+}
+
+.ticketbox-card.selected {
+  border-color: #2dc275 !important;
+  box-shadow: 0 0 0 2px #2dc275, 0 8px 16px rgba(45, 194, 117, 0.15) !important;
+}
+
+.event-card-title {
+  font-size: 15.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+  height: 42px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.ticketbox-green-price {
+  color: #2dc275 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+
+.event-meta-line {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 4px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta-dot {
+  color: #cbd5e1;
+  font-weight: bold;
+}
+
+.event-venue-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.load-more-events-wrap {
+  text-align: center;
+  margin: 32px 0 16px;
+}
+
+.btn-load-more-events {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 24px;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.btn-load-more-events:hover {
+  background: #f8fafc;
+  border-color: #2dc275;
+  color: #2dc275;
+}
+
+/* 5. Fan-to-Fan Resale Home Showcase */
+.resale-home-showcase {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin: 36px 0 16px;
+}
+
+.resale-showcase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.resale-badge-tag {
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.resale-showcase-header h3 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.resale-trust-shield {
+  font-size: 13px;
+  color: #059669;
+  font-weight: 700;
+  background: #ecfdf5;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid #a7f3d0;
+}
+
+.resale-features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.resale-feature-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.resale-feature-box .feature-icon {
+  font-size: 24px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.resale-feature-box strong {
+  display: block;
+  font-size: 14px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.resale-feature-box p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* 6. Ticketbox Event Detail View & Ticket Banner */
+.event-detail-view-container {
+  margin-top: 16px;
+}
+
+.detail-back-navigation {
+  margin-bottom: 16px;
+}
+
+.back-to-catalog-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  padding: 8px 18px !important;
+  border-radius: 9999px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.back-to-catalog-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #2dc275 !important;
+  color: #2dc275 !important;
+}
+
+.ticketbox-detail-banner {
+  background: #1e1e24;
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 32px 36px;
+  margin-bottom: 28px;
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 32px;
+  align-items: center;
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.25);
+}
+
+.banner-format-tag {
+  display: inline-block;
+  background: rgba(45, 194, 117, 0.15);
+  color: #2dc275;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.banner-event-title {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.25;
+  margin: 0 0 16px;
+  color: #ffffff;
+}
+
+.banner-event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.detail-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-price-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2dc275;
+}
+
+.banner-actions-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.banner-cta-buy {
+  background: #2dc275;
+  color: #ffffff;
+  border: none;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 11px 26px;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(45, 194, 117, 0.4);
+  transition: all 0.2s ease;
+}
+
+.banner-cta-buy:hover {
+  background: #26ab66;
+  transform: translateY(-1px);
+}
+
+.banner-cta-reminder {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #475569;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 11px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.banner-cta-reminder:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.banner-poster-right {
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.banner-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.event-detail-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(360px, 1.2fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.detail-left-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-intro-section, .detail-seating-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.detail-intro-section h3, .detail-seating-section h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 14px;
+}
+
+.detail-description-text {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #475569;
+  margin: 0 0 16px;
+}
+
+.event-highlights-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.highlight-chip {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.sticky-booking-panel {
+  position: sticky !important;
+  top: 80px !important;
+  z-index: 10;
+}
+
+.selected-seats-badge {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #c7d2fe;
+}
+
+.submit-booking-btn {
+  width: 100% !important;
+  background: #2dc275 !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  padding: 12px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer;
+  margin-top: 14px !important;
+  transition: all 0.2s ease;
+}
+
+.submit-booking-btn:hover:not(:disabled) {
+  background: #26ab66 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .event-grid-4col {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-slider-grid {
+    grid-template-columns: 1fr;
+  }
+  .event-grid-4col {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .resale-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ticketbox-detail-banner {
+    grid-template-columns: 1fr;
+  }
+  .event-detail-workspace {
+    grid-template-columns: 1fr;
+  }
+  .sticky-booking-panel {
+    position: static !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .event-grid-4col {
+    grid-template-columns: 1fr !important;
+  }
+  .resale-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .ticketbox-search-container {
+    display: none;
+  }
+}
