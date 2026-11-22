@@ -1018,7 +1018,7 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
             h('button', {
               type: 'button',
               className: 'pricing-btn',
-              onClick: () => nav('/lien-he')
+              onClick: () => nav('/lien-he?package=starter')
             }, 'Chọn gói Khởi Nghiệp')
           ),
 
@@ -1044,7 +1044,7 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
             h('button', {
               type: 'button',
               className: 'pricing-btn primary',
-              onClick: () => nav('/lien-he')
+              onClick: () => nav('/lien-he?package=pro')
             }, 'Đăng ký gói Chuyên Nghiệp')
           ),
 
@@ -1068,7 +1068,7 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
             h('button', {
               type: 'button',
               className: 'pricing-btn',
-              onClick: () => nav('/lien-he')
+              onClick: () => nav('/lien-he?package=enterprise')
             }, 'Liên hệ tư vấn VIP')
           )
         ),

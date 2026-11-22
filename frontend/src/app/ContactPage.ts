@@ -1,20 +1,42 @@
-import { createElement as h, useState } from 'react';
+import { createElement as h, useState, useEffect } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
 import type { Api } from '../api/client.ts';
 
-export function ContactPage({ api, onNavigate }: { api: Api; onNavigate: (path: string) => void }) {
+function parseSelectedPackage(path?: string): string {
+  let search = '';
+  if (typeof window !== 'undefined' && window.location.search) {
+    search = window.location.search;
+  }
+  if (!search && path && path.includes('?')) {
+    search = path.slice(path.indexOf('?'));
+  }
+  const params = new URLSearchParams(search);
+  const pkg = (params.get('package') || params.get('plan') || '').toLowerCase();
+  if (pkg.includes('start')) return 'STARTER';
+  if (pkg.includes('ent')) return 'ENTERPRISE';
+  if (pkg.includes('pro')) return 'PRO';
+  return 'PRO';
+}
+
+export function ContactPage({ api, onNavigate, currentPath }: { api: Api; onNavigate: (path: string) => void; currentPath?: string }) {
   const [form, setForm] = useState({
     fullName: '',
     orgName: '',
     email: '',
     phone: '',
     eventType: 'CONCERT',
+    saasPlan: parseSelectedPackage(currentPath),
     message: ''
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [leadId, setLeadId] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const pkg = parseSelectedPackage(currentPath);
+    setForm(prev => ({ ...prev, saasPlan: pkg }));
+  }, [currentPath]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,7 +48,18 @@ export function ContactPage({ api, onNavigate }: { api: Api; onNavigate: (path: 
     setError(null);
     try {
       if (api.contact && typeof api.contact.submitLead === 'function') {
-        const res = await api.contact.submitLead(form);
+        const planName = form.saasPlan === 'STARTER' ? 'Khởi Nghiệp (Starter)' : form.saasPlan === 'ENTERPRISE' ? 'Doanh Nghiệp (Enterprise)' : 'Chuyên Nghiệp (Pro)';
+        const fullMessage = form.message.trim() 
+          ? `[Gói quan tâm: ${planName}] ${form.message.trim()}`
+          : `[Gói quan tâm: ${planName}] Yêu cầu tư vấn triển khai bán vé`;
+        const res = await api.contact.submitLead({
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          companyName: form.orgName.trim() || 'Cá nhân',
+          eventScale: form.saasPlan,
+          message: fullMessage
+        });
         setLeadId(res.id);
       }
       setSubmitted(true);
@@ -129,7 +162,7 @@ export function ContactPage({ api, onNavigate }: { api: Api; onNavigate: (path: 
                   className: 'hero-cta-coral',
                   onClick: () => {
                     setSubmitted(false);
-                    setForm({ fullName: '', orgName: '', email: '', phone: '', eventType: 'CONCERT', message: '' });
+                    setForm({ fullName: '', orgName: '', email: '', phone: '', eventType: 'CONCERT', saasPlan: parseSelectedPackage(currentPath), message: '' });
                   }
                 }, 'Gửi thêm yêu cầu khác'),
                 h('button', {
@@ -185,6 +218,19 @@ export function ContactPage({ api, onNavigate }: { api: Api; onNavigate: (path: 
                     value: form.orgName,
                     onChange: (e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, orgName: e.target.value })
                   })
+                )
+              ),
+
+              h('div', { className: 'form-group' },
+                h('label', { htmlFor: 'contact-saas-plan' }, 'Gói giải pháp dịch vụ quan tâm *'),
+                h('select', {
+                  id: 'contact-saas-plan',
+                  value: form.saasPlan,
+                  onChange: (e: ChangeEvent<HTMLSelectElement>) => setForm({ ...form, saasPlan: e.target.value })
+                },
+                  h('option', { value: 'STARTER' }, '🌱 Gói Khởi Nghiệp (Starter) — Phí sàn 8% / vé bán thành công (Tối đa 500 vé)'),
+                  h('option', { value: 'PRO' }, '🔥 Gói Chuyên Nghiệp (Pro) — Phí sàn 5% / vé bán thành công (Sơ đồ ghế 3D, Zero Oversell)'),
+                  h('option', { value: 'ENTERPRISE' }, '🏢 Gói Doanh Nghiệp (Enterprise) — Phí sàn 3% / vé bán thành công (Cluster riêng, SLA 99.99%)')
                 )
               ),
 

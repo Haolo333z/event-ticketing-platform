@@ -13,6 +13,37 @@ const userRoles=['CUSTOMER','STAFF','ORGANIZER','ADMIN'] as const;
 
 const message=(value:unknown)=>value instanceof ApiError?value.message+' · '+value.code+(value.correlationId?' · Mã tra cứu: '+value.correlationId:''):'Không tải được dữ liệu. Hãy thử lại.';
 
+const copyToClipboard = (text: string) => {
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+};
+
+const shortBookingId = (id: string) => {
+  if (!id) return '';
+  if (id.length <= 12) return id;
+  const clean = id.replace(/-/g, '').toUpperCase();
+  return `#EF-${clean.slice(-6)}`;
+};
+
+const shortRefundId = (id: string) => {
+  if (!id) return '';
+  if (id.length <= 12) return id;
+  const clean = id.replace(/-/g, '').toUpperCase();
+  return `#RF-${clean.slice(-6)}`;
+};
+
+const shortUserId = (id: string) => {
+  if (!id) return '';
+  if (id.length <= 12) return id;
+  return `#USR-${id.slice(0, 8).toUpperCase()}`;
+};
+
+const formatLeadNotes = (notes?: string) => {
+  if (!notes) return '';
+  return notes.replace(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g, 'Quản trị viên (ADMIN)');
+};
+
 export function AdminDashboard({api}:{api:AdminApi}){
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialTab = (searchParams?.get('adminTab') as Tab) || 'events';
@@ -461,7 +492,11 @@ export function AdminDashboard({api}:{api:AdminApi}){
       h('td',null,h('div',null,l.email),h('small',{className:'muted'},l.phone)),
       h('td',null,h('div',null,l.companyName||h('em',{className:'muted'},'Cá nhân')),h('small',{className:'muted'},l.eventScale||'')),
       h('td',null,h('span',{className:'badge badge-plan',style:{fontWeight:'bold',padding:'0.2rem 0.5rem',borderRadius:'4px',background:'#e0e7ff',color:'#3730a3'}},l.saasPlan||'STANDARD')),
-      h('td',{className:'lead-message-cell'},l.message||'—',l.notes?h('p',{className:'lead-notes'},'Ghi chú: '+l.notes):null),
+      h('td',{className:'lead-message-cell'},
+        l.message||'—',
+        l.notes?h('p',{className:'lead-notes'},'Ghi chú: '+formatLeadNotes(l.notes)):null,
+        l.status==='CONVERTED'&&h('div',{className:'converted-badge',style:{fontSize:'0.75rem',color:'#059669',fontWeight:'bold',marginTop:'0.25rem'}},'✓ Đã duyệt bởi Quản trị viên (ADMIN)')
+      ),
       h('td',null,h('span',{className:'lead-status-badge lead-'+(l.status||'NEW').toLowerCase()},(l.status||'NEW'))),
       h('td',null,l.createdAt?new Date(l.createdAt).toLocaleString('vi-VN'):'—'),
       h('td',null,
@@ -487,7 +522,22 @@ export function AdminDashboard({api}:{api:AdminApi}){
       ...inventory.ticketTypes.map(stock=>h('section',{key:stock.ticketTypeId,className:'inventory-type'},h('h3',null,selected.ticketTypes.find(t=>t.id===stock.ticketTypeId)?.name??stock.ticketTypeId),stock.mode==='GA'?table('Tồn kho GA',['Sức chứa','Đang giữ','Đã bán','Còn trống'],[h('tr',{key:stock.ticketTypeId},h('td',null,stock.capacity),h('td',null,stock.held),h('td',null,stock.sold),h('td',null,stock.available))]):h('div',null,h('p',null,'Ghế chỉ định · '+stock.seats.length+' ghế'),h('ul',{className:'admin-seat-list'},...stock.seats.map(seat=>h('li',{key:seat.id,className:seat.status.toLowerCase()},h('strong',null,seat.label),' · '+seat.status))))))))),
 
     !loading&&!error&&data&&tab==='bookings'&&h('section',{className:'bookings-section'},
-      table('Booking theo trạng thái đã chọn',['Mã booking','Trạng thái','Tổng tiền','Hạn giữ','Chi tiết'],(data.items as Booking[]).map(b=>h('tr',{key:b.bookingId},h('td',{className:'booking-id'},b.bookingId),h('td',null,b.status),h('td',null,b.totalAmountVnd.toLocaleString('vi-VN')+' ₫'),h('td',null,new Date(b.expiresAt).toLocaleString('vi-VN')),h('td',null,h('button',{type:'button',onClick:()=>void openBooking(b.bookingId)},'Xem '+b.bookingId))))),
+      table('Booking theo trạng thái đã chọn',['Mã booking','Trạng thái','Tổng tiền','Hạn giữ','Chi tiết'],(data.items as Booking[]).map(b=>h('tr',{key:b.bookingId},
+        h('td',{className:'booking-id',title:b.bookingId},
+          h('span',{style:{fontFamily:'monospace',fontWeight:'bold'}},shortBookingId(b.bookingId)),
+          h('button',{
+            type:'button',
+            className:'btn-copy-id',
+            title:'Sao chép mã đầy đủ: '+b.bookingId,
+            style:{marginLeft:'0.4rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.85rem'},
+            onClick:(e)=>{e.stopPropagation();copyToClipboard(b.bookingId);setNotice('Đã sao chép mã booking: '+b.bookingId);}
+          },'📋')
+        ),
+        h('td',null,b.status),
+        h('td',null,b.totalAmountVnd.toLocaleString('vi-VN')+' ₫'),
+        h('td',null,new Date(b.expiresAt).toLocaleString('vi-VN')),
+        h('td',null,h('button',{type:'button',onClick:()=>void openBooking(b.bookingId)},'Xem '+b.bookingId))
+      ))),
       // Refund section
       h('div',{className:'refund-management-section'},
         h('h3',null,'Quản lý yêu cầu Hoàn tiền (Refund Requests)'),
@@ -495,7 +545,18 @@ export function AdminDashboard({api}:{api:AdminApi}){
         table('Danh sách yêu cầu hoàn tiền từ cổng thanh toán',['Mã hoàn tiền','Sự kiện / Khách hàng','Số tiền','Lý do','Trạng thái','Thao tác'],refunds.map(r=>{
           const isPending = r.status==='REQUESTED'||r.status==='PROCESSING';
           return h('tr',{key:r.id},
-            h('td',{className:'booking-id'},r.id,h('br',null),h('small',{className:'muted'},'Booking: '+r.bookingId)),
+            h('td',{className:'booking-id',title:r.id},
+              h('span',{style:{fontFamily:'monospace',fontWeight:'bold'}},shortRefundId(r.id)),
+              h('button',{
+                type:'button',
+                className:'btn-copy-id',
+                title:'Sao chép mã hoàn: '+r.id,
+                style:{marginLeft:'0.3rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.85rem'},
+                onClick:(e)=>{e.stopPropagation();copyToClipboard(r.id);setNotice('Đã sao chép mã hoàn: '+r.id);}
+              },'📋'),
+              h('br',null),
+              h('small',{className:'muted',title:r.bookingId},'Booking: '+shortBookingId(r.bookingId))
+            ),
             h('td',null,h('strong',null,r.eventTitle||'Sự kiện'),h('br',null),h('small',{className:'muted'},r.customerName+' ('+r.customerEmail+')')),
             h('td',null,h('strong',null,r.amountVnd.toLocaleString('vi-VN')+' ₫')),
             h('td',null,r.reason||'Khách yêu cầu hủy/hoàn vé'),
@@ -511,7 +572,11 @@ export function AdminDashboard({api}:{api:AdminApi}){
       )
     ),
 
-    detail&&tab==='bookings'&&h('section',{className:'result','aria-label':'Chi tiết booking quản trị'},h('h3',null,detail.bookingId),h('p',null,detail.status),h('ul',{className:'timeline'},...(detail.history??[]).map((item,i)=>h('li',{key:i},item.toStatus+' · '+new Date(item.occurredAt).toLocaleString('vi-VN'))))),
+    detail&&tab==='bookings'&&h('section',{className:'result','aria-label':'Chi tiết booking quản trị'},
+      h('h3',null,`Đơn hàng ${shortBookingId(detail.bookingId)} (${detail.bookingId})`),
+      h('p',null,detail.status),
+      h('ul',{className:'timeline'},...(detail.history??[]).map((item,i)=>h('li',{key:i},item.toStatus+' · '+new Date(item.occurredAt).toLocaleString('vi-VN'))))
+    ),
 
     !loading&&!error&&tab==='payouts'&&h('section',{className:'payouts-section'},
       payoutsList.length===0?h('p',{className:'empty-state'},'Không có yêu cầu rút tiền nào phù hợp với bộ lọc.'):
@@ -519,8 +584,22 @@ export function AdminDashboard({api}:{api:AdminApi}){
         const isRequested = p.status === 'REQUESTED';
         const isApproved = p.status === 'APPROVED';
         return h('tr',{key:p.id},
-          h('td',{className:'booking-id'},p.id,p.adminNotes?h('p',{className:'muted',style:{fontSize:'0.8rem',margin:'0.25rem 0 0 0'}},'Ghi chú: '+p.adminNotes):null),
-          h('td',null,h('small',{className:'muted'},p.organizerId)),
+          h('td',{className:'booking-id',title:p.id},
+            h('span',{style:{fontFamily:'monospace',fontWeight:'bold'}},shortRefundId(p.id)),
+            h('button',{
+              type:'button',
+              className:'btn-copy-id',
+              title:'Sao chép mã rút tiền: '+p.id,
+              style:{marginLeft:'0.3rem',border:'none',background:'none',cursor:'pointer',fontSize:'0.85rem'},
+              onClick:(e)=>{e.stopPropagation();copyToClipboard(p.id);setNotice('Đã sao chép mã yêu cầu: '+p.id);}
+            },'📋'),
+            p.adminNotes?h('p',{className:'muted',style:{fontSize:'0.8rem',margin:'0.25rem 0 0 0'}},'Ghi chú: '+formatLeadNotes(p.adminNotes)):null
+          ),
+          h('td',null,
+            h('strong',null,p.organizationName||'Nhà tổ chức'),
+            h('br',null),
+            h('small',{className:'muted',title:p.organizerId},shortUserId(p.organizerId))
+          ),
           h('td',null,p.grossRevenueVnd.toLocaleString('vi-VN')+' ₫'),
           h('td',null,h('span',{style:{color:'#64748b'}},`${p.platformFeePercent}% (${p.platformFeeVnd.toLocaleString('vi-VN')} ₫)`)),
           h('td',null,h('strong',{style:{color:'#059669',fontSize:'1.05rem'}},p.netPayoutVnd.toLocaleString('vi-VN')+' ₫')),
@@ -856,7 +935,7 @@ export function AdminDashboard({api}:{api:AdminApi}){
       h('p',null,'Nguyên nhân: '+aiDiag.rootCause),
       h('p',null,'Khuyến nghị: '+aiDiag.recommendedAction)
     ),
-    !loading&&!error&&data&&tab==='outbox'&&table('Outbox sau commit nghiệp vụ',['Event ID / loại','Booking','Version','Trạng thái','Số lần gửi','Chi tiết'],(data.items as Outbox[]).map(e=>h('tr',{key:e.eventId},h('td',{className:'booking-id'},e.eventId,h('small',null,e.eventType)),h('td',{className:'booking-id'},e.bookingId),h('td',null,e.aggregateVersion),h('td',null,e.status),h('td',null,e.attempts),h('td',null,h('button',{type:'button',onClick:()=>{setRecoveryEvent(e.eventId);switchTab('recovery');}},'Chi tiết event '+e.eventId))))),
+    !loading&&!error&&data&&tab==='outbox'&&table('Outbox sau commit nghiệp vụ',['Event ID / loại','Booking','Version','Trạng thái','Số lần gửi','Chi tiết'],(data.items as Outbox[]).map(e=>h('tr',{key:e.eventId},h('td',{className:'booking-id'},e.eventId,h('small',null,e.eventType)),h('td',{className:'booking-id',title:e.bookingId},shortBookingId(e.bookingId)),h('td',null,e.aggregateVersion),h('td',null,e.status),h('td',null,e.attempts),h('td',null,h('button',{type:'button',onClick:()=>{setRecoveryEvent(e.eventId);switchTab('recovery');}},'Chi tiết event '+e.eventId))))),
     tab==='outbox'&&h('p',{className:'muted'},'PENDING: đang chờ; PUBLISHED: Kafka đã xác nhận; FAILED: hết ngân sách gửi. Chọn một event để xem audit/replay có kiểm soát.'),
     data&&tab!=='inventory'&&tab!=='reports'&&tab!=='reconciliation'&&tab!=='payouts'&&tab!=='ai-ops'&&h('nav',{className:'pagination','aria-label':'Phân trang quản trị'},h('button',{type:'button',disabled:loading||page===0,onClick:()=>setPage(p=>p-1)},'Trang trước'),h('span',{'aria-live':'polite'},'Trang '+(page+1)+' · '+data.totalElements+' bản ghi'),h('button',{type:'button',disabled:loading||(page+1)*data.size>=data.totalElements,onClick:()=>setPage(p=>p+1)},'Trang sau')),
   );

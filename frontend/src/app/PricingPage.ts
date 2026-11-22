@@ -20,7 +20,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
           h('button', {
             type: 'button',
             className: 'hero-cta-coral',
-            onClick: () => onNavigate('/lien-he')
+            onClick: () => onNavigate('/lien-he?package=enterprise')
           }, 'Liên hệ nhận báo giá tùy biến →'),
           h('button', {
             type: 'button',
@@ -56,7 +56,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
           h('button', {
             type: 'button',
             className: 'plan-btn starter-btn',
-            onClick: () => onNavigate('/lien-he')
+            onClick: () => onNavigate('/lien-he?package=starter')
           }, 'Chọn gói Khởi Nghiệp')
         ),
 
@@ -84,7 +84,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
           h('button', {
             type: 'button',
             className: 'plan-btn pro-btn',
-            onClick: () => onNavigate('/lien-he')
+            onClick: () => onNavigate('/lien-he?package=pro')
           }, 'Chọn gói Chuyên Nghiệp')
         ),
 
@@ -111,7 +111,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
           h('button', {
             type: 'button',
             className: 'plan-btn enterprise-btn',
-            onClick: () => onNavigate('/lien-he')
+            onClick: () => onNavigate('/lien-he?package=enterprise')
           }, 'Liên hệ tư vấn riêng')
         )
       )
@@ -221,7 +221,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
         h('button', {
           type: 'button',
           className: 'hero-cta-coral',
-          onClick: () => onNavigate('/lien-he')
+          onClick: () => onNavigate('/lien-he?package=pro')
         }, 'Liên hệ phòng kinh doanh ngay →')
       )
     )

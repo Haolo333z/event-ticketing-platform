@@ -7,9 +7,10 @@ export interface AccountProfilePageProps {
   onNavigate: (path: string) => void;
   onOpenOnboardingModal?: () => void;
   onUserUpdated?: (updated: User) => void;
+  onOpenAuth?: () => void;
 }
 
-export function AccountProfilePage({ api, user, onNavigate, onOpenOnboardingModal, onUserUpdated }: AccountProfilePageProps) {
+export function AccountProfilePage({ api, user, onNavigate, onOpenOnboardingModal, onUserUpdated, onOpenAuth }: AccountProfilePageProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'vat' | 'notifications' | 'organizer'>('profile');
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -287,11 +288,20 @@ export function AccountProfilePage({ api, user, onNavigate, onOpenOnboardingModa
         h('div', { className: 'unauth-icon' }, '🔒'),
         h('h2', null, 'Yêu cầu đăng nhập'),
         h('p', null, 'Vui lòng đăng nhập để truy cập và quản lý thông tin tài khoản cá nhân của bạn.'),
-        h('button', {
-          type: 'button',
-          className: 'btn-primary-action',
-          onClick: () => onNavigate('/')
-        }, 'Quay về Trang chủ')
+        h('div', { style: { display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' } },
+          onOpenAuth && h('button', {
+            type: 'button',
+            className: 'btn-primary-action btn-login-now',
+            style: { background: '#2DC275', color: '#fff', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
+            onClick: onOpenAuth
+          }, '🔑 Đăng nhập ngay'),
+          h('button', {
+            type: 'button',
+            className: 'btn-secondary-action',
+            style: { background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '0.65rem 1.25rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
+            onClick: () => onNavigate('/')
+          }, 'Quay về Trang chủ')
+        )
       )
     );
   }

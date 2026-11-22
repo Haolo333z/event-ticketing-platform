@@ -229,9 +229,10 @@ public class AdminLeadController {
         }
 
         // Update lead status
+        String reviewer = "Quản trị viên (ADMIN)";
         jdbc.update(
             "UPDATE ticketing.contact_leads SET status = 'CONVERTED', notes = COALESCE(notes, '') || ' [Đã duyệt thành Nhà tổ chức bởi ' || ? || ']', updated_at = clock_timestamp() WHERE id = ?",
-            principal.accountId().toString(), id
+            reviewer, id
         );
 
         // Audit log

@@ -522,7 +522,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
       // Other Multi-Page Routes
       currentPath === '/giai-phap' && persona !== 'admin' ? h(SolutionsPage, { onNavigate: navigate }) : null,
       currentPath === '/bang-gia' && persona !== 'admin' ? h(PricingPage, { onNavigate: navigate }) : null,
-      currentPath === '/lien-he' && persona !== 'admin' ? h(ContactPage, { api: customer, onNavigate: navigate }) : null,
+      currentPath.startsWith('/lien-he') && persona !== 'admin' ? h(ContactPage, { api: customer, onNavigate: navigate, currentPath }) : null,
       currentPath === '/organizer' && persona !== 'admin' ? h(OrganizerDashboard, {
         api: customer,
         user,
@@ -560,7 +560,8 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         user,
         onNavigate: navigate,
         onOpenOnboardingModal: () => setOnboardingModalOpen(true),
-        onUserUpdated: (updated) => setUser(updated)
+        onUserUpdated: (updated) => setUser(updated),
+        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
       }) : null
     ),
 
