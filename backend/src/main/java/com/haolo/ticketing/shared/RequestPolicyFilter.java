@@ -26,12 +26,12 @@ public class RequestPolicyFilter extends OncePerRequestFilter {
         if(allowed){res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Vary","Origin");res.setHeader("Access-Control-Expose-Headers","Location, Retry-After, X-Correlation-Id");}
         if(req.getMethod().equals("OPTIONS") && req.getHeader("Access-Control-Request-Method")!=null){
             String method=req.getHeader("Access-Control-Request-Method"),headers=req.getHeader("Access-Control-Request-Headers");
-            boolean valid=allowed && Set.of("GET","POST","PATCH","OPTIONS").contains(method)
+            boolean valid=allowed && Set.of("GET","POST","PUT","PATCH","DELETE","OPTIONS").contains(method)
                 && (headers==null||Arrays.stream(headers.split(",")).allMatch(h->HEADERS.contains(h.trim().toLowerCase(Locale.ROOT))));
             if(!valid){errors.write(req,res,403,"FORBIDDEN","Origin hoặc preflight không được phép");return;}
-            res.setHeader("Access-Control-Allow-Methods","GET, POST, PATCH, OPTIONS");res.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type, Idempotency-Key, X-Correlation-Id");res.setHeader("Access-Control-Max-Age","600");res.setStatus(204);return;
+            res.setHeader("Access-Control-Allow-Methods","GET, POST, PUT, PATCH, DELETE, OPTIONS");res.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type, Idempotency-Key, X-Correlation-Id");res.setHeader("Access-Control-Max-Age","600");res.setStatus(204);return;
         }
-        boolean bodyMethod=(req.getMethod().equals("POST")||req.getMethod().equals("PATCH"))&&!req.getRequestURI().matches("/api/bookings/[^/]+/cancel");
+        boolean bodyMethod=(req.getMethod().equals("POST")||req.getMethod().equals("PUT")||req.getMethod().equals("PATCH"))&&!req.getRequestURI().matches("/api/bookings/[^/]+/cancel");
         if(!bodyMethod){if(req.getInputStream().read()!=-1){errors.write(req,res,400,"VALIDATION_ERROR","Endpoint không nhận body");return;}chain.doFilter(req,res);return;}
         String encoding=req.getHeader("Content-Encoding");
         String contentType=req.getContentType();

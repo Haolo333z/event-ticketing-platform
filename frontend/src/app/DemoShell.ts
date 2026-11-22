@@ -19,31 +19,9 @@ import { getStoredUser, clearStoredAuth } from '../api/client.ts';
 import type { AdminApi } from '../api/admin.ts';
 
 export function DemoShell({ customer, admin, store }: { customer: Api; admin: AdminApi; store: Store }) {
+  const isUserAdmin = (u: User | null): boolean => !!(u && (u.role === 'ADMIN' || u.roles?.includes('ADMIN')));
+
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const initialPersona = (searchParams?.get('persona') === 'admin' || typeof window !== 'undefined' && window.location.hash === '#admin') ? 'admin' : 'customer';
-  
-  // Normalize initial route path
-  const getInitialPath = (): string => {
-    if (typeof window === 'undefined') return '/';
-    const path = window.location.pathname;
-    if (path === '/admin' || window.location.hash === '#admin' || searchParams?.get('persona') === 'admin') return '/admin';
-    if (path === '/giai-phap') return '/giai-phap';
-    if (path === '/bang-gia') return '/bang-gia';
-    if (path === '/ve-cua-toi') return '/ve-cua-toi';
-    if (path === '/payment-return') return '/payment-return';
-    if (path === '/organizer') return '/organizer';
-    if (path === '/staff') return '/staff';
-    if (path === '/tai-khoan') return '/tai-khoan';
-    if (path.startsWith('/transfer/accept') || path === '/transfer/accept') return '/transfer/accept';
-    if (path === '/lien-he') return '/lien-he';
-    if (path === '/dat-ve' || path === '/events') return '/dat-ve';
-    return '/';
-  };
-
-  const [currentPath, setCurrentPath] = useState<string>(getInitialPath);
-  const [persona, setPersona] = useState<'customer' | 'admin'>(initialPersona === 'admin' || getInitialPath() === '/admin' ? 'admin' : 'customer');
-  const [adminVisited, setAdminVisited] = useState(initialPersona === 'admin' || getInitialPath() === '/admin');
-
   const mockCustomer = searchParams?.get('mockUser') === 'customer';
   const mockAdmin = searchParams?.get('mockUser') === 'admin';
   const initialModal = searchParams?.get('openAuth');
@@ -65,10 +43,46 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     role: 'ADMIN'
   } : getStoredUser());
 
+  const isInitialAdmin = isUserAdmin(initialUser);
+  const rawPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const isDirectAdminAccess = (rawPath === '/admin' || (typeof window !== 'undefined' && window.location.hash === '#admin') || searchParams?.get('persona') === 'admin');
+  const shouldBlockAdmin = isDirectAdminAccess && !isInitialAdmin;
+
+  // Normalize initial route path
+  const getInitialPath = (): string => {
+    if (typeof window === 'undefined') return '/';
+    const path = window.location.pathname;
+    if (path === '/admin' || window.location.hash === '#admin' || searchParams?.get('persona') === 'admin') {
+      if (isInitialAdmin) return '/admin';
+      return '/';
+    }
+    if (path === '/giai-phap') return '/giai-phap';
+    if (path === '/bang-gia') return '/bang-gia';
+    if (path === '/ve-cua-toi') return '/ve-cua-toi';
+    if (path === '/payment-return') return '/payment-return';
+    if (path === '/organizer') return '/organizer';
+    if (path === '/staff') return '/staff';
+    if (path === '/tai-khoan') return '/tai-khoan';
+    if (path.startsWith('/transfer/accept') || path === '/transfer/accept') return '/transfer/accept';
+    if (path === '/lien-he') return '/lien-he';
+    if (path === '/dat-ve' || path === '/events') return '/dat-ve';
+    return '/';
+  };
+
+  const initialPersona = (isInitialAdmin && (searchParams?.get('persona') === 'admin' || (typeof window !== 'undefined' && window.location.hash === '#admin'))) ? 'admin' : 'customer';
+
+  const [currentPath, setCurrentPath] = useState<string>(getInitialPath);
+  const [persona, setPersona] = useState<'customer' | 'admin'>(isInitialAdmin && (initialPersona === 'admin' || getInitialPath() === '/admin') ? 'admin' : 'customer');
+  const [adminVisited, setAdminVisited] = useState(isInitialAdmin && (initialPersona === 'admin' || getInitialPath() === '/admin'));
+
   const [user, setUser] = useState<User | null>(initialUser);
-  const [authModalOpen, setAuthModalOpen] = useState(!!initialModal || initialGate);
+  const [authModalOpen, setAuthModalOpen] = useState(!!initialModal || initialGate || shouldBlockAdmin);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>(initialModal === 'register' ? 'register' : 'login');
-  const [gateNotice, setGateNotice] = useState(initialGate ? 'Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.' : '');
+  const [gateNotice, setGateNotice] = useState(
+    shouldBlockAdmin
+      ? 'Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.'
+      : (initialGate ? 'Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.' : '')
+  );
   const [myBookingsOpen, setMyBookingsOpen] = useState(initialMyBookings);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(initialDropdown);
   const [pendingBookingAction, setPendingBookingAction] = useState<(() => void) | null>(null);
@@ -128,34 +142,65 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     }
   }, [mockCustomer, mockAdmin]);
 
+  useEffect(() => {
+    if (shouldBlockAdmin && typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [shouldBlockAdmin]);
+
   // Client-Side Router Navigation Function
   function navigate(path: string) {
+    if (path === '/admin') {
+      if (!isUserAdmin(user)) {
+        setAuthModalTab('login');
+        setGateNotice('Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
+        setAuthModalOpen(true);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/');
+        }
+        setCurrentPath('/');
+        setPersona('customer');
+        setDropdownOpen(null);
+        return;
+      }
+      setPersona('admin');
+      setAdminVisited(true);
+    } else {
+      setPersona('customer');
+    }
+
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     setCurrentPath(path);
     setDropdownOpen(null);
-    if (path === '/admin') {
-      setPersona('admin');
-      setAdminVisited(true);
-    } else {
-      setPersona('customer');
-    }
   }
 
   // Handle Browser Back / Forward Buttons (popstate event)
   useEffect(() => {
     function onPopState() {
       const p = window.location.pathname;
-      setCurrentPath(p);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       if (p === '/admin') {
+        const u = getStoredUser();
+        if (!isUserAdmin(u)) {
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', '/');
+          }
+          setCurrentPath('/');
+          setPersona('customer');
+          setAuthModalTab('login');
+          setGateNotice('Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
+          setAuthModalOpen(true);
+          return;
+        }
         setPersona('admin');
         setAdminVisited(true);
       } else {
         setPersona('customer');
       }
+      setCurrentPath(p);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -450,8 +495,8 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
 
     // Multi-Page Route Render Switching
     h('div', { className: 'route-page-container' },
-      // Admin Dashboard panel (preserved when visited)
-      adminVisited ? h('div', { style: { display: (currentPath === '/admin' || persona === 'admin') ? 'block' : 'none' } },
+      // Admin Dashboard panel (preserved when visited and user is verified ADMIN)
+      (adminVisited && isUserAdmin(user)) ? h('div', { style: { display: (currentPath === '/admin' || persona === 'admin') ? 'block' : 'none' } },
         h(AdminDashboard, { api: admin })
       ) : null,
 

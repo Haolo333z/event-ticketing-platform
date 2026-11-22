@@ -219,6 +219,9 @@ export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch
     if(user&&token&&(user.roles?.includes('ADMIN')||user.role==='ADMIN')){
       return token;
     }
+    if (typeof window !== 'undefined') {
+      return null;
+    }
     return 'demo-admin-token';
   };
   const call=demoTransport(base,fetcher,tokenProvider);
@@ -241,7 +244,7 @@ export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch
     },
     circuitBreaker:{
       getStatus:()=>call('/api/admin/payments/circuit-breaker'),
-      reset:()=>call('/api/admin/payments/circuit-breaker/reset',{method:'POST'}),
+      reset:()=>call('/api/admin/payments/circuit-breaker/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}),
       trip:(reason)=>call('/api/admin/payments/circuit-breaker/trip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})})
     },
     reconciliation:{
@@ -253,7 +256,7 @@ export function createAdminApi(base='http://127.0.0.1:8080',fetcher:typeof fetch
     },
     leads:(page,size,status)=>call('/api/admin/leads?'+new URLSearchParams({page:String(page),size:String(size),...(status&&status!=='ALL'?{status}:{})})),
     updateLeadStatus:(leadId,status,notes)=>call('/api/admin/leads/'+encodeURIComponent(leadId)+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,notes})}),
-    convertToOrganizer:(leadId)=>call('/api/admin/leads/'+encodeURIComponent(leadId)+'/convert-to-organizer',{method:'POST'}),
+    convertToOrganizer:(leadId)=>call('/api/admin/leads/'+encodeURIComponent(leadId)+'/convert-to-organizer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}),
     payouts:(status)=>call('/api/admin/payouts'+(status&&status!=='ALL'?'?status='+encodeURIComponent(status):'')),
     processPayout:(payoutId,decision,adminNotes)=>call('/api/admin/payouts/'+encodeURIComponent(payoutId)+'/process',{
       method:'POST',

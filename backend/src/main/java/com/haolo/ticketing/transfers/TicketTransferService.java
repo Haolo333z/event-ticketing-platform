@@ -54,7 +54,13 @@ public class TicketTransferService {
 
         // 1. Lock ticket FOR UPDATE
         var tickets = jdbc.query(
-            "SELECT id, booking_id, booking_item_id, ticket_ordinal, code, seat_id, status, owner_user_id FROM ticketing.tickets WHERE id = ? FOR UPDATE",
+            """
+            SELECT t.id, t.booking_id, t.booking_item_id, t.ticket_ordinal, t.code, bi.seat_id, t.status, t.owner_user_id
+            FROM ticketing.tickets t
+            JOIN ticketing.booking_items bi ON t.booking_item_id = bi.id
+            WHERE t.id = ?
+            FOR UPDATE OF t
+            """,
             (rs, rowNum) -> new TicketRow(
                 rs.getObject("id", UUID.class),
                 rs.getObject("booking_id", UUID.class),
@@ -184,7 +190,13 @@ public class TicketTransferService {
 
         // 2. Lock old ticket FOR UPDATE
         var oldTickets = jdbc.query(
-            "SELECT id, booking_id, booking_item_id, ticket_ordinal, code, seat_id, status, owner_user_id FROM ticketing.tickets WHERE id = ? FOR UPDATE",
+            """
+            SELECT t.id, t.booking_id, t.booking_item_id, t.ticket_ordinal, t.code, bi.seat_id, t.status, t.owner_user_id
+            FROM ticketing.tickets t
+            JOIN ticketing.booking_items bi ON t.booking_item_id = bi.id
+            WHERE t.id = ?
+            FOR UPDATE OF t
+            """,
             (rs, rowNum) -> new TicketRow(
                 rs.getObject("id", UUID.class),
                 rs.getObject("booking_id", UUID.class),
@@ -216,15 +228,14 @@ public class TicketTransferService {
 
         jdbc.update(
             """
-            INSERT INTO ticketing.tickets (id, booking_id, booking_item_id, ticket_ordinal, code, seat_id, status, owner_user_id, transferred_from_ticket_id, transferred_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'VALID', ?, ?, clock_timestamp())
+            INSERT INTO ticketing.tickets (id, booking_id, booking_item_id, ticket_ordinal, code, status, owner_user_id, transferred_from_ticket_id, transferred_at)
+            VALUES (?, ?, ?, ?, ?, 'VALID', ?, ?, clock_timestamp())
             """,
             newTicketId,
             oldTicket.bookingId(),
             oldTicket.bookingItemId(),
             oldTicket.ticketOrdinal(),
             newCode,
-            oldTicket.seatId(),
             recipient.accountId(),
             oldTicket.id()
         );
@@ -302,10 +313,11 @@ public class TicketTransferService {
                    tr.to_email, tr.note, tr.status, tr.transfer_token, tr.expires_at, tr.created_at
             FROM ticketing.ticket_transfers tr
             JOIN ticketing.tickets t ON tr.ticket_id = t.id
+            JOIN ticketing.booking_items bi ON t.booking_item_id = bi.id
             JOIN ticketing.bookings b ON t.booking_id = b.id
             JOIN ticketing.events e ON b.event_id = e.id
             JOIN ticketing.users u_from ON tr.from_user_id = u_from.id
-            LEFT JOIN ticketing.seats s ON t.seat_id = s.id
+            LEFT JOIN ticketing.seats s ON bi.seat_id = s.id
             WHERE tr.transfer_token = ?
             """;
 

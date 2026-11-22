@@ -76,7 +76,7 @@ public class ResaleListingService {
         // 1. Lock ticket and verify ownership and original price
         var tickets = jdbc.query(
             """
-            SELECT t.id, t.booking_id, t.booking_item_id, t.ticket_ordinal, t.code, t.seat_id, t.status, t.owner_user_id,
+            SELECT t.id, t.booking_id, t.booking_item_id, t.ticket_ordinal, t.code, bi.seat_id, t.status, t.owner_user_id,
                    b.account_id AS booking_account_id, b.event_id,
                    bi.unit_price_vnd,
                    e.title AS event_title,
@@ -87,9 +87,9 @@ public class ResaleListingService {
             JOIN ticketing.booking_items bi ON t.booking_item_id = bi.id
             JOIN ticketing.ticket_types tt ON bi.ticket_type_id = tt.id
             JOIN ticketing.events e ON b.event_id = e.id
-            LEFT JOIN ticketing.seats s ON t.seat_id = s.id
+            LEFT JOIN ticketing.seats s ON bi.seat_id = s.id
             WHERE t.id = ?
-            FOR UPDATE
+            FOR UPDATE OF t
             """,
             (rs, rowNum) -> new TicketDetailRow(
                 rs.getObject("id", UUID.class),
@@ -218,7 +218,7 @@ public class ResaleListingService {
             JOIN ticketing.ticket_types tt ON bi.ticket_type_id = tt.id
             JOIN ticketing.events e ON rl.event_id = e.id
             JOIN ticketing.users u ON rl.seller_user_id = u.id
-            LEFT JOIN ticketing.seats s ON t.seat_id = s.id
+            LEFT JOIN ticketing.seats s ON bi.seat_id = s.id
             WHERE rl.event_id = ?
               AND (rl.status = 'LISTED' OR (rl.status = 'RESERVED' AND rl.lock_expires_at < clock_timestamp()))
             ORDER BY rl.created_at DESC
@@ -363,7 +363,13 @@ public class ResaleListingService {
 
         // Lock and revoke old ticket
         var tickets = jdbc.query(
-            "SELECT id, booking_id, booking_item_id, ticket_ordinal, code, seat_id, status, owner_user_id FROM ticketing.tickets WHERE id = ? FOR UPDATE",
+            """
+            SELECT t.id, t.booking_id, t.booking_item_id, t.ticket_ordinal, t.code, bi.seat_id, t.status, t.owner_user_id
+            FROM ticketing.tickets t
+            JOIN ticketing.booking_items bi ON t.booking_item_id = bi.id
+            WHERE t.id = ?
+            FOR UPDATE OF t
+            """,
             (rs, rowNum) -> new TicketDetailRow(
                 rs.getObject("id", UUID.class),
                 rs.getObject("booking_id", UUID.class),
@@ -396,15 +402,14 @@ public class ResaleListingService {
 
         jdbc.update(
             """
-            INSERT INTO ticketing.tickets (id, booking_id, booking_item_id, ticket_ordinal, code, seat_id, status, owner_user_id, transferred_from_ticket_id, transferred_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'VALID', ?, ?, clock_timestamp())
+            INSERT INTO ticketing.tickets (id, booking_id, booking_item_id, ticket_ordinal, code, status, owner_user_id, transferred_from_ticket_id, transferred_at)
+            VALUES (?, ?, ?, ?, ?, 'VALID', ?, ?, clock_timestamp())
             """,
             newTicketId,
             oldTicket.bookingId(),
             oldTicket.bookingItemId(),
             oldTicket.ticketOrdinal(),
             newCode,
-            oldTicket.seatId(),
             buyer.accountId(),
             oldTicket.id()
         );
@@ -521,7 +526,7 @@ public class ResaleListingService {
             JOIN ticketing.ticket_types tt ON bi.ticket_type_id = tt.id
             JOIN ticketing.events e ON rl.event_id = e.id
             JOIN ticketing.users u ON rl.seller_user_id = u.id
-            LEFT JOIN ticketing.seats s ON t.seat_id = s.id
+            LEFT JOIN ticketing.seats s ON bi.seat_id = s.id
             WHERE rl.seller_user_id = ?
             ORDER BY rl.created_at DESC
             """,

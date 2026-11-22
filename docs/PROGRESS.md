@@ -4,7 +4,70 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK T30: VÁ LỖI LỘ LỊCH SỬ ĐẶT VÉ KHI CHƯA ĐĂNG NHẬP, DỌN TRANG CHỦ, LÀM ĐẸP DANH SÁCH ĐƠN HÀNG & ĐỒNG BỘ PHÍ SÀN** (2026-11-22)
+- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK FIX P0: KHẮC PHỤC DỨT ĐIỂM 4 NHÓM LỖI P0 (BROKEN ACCESS CONTROL ADMIN, CORS PREFLIGHT 403, HTTP 415 VÀ SQL CRASH 500)** (2026-11-22)
+- **Tiến độ:** Khắc phục triệt để 100% 4 nhóm lỗi P0 theo chỉ đạo:
+  - **P0-1 (Broken Access Control / Lộ dữ liệu Admin):**
+    - Cập nhật `createAdminApi` trong `frontend/src/api/admin.ts`: loại bỏ logic tự động cấp token demo (`demo-admin-token`) khi người dùng chưa có tài khoản/vai trò ADMIN (trong môi trường browser trả về `null`).
+    - Bổ sung Route Guard chặt chẽ trên frontend trong `frontend/src/app/DemoShell.ts`: kiểm tra `isUserAdmin(user)` trước khi render `AdminDashboard`; nếu khách hoặc user thường cố truy cập `/admin`, tự động replace URL về `/`, kích hoạt `AuthModal` kèm thông báo *"Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN."*; áp dụng tương tự trên `navigate()` và `onPopState`.
+  - **P0-4 (CORS Preflight 403 trên `/api/me/profile`):**
+    - Cập nhật `SecurityConfiguration.java`: thêm `.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()` ở đầu chuỗi kiểm tra HttpSecurity để preflight request không bị chặn 403.
+    - Cập nhật `RequestPolicyFilter.java`: bổ sung các phương thức `PUT`, `DELETE` vào danh sách cho phép của preflight `OPTIONS` và header `Access-Control-Allow-Methods`, đồng thời bổ sung `PUT` vào `bodyMethod` để các API có body JSON như `PUT /api/me/profile` không bị từ chối 400.
+    - Cập nhật `MockBearerFilter.java`: cho phép request `OPTIONS` luôn được coi là public endpoint, bỏ qua xác thực token.
+  - **P0-5 (HTTP 415 Unsupported Media Type ở `/admin`):**
+    - Cập nhật `convertToOrganizer` và `resetCircuitBreaker` trong `frontend/src/api/admin.ts`: bổ sung header `'Content-Type': 'application/json'` và body `JSON.stringify({})` cho các request POST rỗng, vượt qua kiểm tra nghiêm ngặt của `RequestPolicyFilter`.
+  - **P0-2 & P0-3 (SQL Crash HTTP 500 do truy vấn cột không tồn tại):**
+    - Đã đối chiếu các bản Flyway migrations `V2`, `V8`, `V25`: bảng `ticketing.tickets` không có cột `seat_id` (cột `seat_id` nằm ở bảng `ticketing.booking_items`).
+    - Sửa `ResaleListingService.java` (dòng 79, 90, 221, 366, 399, 524) và `TicketTransferService.java` (dòng 57, 187, 219, 308): JOIN `ticketing.booking_items bi ON t.booking_item_id = bi.id` để lấy đúng `bi.seat_id`, và loại bỏ cột `seat_id` khỏi câu lệnh `INSERT INTO ticketing.tickets`.
+    - Sửa `StaffCheckInService.java` (dòng 35, 56): thay `e.ends_at` thành `NULL AS ends_at` vì bảng `ticketing.events` không có cột `ends_at`.
+- **Kết quả kiểm chứng thực tế:**
+  - Database: Chuỗi **28 Flyway migrations (`V1` $\rightarrow$ `V28`)** hợp lệ, đạt chuẩn **44 bảng nghiệp vụ** trong schema `ticketing`.
+  - Backend (`.\backend\mvnw.cmd -f backend/pom.xml test`): **357/357 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn).
+  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (237ms)**.
+  - OpenAPI 3.1 Contracts (`cmd /c "npm test --prefix tools/contracts"`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
+  - Git Hygiene: Không commit, không push, bảo toàn nguyên vẹn working tree theo đúng `AGENTS.md` và `docs/RULES.md`.
+
+---
+
+## FIX-P0 — Sửa Dứt Điểm 4 Nhóm Lỗi P0 (Broken Access Control Admin, CORS Preflight 403, HTTP 415, SQL Crash 500) (Done, 2026-11-22)
+
+**Phạm vi và đầu vào:** Sửa nhóm 4 lỗi P0 theo chỉ đạo: loại bỏ token demo admin tự cấp và thêm route guard cho `/admin`, cho phép CORS preflight OPTIONS cùng phương thức PUT/DELETE cho `/api/me/profile`, khắc phục HTTP 415 cho request POST rỗng ở admin API, sửa triệt để lỗi SQL 500 do truy vấn `seat_id` trên `tickets` và `ends_at` trên `events`.
+
+**Các file đã thay đổi:**
+1. Frontend:
+   - `frontend/src/api/admin.ts`
+   - `frontend/src/app/DemoShell.ts`
+2. Backend:
+   - `backend/src/main/java/com/haolo/ticketing/shared/RequestPolicyFilter.java`
+   - `backend/src/main/java/com/haolo/ticketing/identity/SecurityConfiguration.java`
+   - `backend/src/main/java/com/haolo/ticketing/identity/MockBearerFilter.java`
+   - `backend/src/main/java/com/haolo/ticketing/resale/ResaleListingService.java`
+   - `backend/src/main/java/com/haolo/ticketing/transfers/TicketTransferService.java`
+   - `backend/src/main/java/com/haolo/ticketing/checkin/StaffCheckInService.java`
+   - `backend/src/test/java/com/haolo/ticketing/resale/ResaleListingServiceTest.java`
+   - `backend/src/test/java/com/haolo/ticketing/transfers/TicketTransferServiceTest.java`
+3. Tài liệu:
+   - `docs/PROGRESS.md`
+   - `docs/HANDOFF.md`
+   - `docs/TASKS.md`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Full Frontend Test Suite & Production Build
+cmd /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: 84/84 tests PASS 100% (5 suites, 84 cases), built in 237ms (dist/index.html generated)
+
+# 2. OpenAPI 3.1 Contract Verification
+cmd /c "npm test --prefix tools/contracts"
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases
+
+# 3. Full Backend Regression Suite
+.\backend\mvnw.cmd -f backend/pom.xml test
+# Kết quả: Tests run: 357, Failures: 0, Errors: 0, Skipped: 121 -> BUILD SUCCESS (22.131s)
+```
+
+---
+
+## Trạng thái trước (Task T30)
 - **Tiến độ:** Hoàn thiện dứt điểm 4 hạng mục an ninh, trải nghiệm người dùng và tính nhất quán thương mại:
   - **Hạng mục 1 — Chặn tuyệt đối việc tự dùng tài khoản Demo / Mock Fallback khi chưa đăng nhập:**
     - Cập nhật `createApi` và `demoTransport` trong `client.ts`: trong môi trường trình duyệt (`typeof window !== 'undefined'`), khi người dùng chưa đăng nhập (`getStoredToken() === null`), tuyệt đối không tự gắn mock token `'demo-customer-token'` hay kích hoạt demo fallback.

@@ -32,7 +32,7 @@ public class StaffCheckInService {
 
         if (principal.hasRole("ADMIN")) {
             return jdbc.query(
-                "SELECT e.id, e.title, e.venue, e.starts_at, e.ends_at, e.status, NULL AS assigned_at " +
+                "SELECT e.id, e.title, e.venue, e.starts_at, NULL AS ends_at, e.status, NULL AS assigned_at " +
                 "FROM ticketing.events e " +
                 "ORDER BY e.starts_at DESC",
                 (rs, rowNum) -> {
@@ -53,7 +53,7 @@ public class StaffCheckInService {
 
         if (principal.hasRole("STAFF")) {
             return jdbc.query(
-                "SELECT e.id, e.title, e.venue, e.starts_at, e.ends_at, e.status, a.assigned_at " +
+                "SELECT e.id, e.title, e.venue, e.starts_at, NULL AS ends_at, e.status, a.assigned_at " +
                 "FROM ticketing.event_staff_assignments a " +
                 "JOIN ticketing.events e ON e.id = a.event_id " +
                 "WHERE a.staff_user_id = ? AND a.revoked_at IS NULL " +

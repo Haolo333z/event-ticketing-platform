@@ -163,6 +163,9 @@ final class MockBearerFilter extends OncePerRequestFilter {
 
     private boolean isPublicEndpoint(HttpServletRequest req) {
         String m = req.getMethod();
+        if ("OPTIONS".equalsIgnoreCase(m)) {
+            return true;
+        }
         String u = req.getRequestURI();
         if ("GET".equalsIgnoreCase(m)) {
             if (u.startsWith("/api/events") ||

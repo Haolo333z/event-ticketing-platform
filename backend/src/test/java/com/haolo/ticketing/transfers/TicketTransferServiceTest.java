@@ -36,7 +36,7 @@ class TicketTransferServiceTest {
             ticketId, UUID.randomUUID(), UUID.randomUUID(), 1, "EF-TICKET-01", null, "VALID", senderId
         );
 
-        when(jdbc.query(contains("FROM ticketing.tickets WHERE id = ? FOR UPDATE"), any(RowMapper.class), eq(ticketId)))
+        when(jdbc.query(contains("FROM ticketing.tickets"), any(RowMapper.class), eq(ticketId)))
             .thenReturn(List.of(ticketRow));
 
         when(jdbc.queryForObject(contains("FROM ticketing.ticket_check_ins"), eq(Integer.class), eq(ticketId)))
@@ -66,7 +66,7 @@ class TicketTransferServiceTest {
             ticketId, UUID.randomUUID(), UUID.randomUUID(), 1, "EF-TICKET-01", null, "VALID", senderId
         );
 
-        when(jdbc.query(contains("FROM ticketing.tickets WHERE id = ? FOR UPDATE"), any(RowMapper.class), eq(ticketId)))
+        when(jdbc.query(contains("FROM ticketing.tickets"), any(RowMapper.class), eq(ticketId)))
             .thenReturn(List.of(ticketRow));
 
         when(jdbc.queryForObject(contains("FROM ticketing.ticket_check_ins"), eq(Integer.class), eq(ticketId)))
@@ -100,7 +100,7 @@ class TicketTransferServiceTest {
             oldTicketId, UUID.randomUUID(), UUID.randomUUID(), 1, "EF-OLD-TICKET", null, "VALID", senderId
         );
 
-        when(jdbc.query(contains("FROM ticketing.tickets WHERE id = ? FOR UPDATE"), any(RowMapper.class), eq(oldTicketId)))
+        when(jdbc.query(contains("FROM ticketing.tickets"), any(RowMapper.class), eq(oldTicketId)))
             .thenReturn(List.of(oldTicket));
 
         AcceptTransferResponse res = service.acceptTransfer(recipient, token);
@@ -115,7 +115,7 @@ class TicketTransferServiceTest {
         verify(jdbc).update(contains("UPDATE ticketing.tickets SET status = 'REVOKED' WHERE id = ?"), eq(oldTicketId));
 
         // Verify new ticket inserted
-        verify(jdbc).update(contains("INSERT INTO ticketing.tickets"), any(UUID.class), any(), any(), eq(1), anyString(), any(), eq(recipientId), eq(oldTicketId));
+        verify(jdbc).update(contains("INSERT INTO ticketing.tickets"), any(UUID.class), any(), any(), eq(1), anyString(), eq(recipientId), eq(oldTicketId));
 
         // Verify outbox event written
         verify(jdbc).update(contains("INSERT INTO ticketing.outbox_events"), any(), any(), eq(transferId), anyString());

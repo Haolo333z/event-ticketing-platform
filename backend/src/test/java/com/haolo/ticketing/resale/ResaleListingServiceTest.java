@@ -151,7 +151,7 @@ class ResaleListingServiceTest {
             sellerId, sellerId, UUID.randomUUID(), 500000L, "Event", "GA", null
         );
 
-        when(jdbc.query(contains("FROM ticketing.tickets WHERE id = ? FOR UPDATE"), any(RowMapper.class), eq(oldTicketId)))
+        when(jdbc.query(contains("FROM ticketing.tickets"), any(RowMapper.class), eq(oldTicketId)))
             .thenReturn(List.of(oldTicket));
 
         SettleResaleResponse res = service.settlePurchase(buyer, listingId);
@@ -163,7 +163,7 @@ class ResaleListingServiceTest {
         verify(jdbc).update(contains("UPDATE ticketing.tickets SET status = 'REVOKED'"), eq(oldTicketId));
 
         // Verify new ticket issued to buyer
-        verify(jdbc).update(contains("INSERT INTO ticketing.tickets"), any(UUID.class), any(), any(), eq(1), startsWith("EF-RSL-"), any(), eq(buyerId), eq(oldTicketId));
+        verify(jdbc).update(contains("INSERT INTO ticketing.tickets"), any(UUID.class), any(), any(), eq(1), startsWith("EF-RSL-"), eq(buyerId), eq(oldTicketId));
 
         // Verify listing marked SOLD
         verify(jdbc).update(contains("UPDATE ticketing.resale_listings"), eq(buyerId), eq(listingId));
