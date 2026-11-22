@@ -251,7 +251,11 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   function fail(value:unknown){setError(value instanceof ApiError?value:new ApiError('CLIENT_ERROR','Không thể tải dữ liệu. Hãy thử lại.'));}
   async function historyRefresh(){setHistoryLoading(true);try{setHistory((await api.mine()).items);setHistoryFailed(false);}catch(value){setHistoryFailed(true);fail(value);}finally{setHistoryLoading(false);}}
   useEffect(()=>{let active=true;setLoading(true);setCatalogFailed(false);api.events().then(data=>{if(active){setEvents(data.items);setError(null);}}).catch(value=>{if(active){setCatalogFailed(true);fail(value);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[api,catalogVersion]);
-  useEffect(()=>{void historyRefresh();},[api]);
+  useEffect(()=>{
+    if (!embedded || user) {
+      void historyRefresh();
+    }
+  },[api, embedded, user]);
   useEffect(()=>{let active=true;const payment=readPaymentAttempt(store);if(payment)api.booking(payment.bookingId).then(value=>{if(active)setBooking(value);}).catch(value=>{if(active)fail(value);});return()=>{active=false;};},[api,store]);
   useEffect(()=>{
     let active=true;setDetail(null);setAvailability(null);setDetailLoading(!!selected);setDetailFailed(false);setAvailabilityStale(false);
@@ -919,8 +923,8 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
         h(Checkout, { key: booking.bookingId, api, store, booking, onChange: (value: Booking) => { setBooking(value); void historyRefresh(); if (selected) void api.availability(selected).then(setAvailability).catch(() => {}); } })
       ),
 
-      // MY BOOKINGS & HISTORY
-      h('section', { className: 'history', 'aria-labelledby': 'history-heading' },
+      // MY BOOKINGS & HISTORY (Only rendered in standalone/test mode; in production shell, history is exclusively at /ve-cua-toi)
+      !embedded && h('section', { className: 'history', 'aria-labelledby': 'history-heading' },
         h('div', { className: 'section-heading' },
           h('div', null,
             h('h2', { id: 'history-heading' }, 'Lịch sử đặt vé của tôi'),
@@ -991,7 +995,7 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               h('h3', null, 'Gói Khởi Nghiệp (Starter)'),
               h('p', { className: 'plan-desc' }, 'Phù hợp hội thảo, talkshow, sự kiện vừa và nhỏ.'),
               h('div', { className: 'plan-price' },
-                h('span', { className: 'price-num' }, '4.5%'),
+                h('span', { className: 'price-num' }, '8%'),
                 h('span', { className: 'price-unit' }, '/ vé bán ra')
               )
             ),
@@ -1015,7 +1019,7 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               h('h3', null, 'Gói Chuyên Nghiệp (Pro)'),
               h('p', { className: 'plan-desc' }, 'Dành cho Concert, Lễ hội âm nhạc & Đêm diễn lớn.'),
               h('div', { className: 'plan-price' },
-                h('span', { className: 'price-num' }, '3.2%'),
+                h('span', { className: 'price-num' }, '5%'),
                 h('span', { className: 'price-unit' }, '/ vé bán ra')
               )
             ),
@@ -1040,8 +1044,8 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
               h('h3', null, 'Gói Doanh Nghiệp (Enterprise)'),
               h('p', { className: 'plan-desc' }, 'Sự kiện quy mô Quốc gia, SVĐ lớn > 20.000 khán giả.'),
               h('div', { className: 'plan-price' },
-                h('span', { className: 'price-num' }, 'Liên hệ'),
-                h('span', { className: 'price-unit' }, 'báo giá riêng')
+                h('span', { className: 'price-num' }, '3%'),
+                h('span', { className: 'price-unit' }, '/ vé bán ra')
               )
             ),
             h('ul', { className: 'plan-features' },

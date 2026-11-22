@@ -1,7 +1,7 @@
 export type TicketType={id:string;name:string;mode:'GA'|'SEATED';priceVnd:number;active:boolean};
 export type Event={id:string;title:string;description:string;venue:string;startsAt:string;ticketTypes:TicketType[]};
 export type Status='PENDING_PAYMENT'|'CONFIRMED'|'PAYMENT_FAILED'|'CANCELLED'|'EXPIRED'|'REFUND_REQUIRED';
-export type Booking={bookingId:string;status:Status;expiresAt:string;totalAmountVnd:number;history?:{fromStatus:Status|null;toStatus:Status;occurredAt:string}[]};
+export type Booking={bookingId:string;eventId?:string;status:Status;expiresAt:string;totalAmountVnd:number;history?:{fromStatus:Status|null;toStatus:Status;occurredAt:string}[]};
 export type Scenario='SUCCESS'|'FAILURE'|'DELAY_TIMEOUT';
 export type PaymentAttempt={bookingId:string;scenario:Scenario;requestId:string};
 export type Ticket={id:string;bookingId:string;bookingItemId:string;ticketOrdinal:number;code:string;seatId:string|null;seatLabel:string|null};
@@ -783,7 +783,7 @@ export interface Api{
 
 let activeRefreshPromise:Promise<string|null>|null=null;
 
-export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=>string)){
+export function demoTransport(base:string,fetcher:typeof fetch,token:string|null|(()=>string|null)){
   async function doRefresh():Promise<string|null>{
     if(activeRefreshPromise){
       return activeRefreshPromise;
@@ -815,6 +815,10 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
     return activeRefreshPromise;
   }
 
+  function isPersonalEndpoint(path:string):boolean{
+    return path.startsWith('/api/me') || path.startsWith('/api/bookings') || path.startsWith('/api/tickets');
+  }
+
   async function call<T>(path:string,init:RequestInit={}):Promise<T>{
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
     const resolvedToken=typeof token==='function'?token():token;
@@ -836,9 +840,9 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
             'Authorization':'Bearer '+refreshedToken
           };
           response=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
-        }else{
+        }else if(!isPersonalEndpoint(path)){
           // Stored token was expired or invalid and refresh failed (stored auth was cleared).
-          // Fallback retry using current tokenProvider() or clean anonymous headers for public endpoints.
+          // Fallback retry using current tokenProvider() or clean anonymous headers for public endpoints only.
           const fallbackToken=typeof token==='function'?token():null;
           const retryHeaders:Record<string,string>={
             ...(init.headers as Record<string,string>|undefined)
@@ -867,7 +871,12 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|(()=
 }
 
 export function createApi(base='http://127.0.0.1:8080',fetcher:typeof fetch=globalThis.fetch):Api{
-  const tokenProvider=()=>getStoredToken()||'demo-customer-token';
+  const tokenProvider=()=>{
+    const stored=getStoredToken();
+    if(stored)return stored;
+    if(typeof window!=='undefined')return null;
+    return 'demo-customer-token';
+  };
   const call=demoTransport(base,fetcher,tokenProvider);
   return{
     events:()=>call('/api/events?size=100'),

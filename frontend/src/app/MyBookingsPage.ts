@@ -14,6 +14,24 @@ const labels: Record<string, string> = {
 const vnd = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 const date = (value: string) => new Date(value).toLocaleString('vi-VN');
 
+function formatBookingDateTime(val?: string | null): string {
+  if (!val) return '—';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  const pad = (n: number) => n < 10 ? '0' + n : String(n);
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+function getShortBookingCode(id: string): string {
+  const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+  return '#EF-' + clean.slice(-6).toUpperCase();
+}
+
 export function MyBookingsPage({
   api,
   user,
@@ -36,6 +54,7 @@ export function MyBookingsPage({
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [qrMap, setQrMap] = useState<Record<string, string>>({});
   const [eventDetail, setEventDetail] = useState<Event | null>(null);
+  const [eventTitles, setEventTitles] = useState<Record<string, string>>({});
   const [currentInvoice, setCurrentInvoice] = useState<import('../api/client.ts').EInvoiceItem | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -147,6 +166,18 @@ export function MyBookingsPage({
       if (res.items.length > 0 && !selectedBooking) {
         setSelectedBooking(res.items[0]);
       }
+      try {
+        const evRes = await api.events();
+        if (evRes && evRes.items) {
+          const map: Record<string, string> = {};
+          for (const ev of evRes.items) {
+            map[ev.id] = ev.title;
+          }
+          setEventTitles(prev => ({ ...prev, ...map }));
+        }
+      } catch {
+        // events catalog fallback
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Không tải được danh sách vé.');
     } finally {
@@ -172,13 +203,37 @@ export function MyBookingsPage({
     let active = true;
     api.detail(eventId)
       .then(ev => {
-        if (active) setEventDetail(ev);
+        if (active) {
+          setEventDetail(ev);
+          setEventTitles(prev => ({ ...prev, [eventId]: ev.title }));
+        }
       })
       .catch(() => {
         if (active) setEventDetail(null);
       });
     return () => { active = false; };
   }, [selectedBooking, api]);
+
+  // Fetch missing event titles for any booking items
+  useEffect(() => {
+    if (!bookings.length) return;
+    const missingIds = bookings
+      .map(b => b.eventId)
+      .filter((id): id is string => !!id && !eventTitles[id]);
+    if (!missingIds.length) return;
+
+    let active = true;
+    for (const id of Array.from(new Set(missingIds))) {
+      api.detail(id)
+        .then(ev => {
+          if (active && ev) {
+            setEventTitles(prev => ({ ...prev, [id]: ev.title }));
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { active = false; };
+  }, [bookings, eventTitles, api]);
 
   // Load tickets and fetch HMAC-SHA256 Signed QR Code tokens
   useEffect(() => {
@@ -304,20 +359,32 @@ export function MyBookingsPage({
           ),
 
           h('div', { className: 'bookings-scroll-list' },
-            filteredBookings.map(b => h('article', {
-              key: b.bookingId,
-              className: 'booking-item-card' + (selectedBooking?.bookingId === b.bookingId ? ' active' : ''),
-              onClick: () => setSelectedBooking(b)
-            },
-              h('div', { className: 'card-top' },
-                h('span', { className: 'booking-code' }, 'Mã đơn: ' + b.bookingId.slice(0, 8) + '…'),
-                h('span', { className: 'booking-status-tag status-' + b.status.toLowerCase() }, labels[b.status] ?? b.status)
-              ),
-              h('div', { className: 'card-meta' },
-                h('div', { className: 'meta-amount' }, vnd(b.totalAmountVnd)),
-                h('div', { className: 'meta-date' }, 'Ngày tạo: ' + date(b.history?.[0]?.occurredAt ?? b.expiresAt))
-              )
-            ))
+            filteredBookings.map(b => {
+              const shortCode = getShortBookingCode(b.bookingId);
+              const bookingDate = b.history?.[0]?.occurredAt ?? b.expiresAt;
+              const eventTitle = (b.eventId && eventTitles[b.eventId])
+                ? eventTitles[b.eventId]
+                : (eventDetail && selectedBooking?.bookingId === b.bookingId ? eventDetail.title : 'Vé Sự Kiện');
+
+              return h('article', {
+                key: b.bookingId,
+                className: 'booking-item-card' + (selectedBooking?.bookingId === b.bookingId ? ' active' : ''),
+                onClick: () => setSelectedBooking(b)
+              },
+                h('div', { className: 'card-top' },
+                  h('strong', { className: 'booking-event-name', title: eventTitle }, eventTitle),
+                  h('span', { className: 'booking-status-tag status-' + b.status.toLowerCase() }, labels[b.status] ?? b.status)
+                ),
+                h('div', { className: 'card-middle' },
+                  h('span', { className: 'booking-code-badge' }, shortCode),
+                  h('span', { className: 'meta-date' }, '🗓️ ' + formatBookingDateTime(bookingDate))
+                ),
+                h('div', { className: 'card-bottom' },
+                  h('span', { className: 'meta-price-label' }, 'Tổng thanh toán:'),
+                  h('strong', { className: 'meta-amount' }, vnd(b.totalAmountVnd))
+                )
+              );
+            })
           )
         ),
 
@@ -325,7 +392,10 @@ export function MyBookingsPage({
         h('div', { className: 'booking-detail-panel' },
           selectedBooking && h('div', { className: 'ticket-inspection-view' },
             h('div', { className: 'inspection-header' },
-              h('h3', null, 'Chi Tiết Vé Điện Tử'),
+              h('div', null,
+                h('h3', null, 'Chi Tiết Vé Điện Tử'),
+                h('span', { className: 'inspection-sub-code' }, 'Mã đơn: ' + getShortBookingCode(selectedBooking.bookingId))
+              ),
               h('span', { className: 'booking-status-tag status-' + selectedBooking.status.toLowerCase() },
                 labels[selectedBooking.status] ?? selectedBooking.status
               )
@@ -339,7 +409,7 @@ export function MyBookingsPage({
                   h('strong', null, 'EVENTFLOW BOARDING PASS'),
                   h('span', null, 'CỔNG SOÁT VÉ ĐIỆN TỬ THÔNG MINH')
                 ),
-                h('div', { className: 'pass-code' }, selectedBooking.bookingId.slice(0, 13).toUpperCase())
+                h('div', { className: 'pass-code' }, getShortBookingCode(selectedBooking.bookingId))
               ),
 
               h('div', { className: 'pass-body' },

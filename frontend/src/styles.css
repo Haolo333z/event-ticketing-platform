@@ -4146,6 +4146,58 @@ legend {
   color: #64748b;
 }
 
+.booking-event-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  max-width: 65%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.booking-code-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+  letter-spacing: 0.5px;
+}
+
+.card-middle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ef-border, #e2e8f0);
+}
+
+.meta-price-label {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.inspection-sub-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-top: 2px;
+  display: inline-block;
+}
+
 .booking-detail-panel {
   background: #ffffff;
   border: 1.5px solid var(--ef-border);

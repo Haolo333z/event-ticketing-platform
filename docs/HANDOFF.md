@@ -2,6 +2,13 @@
 
 Chốt ngày **22/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
+> **Cập nhật 22/11/2026 (Task T30):** Hoàn tất toàn diện **Task T30: Vá Lỗi Lộ Lịch Sử Đặt Vé Khi Chưa Đăng Nhập, Dọn Trang Chủ, Làm Đẹp Danh Sách Đơn Hàng & Đồng Bộ Phí Sàn**:
+> - **Hạng mục 1:** Chặn tuyệt đối việc tự cấp mock token demo (`demo-customer-token`) khi người dùng chưa đăng nhập trong môi trường trình duyệt; chặn cơ chế fallback trên các API dữ liệu cá nhân (`/api/bookings/**`, `/api/tickets/**`, `/api/me/**`); trả về đúng `401 UNAUTHENTICATED` khi chưa đăng nhập.
+> - **Hạng mục 2:** Gỡ bỏ hoàn toàn khối `section.history` ("Lịch sử đặt vé của tôi") khỏi Trang chủ `/`; chỉ hiển thị lịch sử đặt vé tại phân hệ chuyên biệt `/ve-cua-toi` (`MyBookingsPage.ts`). Nếu chưa đăng nhập, hiển thị thẻ nhắc đăng nhập trang trọng.
+> - **Hạng mục 3:** Làm đẹp danh sách đơn hàng tại `/ve-cua-toi`: hiển thị tên sự kiện rõ ràng, mã đơn ngắn gọn định dạng `#EF-XXXXXX` (thay cho chuỗi UUID 36 ký tự thô), ngày giờ đặt dạng `DD/MM/YYYY HH:mm`, badge trạng thái và tổng tiền VND.
+> - **Hạng mục 4:** Đồng bộ 100% tỷ lệ phí sàn giữa `/bang-gia`, trang chủ và backend `OrganizerPayoutService.java`: 8% (Khởi Nghiệp Starter), 5% (Chuyên Nghiệp Pro), 3% (Doanh Nghiệp Enterprise).
+> - **Chỉ số kiểm thử:** 357 Backend JUnit 5 tests PASS 100%, 84 Frontend tests PASS 100%, Vite production build SUCCESS (259ms), OpenAPI 3.1 Contracts PASS 100%. Bảo toàn 100% Zero Oversell, 0 Deadlock, Anti-IDOR và tuân thủ quy tắc không commit/push.
+
 > **Cập nhật 22/11/2026 (Task T29):** Hoàn tất toàn diện **Task T29: Tối Ưu Giao Diện Theo Phong Cách Ticketbox.vn, Tách Trang Chi Tiết & Dọn Lỗi Dữ Liệu Hiển Thị**:
 > - **Hạng mục 1:** Khắc phục triệt để lỗi `Giá từ: ∞ đ` bằng helper an toàn `getEventMinPriceText()`; chuẩn hóa định dạng ngày `DD/MM/YYYY` bỏ hoàn toàn phần giây; dọn dữ liệu rác test và bản trùng lặp; đa dạng hóa 100% poster theo 5 thể loại Unsplash không lặp lại ảnh; phân trang 8–12 sự kiện kèm nút "Xem thêm".
 > - **Hạng mục 2:** Bỏ thanh utility strip cũ ở đầu trang; thiết kế lại Header chính 1 hàng nền tối `#1E1E24` chuẩn Ticketbox với thanh tìm kiếm bo tròn 9999px thời gian thực, menu Dành cho Ban tổ chức ▾, nút `🎟️ Vé của tôi`, nút cam `+ Tạo sự kiện`, và cụm Avatar Dropdown phân quyền 4 vai trò. Thêm thanh danh mục Ticketbox ngang mỏng (`.ticketbox-category-strip`) ngay dưới Header.

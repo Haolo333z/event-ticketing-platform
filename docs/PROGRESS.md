@@ -4,7 +4,66 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK T29: TỐI ƯU GIAO DIỆN THEO PHONG CÁCH TICKETBOX.VN, TÁCH TRANG CHI TIẾT & DỌN LỖI DỮ LIỆU HIỂN THỊ** (2026-11-22)
+- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TASK T30: VÁ LỖI LỘ LỊCH SỬ ĐẶT VÉ KHI CHƯA ĐĂNG NHẬP, DỌN TRANG CHỦ, LÀM ĐẸP DANH SÁCH ĐƠN HÀNG & ĐỒNG BỘ PHÍ SÀN** (2026-11-22)
+- **Tiến độ:** Hoàn thiện dứt điểm 4 hạng mục an ninh, trải nghiệm người dùng và tính nhất quán thương mại:
+  - **Hạng mục 1 — Chặn tuyệt đối việc tự dùng tài khoản Demo / Mock Fallback khi chưa đăng nhập:**
+    - Cập nhật `createApi` và `demoTransport` trong `client.ts`: trong môi trường trình duyệt (`typeof window !== 'undefined'`), khi người dùng chưa đăng nhập (`getStoredToken() === null`), tuyệt đối không tự gắn mock token `'demo-customer-token'` hay kích hoạt demo fallback.
+    - Chặn cơ chế fallback token trên các API dữ liệu cá nhân (`/api/bookings/**`, `/api/tickets/**`, `/api/me/**`); mọi yêu cầu từ khách vãng lai khi không có JWT token hợp lệ đều nhận mã phản hồi chuẩn `401 UNAUTHENTICATED` ("Cần đăng nhập").
+    - Ở Frontend, khi chưa đăng nhập (`!user`), không tự động gọi API lấy lịch sử đặt vé (`api.mine()`).
+  - **Hạng mục 2 — Gỡ bỏ hoàn toàn khối "Lịch sử đặt vé của tôi" khỏi Trang chủ `/` (`App.ts`):**
+    - Trang chủ `/` hiển thị thuần túy các nội dung công khai: Hero Banner Slider Ticketbox 16:9, Thanh danh mục thể loại, Lưới sự kiện nổi bật 4 cột tràn ngang, Chợ vé chuyển nhượng Resale chính chủ, Trụ cột công nghệ, Bảng giá minh bạch, Form liên hệ tư vấn B2B và FAQ.
+    - Khối `section.history` được loại bỏ hoàn toàn khỏi giao diện người dùng trên Trang chủ (`embedded: true`); toàn bộ lịch sử đặt vé được đưa về duy nhất tại trang `/ve-cua-toi` (`MyBookingsPage.ts`). Khách chưa đăng nhập truy cập `/ve-cua-toi` sẽ thấy màn hình nhắc đăng nhập kèm nút kích hoạt `AuthModal`.
+    - Bảo toàn 100% khả năng chạy độc lập của component `App` trong bộ test `App.test.ts` (`!embedded`).
+  - **Hạng mục 3 — Làm đẹp hiển thị danh sách đơn hàng (bỏ chuỗi UUID 36 ký tự thô):**
+    - Tại `/ve-cua-toi` (`MyBookingsPage.ts`), mỗi dòng đơn hàng hiển thị trực quan và trang nhã: **Tên sự kiện** (tự động mapping từ danh mục sự kiện và tra cứu chi tiết), **Mã đơn ngắn gọn** (chuẩn `#EF-` + 6 ký tự hex cuối in hoa: ví dụ `#EF-3E86C4`), **Ngày giờ đặt chuẩn (`DD/MM/YYYY HH:mm`)**, **Badge trạng thái đơn hàng màu sắc tương phản cao**, và **Tổng tiền thanh toán VND**.
+    - Cập nhật Boarding Pass hiển thị mã đơn định dạng `#EF-XXXXXX` thay cho chuỗi UUID thô dài dòng.
+  - **Hạng mục 4 — Đồng bộ tỷ lệ phí sàn giữa `/bang-gia`, trang chủ và `OrganizerPayoutService.java`:**
+    - Đồng bộ 100% tỷ lệ phí sàn trên toàn hệ thống khớp với logic tính doanh thu đối soát của backend `OrganizerPayoutService.java` (dòng 54–58):
+      - **Gói Khởi Nghiệp (Starter):** `8% / vé bán thành công` (trước đó hiển thị `4.5%`).
+      - **Gói Chuyên Nghiệp (Pro):** `5% / vé bán thành công` (trước đó hiển thị `3.2%`).
+      - **Gói Doanh Nghiệp (Enterprise):** `3% / vé bán thành công` (trước đó ghi `Liên hệ`).
+    - Cập nhật đồng bộ trên cả [PricingPage.ts](file:///d:/event-ticketing-platform/frontend/src/app/PricingPage.ts) và phần `#pricing` trong [App.ts](file:///d:/event-ticketing-platform/frontend/src/app/App.ts).
+- **Kết quả kiểm chứng thực tế:**
+  - Database: Chuỗi **28 Flyway migrations (`V1` $\rightarrow$ `V28`)** áp dụng tự động, đạt chuẩn **44 bảng nghiệp vụ** trong schema `ticketing`.
+  - Backend (`.\backend\mvnw.cmd -f backend/pom.xml test`): **357/357 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn).
+  - Frontend (`cmd /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (259ms)**.
+  - OpenAPI 3.1 Contracts (`cmd /c "npm test --prefix tools/contracts"`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
+  - Git Hygiene: Không commit, không push, bảo toàn nguyên vẹn working tree theo đúng `AGENTS.md` và `docs/RULES.md`.
+
+---
+
+## T30 — Vá Lỗi Lộ Lịch Sử Đặt Vé Khi Chưa Đăng Nhập, Dọn Trang Chủ, Làm Đẹp Danh Sách Đơn Hàng & Đồng Bộ Phí Sàn (Done, 2026-11-22)
+
+**Phạm vi và đầu vào:** Chặn triệt để việc tự gắn token demo cho khách chưa đăng nhập, dọn dẹp trang chủ không còn khối lịch sử đơn hàng, chuẩn hóa hiển thị đơn hàng tại `/ve-cua-toi` với mã đơn ngắn `#EF-XXXXXX` và ngày giờ `DD/MM/YYYY HH:mm`, đồng bộ tỷ lệ phí sàn 8% / 5% / 3% khớp với `OrganizerPayoutService.java`.
+
+**Các file đã triển khai / cập nhật:**
+1. Frontend:
+   - `frontend/src/api/client.ts`
+   - `frontend/src/app/App.ts`
+   - `frontend/src/app/MyBookingsPage.ts`
+   - `frontend/src/app/PricingPage.ts`
+   - `frontend/src/styles.css`
+2. Tài liệu:
+   - `docs/PROGRESS.md`
+   - `docs/HANDOFF.md`
+   - `docs/TASKS.md`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Full Frontend Test Suite & Production Build
+cmd /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: 84/84 tests PASS 100% (5 suites, 84 cases), built in 259ms (dist/index.html generated)
+
+# 2. OpenAPI 3.1 Contract Verification
+cmd /c "npm test --prefix tools/contracts"
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases
+
+# 3. Full Backend Regression Suite
+.\backend\mvnw.cmd -f backend/pom.xml test
+# Kết quả: Tests run: 357, Failures: 0, Errors: 0, Skipped: 121 -> BUILD SUCCESS (22.576s)
+```
+
+---
 - **Tiến độ:** Hoàn thiện trọn vẹn 4 hạng mục giao diện & dữ liệu thương mại cao cấp:
   - **Hạng mục 1 — Sửa 3 lỗi hiển thị & dọn rác dữ liệu ngay lập tức:**
     - Khắc phục triệt để lỗi `Giá từ: ∞ đ` bằng helper an toàn `getEventMinPriceText(ticketTypes)`. Trả về `"Đang cập nhật"` hoặc `"Miễn phí"` khi danh sách vé rỗng hoặc chưa kích hoạt, tuyệt đối không gọi `vnd(Math.min(...[]))`.

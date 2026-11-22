@@ -42,7 +42,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
             h('p', { className: 'plan-desc' }, 'Dành cho hội thảo, workshop, triển lãm và biểu diễn acoustic quy mô ấm cúng.')
           ),
           h('div', { className: 'plan-price' },
-            h('strong', null, '4.5%'),
+            h('strong', null, '8%'),
             h('span', null, '/ vé bán thành công')
           ),
           h('div', { className: 'plan-free-tier' }, 'Miễn phí 100% đối với sự kiện phát vé miễn phí'),
@@ -69,7 +69,7 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
             h('p', { className: 'plan-desc' }, 'Lựa chọn số 1 của các đơn vị biểu diễn âm nhạc, kịch nghệ và hội nghị quy mô lớn.')
           ),
           h('div', { className: 'plan-price' },
-            h('strong', null, '3.2%'),
+            h('strong', null, '5%'),
             h('span', null, '/ vé bán thành công')
           ),
           h('div', { className: 'plan-free-tier' }, 'Bao gồm bảo đảm Zero Oversell 100%'),
@@ -96,8 +96,8 @@ export function PricingPage({ onNavigate }: { onNavigate: (path: string) => void
             h('p', { className: 'plan-desc' }, 'Hạ tầng máy chủ độc lập chuyên biệt cho các sự kiện quốc gia và lưu diễn quốc tế.')
           ),
           h('div', { className: 'plan-price' },
-            h('strong', null, 'Liên hệ'),
-            h('span', null, 'báo giá tùy chỉnh theo dự án')
+            h('strong', null, '3%'),
+            h('span', null, '/ vé bán thành công')
           ),
           h('div', { className: 'plan-free-tier' }, 'Cam kết SLA 99.99% bằng hợp đồng pháp lý'),
           h('ul', { className: 'plan-features' },
