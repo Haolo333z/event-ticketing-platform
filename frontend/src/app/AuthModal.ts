@@ -1,4 +1,4 @@
-import {createElement as h,useState} from 'react';
+import {createElement as h,useState,useEffect} from 'react';
 import type {Api,User} from '../api/client.ts';
 import {setStoredAuth} from '../api/client.ts';
 
@@ -21,6 +21,18 @@ export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSucces
   const[error,setError]=useState<string|null>(null);
   const[showGoogleMenu,setShowGoogleMenu]=useState(false);
   const[googleLoading,setGoogleLoading]=useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setError(null);
+      setLoading(false);
+      setShowGoogleMenu(false);
+      setGoogleLoading(false);
+      if (initialTab) {
+        setTab(initialTab);
+      }
+    }
+  }, [isOpen, initialTab]);
 
   if(!isOpen)return null;
 
@@ -132,7 +144,7 @@ export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSucces
             required:true,
             placeholder:'Nguyễn Văn A',
             value:displayName,
-            onChange:e=>setDisplayName((e.target as HTMLInputElement).value)
+            onChange:e=>{setDisplayName((e.target as HTMLInputElement).value);if(error)setError(null);}
           })
         ),
 
@@ -144,7 +156,7 @@ export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSucces
             required:true,
             placeholder:'ban@email.com',
             value:email,
-            onChange:e=>setEmail((e.target as HTMLInputElement).value)
+            onChange:e=>{setEmail((e.target as HTMLInputElement).value);if(error)setError(null);}
           })
         ),
 
@@ -155,7 +167,7 @@ export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSucces
             type:'tel',
             placeholder:'0901234567',
             value:phone,
-            onChange:e=>setPhone((e.target as HTMLInputElement).value)
+            onChange:e=>{setPhone((e.target as HTMLInputElement).value);if(error)setError(null);}
           })
         ),
 
@@ -167,7 +179,7 @@ export function AuthModal({isOpen,initialTab='login',gateNotice,onClose,onSucces
             required:true,
             placeholder:'Tối thiểu 6 ký tự',
             value:password,
-            onChange:e=>setPassword((e.target as HTMLInputElement).value)
+            onChange:e=>{setPassword((e.target as HTMLInputElement).value);if(error)setError(null);}
           })
         ),
 

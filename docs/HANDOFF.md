@@ -2,6 +2,11 @@
 
 Chốt ngày **23/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
+> **Cập nhật 23/11/2026 (Chặn Gán "Hết Hạn Phiên" Khi Đăng Xuất & Tự Động Xóa Lỗi AuthModal):**
+> - Khi người dùng chủ động bấm Đăng xuất (`logout()`): Bỏ qua refresh interceptor cho `/api/auth/logout`, xóa sạch auth và trả về thành công; phân biệt `hadToken = !!resolvedToken` khi gặp 401 (chỉ hiện *"Phiên đăng nhập đã hết hạn"* khi có token nhưng refresh thất bại, không gán cho anonymous/vừa logout); dọn sạch `gateNotice = ''` trên `DemoShell` và reset `error = null` trên `MyBookingsPage` để hiển thị đúng card *"Yêu Cầu Đăng Nhập"*.
+> - Tự động xóa thông báo lỗi cũ của `AuthModal.ts`: Bổ sung `useEffect([isOpen, initialTab])` tự động xóa sạch `error = null`, `loading = false`, `googleLoading = false` mỗi khi mở modal hoặc đổi tab; tự động xóa lỗi cũ khi người dùng gõ phím vào các ô input hoặc bấm submit `/api/auth/login`.
+> - Chỉ số kiểm thử: **84/84 Frontend tests PASS 100%**, **Vite build SUCCESS (259ms)**, **OpenAPI 3.1 Contracts PASS 100% (47 operations, 69 ca test)**.
+> 
 > **Cập nhật 23/11/2026 (Khắc Phục Hết Hạn Phiên Token, Silent Refresh & Căn Giữa Modal):**
 > - Cố định khóa ký JWT qua `JWT_SECRET` trong `application.yml`, `JwtService.java`, `.env` và `.env.example`, đảm bảo token không bị mất sau khi restart server hoặc tắt mở máy.
 > - Bổ sung `Access-Control-Allow-Credentials: true` vào `RequestPolicyFilter.java` và thêm `body: JSON.stringify({})` cho `doRefresh()` trong `client.ts`, cho phép browser gửi nhận Refresh Cookie an toàn qua CORS và loại bỏ triệt để lỗi HTTP 400.

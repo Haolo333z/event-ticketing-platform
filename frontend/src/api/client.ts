@@ -840,7 +840,7 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
       let response=await fetcher(base+path,fetchOptions);
 
       // 401 interceptor with token family refresh
-      if(response.status===401&&!path.startsWith('/api/auth/login')&&!path.startsWith('/api/auth/register')&&!path.startsWith('/api/auth/refresh')){
+      if(response.status===401&&!path.startsWith('/api/auth/login')&&!path.startsWith('/api/auth/register')&&!path.startsWith('/api/auth/refresh')&&!path.startsWith('/api/auth/logout')){
         const refreshedToken=await doRefresh();
         if(refreshedToken){
           const retryHeaders:Record<string,string>={
@@ -871,12 +871,23 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
         }
       }
 
+      if(path.startsWith('/api/auth/logout')){
+        clearStoredAuth();
+        if(!response.ok){
+          return {success:true,message:'Đã đăng xuất'} as T;
+        }
+      }
+
       let body:Record<string,unknown>;
       try{body=await response.json();}catch{throw new ApiError('NETWORK_ERROR','Chưa xác định được kết quả. Hãy thử lại cùng yêu cầu.');}
       if(!response.ok){
         if(response.status===401){
           clearStoredAuth();
-          throw new ApiError('UNAUTHENTICATED','Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',401,body.correlationId as string|undefined);
+          const hadToken=!!resolvedToken;
+          const msg=hadToken
+            ?'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.'
+            :String(body.message??'Cần đăng nhập để thực hiện thao tác này.');
+          throw new ApiError('UNAUTHENTICATED',msg,401,body.correlationId as string|undefined);
         }
         throw new ApiError(String(body.code??'INTERNAL_ERROR'),String(body.message??'Không thể hoàn tất yêu cầu'),response.status,body.correlationId as string|undefined);
       }

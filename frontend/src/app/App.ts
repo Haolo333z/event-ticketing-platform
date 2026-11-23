@@ -254,6 +254,10 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   useEffect(()=>{
     if (!embedded || user) {
       void historyRefresh();
+    } else {
+      setHistory([]);
+      setHistoryLoading(false);
+      setHistoryFailed(false);
     }
   },[api, embedded, user]);
   useEffect(()=>{let active=true;const payment=readPaymentAttempt(store);if(payment)api.booking(payment.bookingId).then(value=>{if(active)setBooking(value);}).catch(value=>{if(active)fail(value);});return()=>{active=false;};},[api,store]);

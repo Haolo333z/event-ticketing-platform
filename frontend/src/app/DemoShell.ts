@@ -92,6 +92,12 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('ALL');
 
+  function openAuthModal(tab: 'login' | 'register' = 'login', notice = '') {
+    setAuthModalTab(tab);
+    setGateNotice(notice);
+    setAuthModalOpen(true);
+  }
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
@@ -110,9 +116,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
 
   function handleCreateEventClick() {
     if (!user) {
-      setAuthModalTab('login');
-      setGateNotice('Vui lòng đăng nhập để tạo và quản lý sự kiện.');
-      setAuthModalOpen(true);
+      openAuthModal('login', 'Vui lòng đăng nhập để tạo và quản lý sự kiện.');
       return;
     }
     const userRoles = (user.roles && user.roles.length > 0) ? user.roles : [user.role];
@@ -150,9 +154,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
   function navigate(path: string) {
     if (path === '/admin') {
       if (!isUserAdmin(user)) {
-        setAuthModalTab('login');
-        setGateNotice('Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
-        setAuthModalOpen(true);
+        openAuthModal('login', 'Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
         if (typeof window !== 'undefined') {
           window.history.replaceState({}, '', '/');
         }
@@ -187,9 +189,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           }
           setCurrentPath('/');
           setPersona('customer');
-          setAuthModalTab('login');
-          setGateNotice('Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
-          setAuthModalOpen(true);
+          openAuthModal('login', 'Yêu cầu quyền Quản trị viên để truy cập trang này. Vui lòng đăng nhập với tài khoản ADMIN.');
           return;
         }
         setPersona('admin');
@@ -214,12 +214,14 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
     }
     clearStoredAuth();
     setUser(null);
+    setGateNotice('');
     navigate('/');
     setMyBookingsOpen(false);
   }
 
   function handleAuthSuccess(loggedInUser: User) {
     setUser(loggedInUser);
+    setGateNotice('');
     const userRoles = loggedInUser.roles || [loggedInUser.role];
     if (userRoles.includes('ADMIN')) {
       setAdminVisited(true);
@@ -412,12 +414,12 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           h('button', {
             type: 'button',
             className: 'btn-auth-login',
-            onClick: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+            onClick: () => openAuthModal('login')
           }, 'Đăng nhập'),
           h('button', {
             type: 'button',
             className: 'btn-auth-register',
-            onClick: () => { setAuthModalTab('register'); setAuthModalOpen(true); }
+            onClick: () => openAuthModal('register')
           }, 'Đăng ký')
         ),
 
@@ -510,9 +512,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
           onNavigate: navigate,
           onRequireAuth: (resumeAction) => {
             setPendingBookingAction(() => resumeAction);
-            setGateNotice('Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.');
-            setAuthModalTab('login');
-            setAuthModalOpen(true);
+            openAuthModal('login', 'Vui lòng đăng nhập để tiếp tục giữ vé. Lựa chọn của bạn đã được lưu tự động.');
           }
         })
       ),
@@ -525,19 +525,19 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         api: customer,
         user,
         onNavigate: navigate,
-        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        onOpenAuth: () => openAuthModal('login')
       }) : null,
       currentPath === '/staff' && persona !== 'admin' ? h(StaffCheckInPage, {
         api: customer,
         user,
         onNavigate: navigate,
-        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        onOpenAuth: () => openAuthModal('login')
       }) : null,
       currentPath.startsWith('/transfer/accept') && persona !== 'admin' ? h(TransferAcceptPage, {
         api: customer,
         user,
         onNavigate: navigate,
-        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        onOpenAuth: () => openAuthModal('login')
       }) : null,
       currentPath === '/payment-return' && persona !== 'admin' ? h(PaymentReturnPage, {
         api: customer,
@@ -546,7 +546,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
       currentPath === '/ve-cua-toi' && persona !== 'admin' ? h(MyBookingsPage, {
         api: customer,
         user,
-        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); },
+        onOpenAuth: () => openAuthModal('login'),
         onNavigate: navigate,
         onSelectBooking: (id) => {
           setActiveBookingId(id);
@@ -559,7 +559,7 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
         onNavigate: navigate,
         onOpenOnboardingModal: () => setOnboardingModalOpen(true),
         onUserUpdated: (updated) => setUser(updated),
-        onOpenAuth: () => { setAuthModalTab('login'); setAuthModalOpen(true); }
+        onOpenAuth: () => openAuthModal('login')
       }) : null
     ),
 

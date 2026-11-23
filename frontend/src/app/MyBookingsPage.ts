@@ -194,6 +194,12 @@ export function MyBookingsPage({
   useEffect(() => {
     if (user) {
       void loadBookings();
+    } else {
+      setBookings([]);
+      setError(null);
+      setSelectedBooking(null);
+      setTickets([]);
+      setQrMap({});
     }
   }, [user]);
 

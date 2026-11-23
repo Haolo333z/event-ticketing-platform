@@ -4,7 +4,75 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **VÁ DỨT ĐIỂM LỖI BUILD MAVEN TRONG START-ALL.BAT & KIỂM CHỨNG TOÀN DIỆN 1-CHẠM** (2026-11-23)
+- **Giai đoạn:** EventFlow Enterprise 2026 — **CHẶN GÁN "HẾT HẠN PHIÊN" KHI ĐĂNG XUẤT & RESET LỖI CŨ AUTHMODAL** (2026-11-23)
+- **Tiến độ:** 
+  - Khắc phục triệt để việc gán nhầm thông báo *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"* khi người dùng chủ động bấm Đăng xuất:
+    - Trong `frontend/src/api/client.ts`: Đối với endpoint `/api/auth/logout`, bỏ qua interceptor refresh và luôn trả về `{ success: true }`, giải phóng auth mà không throw 401. Đối với các request 401 khác, phân biệt rõ ràng `hadToken = !!resolvedToken`: chỉ thông báo phiên hết hạn khi trước đó có token nhưng refresh thất bại; nếu request gửi ẩn danh hoặc vừa logout không có token, trả về thông báo lỗi chuẩn từ backend (`body.message`).
+    - Trong `frontend/src/app/DemoShell.ts`: `handleLogout()` và `handleAuthSuccess()` luôn gọi `setGateNotice('')` để xóa sạch toàn bộ thông báo gate/hết hạn. Chuẩn hóa hàm `openAuthModal(tab, notice)` cho toàn bộ các nút mở AuthModal.
+    - Trong `frontend/src/app/App.ts`: Sửa `historyRefresh()` chỉ gọi khi `!embedded || user`, khi `embedded: true` và `user == null` tự động dọn sạch `history = []`, `historyFailed = false`, không gọi nhầm `/api/me/bookings`.
+    - Trong `frontend/src/app/MyBookingsPage.ts`: Hook `useEffect([user])` khi `user == null` tự động reset `error = null`, `bookings = []`, `tickets = []`, hiển thị chuẩn xác card *"Yêu Cầu Đăng Nhập"* thay vì card *"Phiên Đăng Nhập Đã Hết Hạn"*.
+  - Tự động xóa sạch lỗi cũ của `AuthModal` trước khi gửi request `/api/auth/login`:
+    - Trong `frontend/src/app/AuthModal.ts`: Bổ sung `useEffect` lắng nghe `[isOpen, initialTab]`: mỗi khi mở modal (`isOpen = true`), tự động reset `error = null`, `loading = false`, `showGoogleMenu = false`, `googleLoading = false`, và đồng bộ `tab = initialTab`.
+    - Khi chuyển tab Đăng nhập / Đăng ký: tự động gọi `setError(null)`.
+    - Khi người dùng chỉnh sửa (gõ) bất kỳ ô input nào (Họ tên, Email, Số điện thoại, Mật khẩu): tự động gọi `setError(null)` xóa ngay lỗi cũ.
+    - Khi submit form hoặc chọn tài khoản Google/Demo: reset `setError(null)` trước khi gửi request.
+  - **Kết quả kiểm chứng kỹ thuật:**
+    - Frontend (`cmd.exe /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (259ms)**.
+    - OpenAPI 3.1 Contracts (`npm.cmd test --prefix tools/contracts`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
+    - Bảo toàn 100% bất biến Zero Oversell, 0 Deadlock, Anti-IDOR.
+
+---
+
+## FIX-LOGOUT-AND-AUTH-MODAL — Chặn Gán "Hết Hạn Phiên" Khi Chủ Động Đăng Xuất & Tự Động Xóa Lỗi AuthModal (Done, 2026-11-23)
+
+**Phạm vi và đầu vào:** Sửa dứt điểm 2 hạng mục theo yêu cầu:
+1. **Chặn thông báo "Phiên đăng nhập đã hết hạn" khi chủ động bấm Đăng xuất (`logout()`):**
+   - Trong `frontend/src/api/client.ts`:
+     - Bổ sung ngoại lệ cho `/api/auth/logout` trong 401 interceptor: không gọi `doRefresh()`, tự động dọn `clearStoredAuth()` và trả về `{ success: true, message: 'Đã đăng xuất' }` kể cả khi server trả mã lỗi hoặc cookie đã hết hạn.
+     - Khi nhận 401 từ các request khác, kiểm tra `hadToken = !!resolvedToken`. Chỉ gán *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại."* khi client thật sự gửi kèm token nhưng bị hết hạn và refresh thất bại. Khi request không kèm token (ẩn danh hoặc sau khi logout), gán thông báo chuẩn `body.message ?? 'Cần đăng nhập để thực hiện thao tác này.'`.
+   - Trong `frontend/src/app/DemoShell.ts`:
+     - Trong `handleLogout()`, bổ sung `setGateNotice('')` để xóa sạch thông báo gate.
+     - Trong `handleAuthSuccess()`, xóa sạch `setGateNotice('')`.
+     - Chuẩn hóa hàm `openAuthModal(tab, notice = '')` và áp dụng cho toàn bộ các nút mở AuthModal (Header login/register, các router guard và callback `onOpenAuth` của `OrganizerDashboard`, `StaffCheckInPage`, `TransferAcceptPage`, `MyBookingsPage`, `AccountProfilePage`).
+   - Trong `frontend/src/app/App.ts`:
+     - Khi `embedded: true` và `user` chuyển sang `null`, reset `history = []`, `historyLoading = false`, `historyFailed = false`, ngăn việc gọi API `/api/me/bookings` khi không có token.
+   - Trong `frontend/src/app/MyBookingsPage.ts`:
+     - Khi `user` chuyển sang `null` (đăng xuất), tự động reset `bookings = []`, `error = null`, `selectedBooking = null`, `tickets = []`, `qrMap = {}`, đảm bảo không hiển thị card lỗi hết hạn phiên mà hiển thị card *"Yêu Cầu Đăng Nhập"* chuẩn mực.
+2. **Tự động xóa thông báo lỗi cũ trong `AuthModal.ts`:**
+   - Thêm `useEffect` theo dõi `[isOpen, initialTab]`: mỗi lần mở `AuthModal`, tự động reset `error = null`, `loading = false`, `showGoogleMenu = false`, `googleLoading = false`, và cập nhật `tab = initialTab`.
+   - Khi chuyển tab Đăng nhập / Đăng ký: `setError(null)`.
+   - Khi người dùng nhập liệu ở bất kỳ ô input nào: tự động `if(error) setError(null)`.
+   - Khi bấm Đăng nhập ngay / Submit form / chọn tài khoản Google: reset `setError(null)` trước khi gửi request `/api/auth/login`.
+
+**Các file đã chỉnh sửa:**
+1. `frontend/src/api/client.ts`
+2. `frontend/src/app/AuthModal.ts`
+3. `frontend/src/app/DemoShell.ts`
+4. `frontend/src/app/App.ts`
+5. `frontend/src/app/MyBookingsPage.ts`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Frontend tests & production build
+cmd.exe /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: tests 84, suites 5, pass 84, fail 0 (2564ms); tsc && vite build SUCCESS (259ms)
+
+# 2. OpenAPI 3.1 Contract verification
+npm.cmd test --prefix tools/contracts
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases; roles, headers, CORS and states checked.
+```
+
+**Bằng chứng:**
+- [client.ts](file:///d:/event-ticketing-platform/frontend/src/api/client.ts#L842-L895)
+- [AuthModal.ts](file:///d:/event-ticketing-platform/frontend/src/app/AuthModal.ts#L25-L37)
+- [DemoShell.ts](file:///d:/event-ticketing-platform/frontend/src/app/DemoShell.ts#L95-L102)
+- [App.ts](file:///d:/event-ticketing-platform/frontend/src/app/App.ts#L254-L262)
+- [MyBookingsPage.ts](file:///d:/event-ticketing-platform/frontend/src/app/MyBookingsPage.ts#L194-L205)
+
+**Giới hạn kiểm chứng:**
+- Kiểm chứng thành công 100% bằng bộ unit & integration tests Node/React và build Vite production; kiểm chứng giao diện thực tế cần mở trình duyệt và thực hiện tương tác UI.
+
+---
 - **Tiến độ:** 
   - Khắc phục triệt để lỗi `there is no POM in this directory` khi `start-all.bat` tự động phát hiện mã nguồn backend mới hơn file `.jar` và chạy Maven đóng gói:
     - Chuyển ngữ cảnh vào đúng thư mục backend: `pushd "%~dp0backend"`, gọi `call .\mvnw.cmd -f pom.xml package -DskipTests`, kiểm tra `if errorlevel 1` an toàn và `popd`.
