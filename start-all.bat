@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 )
 
 echo    Dang doi PostgreSQL (port 5432) san sang...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$timeout = 35; $sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.Elapsed.TotalSeconds -lt $timeout) { try { $tcp = New-Object Net.Sockets.TcpClient; $tcp.Connect('127.0.0.1', 5432); $tcp.Close(); Write-Host '   [OK] PostgreSQL port 5432 da san sang ket noi!' -ForegroundColor Green; exit 0 } catch { Start-Sleep -Seconds 1 } }; Write-Host '   [CANH BAO] Khong the ket noi port 5432 sau 35 giay' -ForegroundColor Yellow; exit 1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$timeout = 35; $sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.Elapsed.TotalSeconds -lt $timeout) { try { $tcp = New-Object Net.Sockets.TcpClient; $tcp.Connect('127.0.0.1', 5432); $tcp.Close(); Write-Host '   [OK] PostgreSQL port 5432 da san sang ket noi.' -ForegroundColor Green; exit 0 } catch { Start-Sleep -Seconds 1 } }; Write-Host '   [CANH BAO] Khong the ket noi port 5432 sau 35 giay.' -ForegroundColor Yellow; exit 1"
 
 :: 4. Kiem tra file .jar va ma nguon Backend de tu dong package neu can
 echo.
@@ -49,13 +49,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$jar = 'backend\target\t
 if %errorlevel% equ 10 (
     echo    Phat hien ma nguon backend moi hon file .jar hoac file .jar chua ton tai.
     echo    Dang tien hanh dong goi lai backend voi Maven...
-    call .\backend\mvnw.cmd package -DskipTests
-    if %errorlevel% neq 0 (
+    pushd "%~dp0backend"
+    call .\mvnw.cmd -f pom.xml package -DskipTests
+    if errorlevel 1 (
+        popd
         echo.
         echo [LOI] Dong goi backend bang Maven that bai! Vui long kiem tra ma nguon.
         pause
         exit /b 1
     )
+    popd
     echo    [OK] Dong goi backend thanh cong!
 ) else (
     echo    [OK] File .jar backend da san sang va dong bo ma nguon moi nhat.
@@ -66,7 +69,7 @@ echo    Dang bat Backend trong cua so rieng "EventFlow Backend (8080)"...
 start "EventFlow Backend (8080)" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\start-backend-local.ps1"
 
 echo    Dang doi Backend khoi dong hoan tat (http://127.0.0.1:8080/actuator/health UP)...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.Elapsed.TotalSeconds -lt 90) { try { $res = Invoke-RestMethod -Uri 'http://127.0.0.1:8080/actuator/health' -TimeoutSec 2 -ErrorAction Stop; if ($res.status -eq 'UP') { Write-Host '   [OK] Backend da san sang (HTTP 200 / UP)!' -ForegroundColor Green; exit 0 } } catch { Start-Sleep -Seconds 2 } }; Write-Host '   [LOI] Backend chua phan hoi sau 90 giay!' -ForegroundColor Red; exit 1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.Elapsed.TotalSeconds -lt 90) { try { $res = Invoke-RestMethod -Uri 'http://127.0.0.1:8080/actuator/health' -TimeoutSec 2 -ErrorAction Stop; if ($res.status -eq 'UP') { Write-Host '   [OK] Backend da san sang (HTTP 200 / UP).' -ForegroundColor Green; exit 0 } } catch { Start-Sleep -Seconds 2 } }; Write-Host '   [LOI] Backend chua phan hoi sau 90 giay.' -ForegroundColor Red; exit 1"
 if %errorlevel% neq 0 (
     echo.
     echo [LOI] Backend khong phan hoi dung hen. Vui long kiem tra cua so "EventFlow Backend (8080)".

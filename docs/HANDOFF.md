@@ -7,6 +7,7 @@ Chốt ngày **23/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. �
 > - Bổ sung `Access-Control-Allow-Credentials: true` vào `RequestPolicyFilter.java` và thêm `body: JSON.stringify({})` cho `doRefresh()` trong `client.ts`, cho phép browser gửi nhận Refresh Cookie an toàn qua CORS và loại bỏ triệt để lỗi HTTP 400.
 > - Tự động Silent Refresh 1 lần khi nhận HTTP 401; nếu refresh thất bại thì gọi `clearStoredAuth()` đồng bộ state xóa sạch user trên Header và hiển thị card *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"* trên `/ve-cua-toi` kèm nút mở `AuthModal`.
 > - Sửa vị trí `OrganizerOnboardingModal.ts` căn giữa chính giữa màn hình với `auth-modal-backdrop auth-modal-overlay` và CSS `position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999`.
+> - Sửa `start-all.bat`: dùng `pushd "%~dp0backend"`, `call .\mvnw.cmd -f pom.xml package -DskipTests` và `popd`, loại bỏ lỗi `there is no POM in this directory`; kiểm chứng tự động build jar và khởi động web thành công 100%.
 > - Chỉ số kiểm thử: **358/358 Backend JUnit 5 tests PASS 100%**, **84/84 Frontend Vitest tests PASS 100%**, **Vite build SUCCESS (261ms)**, **OpenAPI 3.1 Contracts PASS 100% (47 operations, 69 ca test)**.
 
 > **Cập nhật 22/11/2026 (Sổ Tay Hướng Dẫn Sử Dụng Chi Tiết Từng Thao Tác):**

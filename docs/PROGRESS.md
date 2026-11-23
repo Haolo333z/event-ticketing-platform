@@ -4,8 +4,12 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **VÁ DỨT ĐIỂM HẾT HẠN PHIÊN TOKEN (JWT SECRET, SILENT REFRESH, CORS CREDENTIALS) & CĂN GIỮA ONBOARDING MODAL** (2026-11-23)
+- **Giai đoạn:** EventFlow Enterprise 2026 — **VÁ DỨT ĐIỂM LỖI BUILD MAVEN TRONG START-ALL.BAT & KIỂM CHỨNG TOÀN DIỆN 1-CHẠM** (2026-11-23)
 - **Tiến độ:** 
+  - Khắc phục triệt để lỗi `there is no POM in this directory` khi `start-all.bat` tự động phát hiện mã nguồn backend mới hơn file `.jar` và chạy Maven đóng gói:
+    - Chuyển ngữ cảnh vào đúng thư mục backend: `pushd "%~dp0backend"`, gọi `call .\mvnw.cmd -f pom.xml package -DskipTests`, kiểm tra `if errorlevel 1` an toàn và `popd`.
+    - Chuẩn hóa các chuỗi thông báo trong các câu lệnh inline PowerShell của batch file, loại bỏ ký tự dấu chấm than `!` gây xung đột với parser cmd.
+    - Chạy thực tế xác nhận: Maven tự động biên dịch 162 file mã nguồn Java, đóng gói thành công `ticketing-backend-0.0.1-SNAPSHOT.jar` (BUILD SUCCESS 10.58s), khởi động Backend UP (HTTP 200) và Frontend 5173 mở trình duyệt tự động.
   - Khắc phục triệt để lỗi mất phiên làm việc sau khi tắt mở máy / restart backend và sự lệch pha giữa Header và trang `/ve-cua-toi`:
     - **Cố định khóa ký bí mật JWT (`JWT_SECRET`):** Bổ sung cấu hình đọc `JWT_SECRET` chuẩn xác trong `application.yml`, `JwtService.java`, `RefreshTokenService.java`, `.env` và `.env.example`, đảm bảo khóa ký cố định và bền vững qua các lần khởi động lại server.
     - **Cấu hình CORS Credentials & Bổ sung body cho Refresh Token:** Bổ sung `Access-Control-Allow-Credentials: true` vào `RequestPolicyFilter.java` cho cả request thông thường và OPTIONS preflight; bổ sung `body: JSON.stringify({})` cho lệnh POST `/api/auth/refresh` trong `client.ts` loại bỏ triệt để lỗi HTTP 400.
