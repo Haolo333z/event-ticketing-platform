@@ -1,8 +1,22 @@
 # Bàn giao event-ticketing-platform
 
-Chốt ngày **22/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
+Chốt ngày **23/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
-> **Cập nhật 22/11/2026 (Live E2E Re-Audit 15 Hạng Mục Lỗi & Flyway V29):** Hoàn tất toàn diện đợt kiểm thử và nghiệm thu thực tế bằng trình duyệt Playwright E2E Live QA Auditor kết nối hệ thống thật (`http://127.0.0.1:5173/`, backend `:8080`, PostgreSQL 17 `:5432`):
+> **Cập nhật 23/11/2026 (Khắc Phục Hết Hạn Phiên Token, Silent Refresh & Căn Giữa Modal):**
+> - Cố định khóa ký JWT qua `JWT_SECRET` trong `application.yml`, `JwtService.java`, `.env` và `.env.example`, đảm bảo token không bị mất sau khi restart server hoặc tắt mở máy.
+> - Bổ sung `Access-Control-Allow-Credentials: true` vào `RequestPolicyFilter.java` và thêm `body: JSON.stringify({})` cho `doRefresh()` trong `client.ts`, cho phép browser gửi nhận Refresh Cookie an toàn qua CORS và loại bỏ triệt để lỗi HTTP 400.
+> - Tự động Silent Refresh 1 lần khi nhận HTTP 401; nếu refresh thất bại thì gọi `clearStoredAuth()` đồng bộ state xóa sạch user trên Header và hiển thị card *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"* trên `/ve-cua-toi` kèm nút mở `AuthModal`.
+> - Sửa vị trí `OrganizerOnboardingModal.ts` căn giữa chính giữa màn hình với `auth-modal-backdrop auth-modal-overlay` và CSS `position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999`.
+> - Chỉ số kiểm thử: **358/358 Backend JUnit 5 tests PASS 100%**, **84/84 Frontend Vitest tests PASS 100%**, **Vite build SUCCESS (261ms)**, **OpenAPI 3.1 Contracts PASS 100% (47 operations, 69 ca test)**.
+
+> **Cập nhật 22/11/2026 (Sổ Tay Hướng Dẫn Sử Dụng Chi Tiết Từng Thao Tác):**
+> - Đã hoàn thiện tài liệu hướng dẫn vận hành và sử dụng chi tiết chuẩn Click-by-Click tại [docs/HUONG_DAN_SU_DUNG_CHI_TIET.md](HUONG_DAN_SU_DUNG_CHI_TIET.md) (dung lượng ~59.5 KB, cấu trúc chuẩn 6 phần, 100% chức năng có 4 bước: Mục đích -> Bấm nút nào -> Điền dữ liệu mẫu thật nào -> Kết quả thực tế nhìn thấy).
+> - Phục vụ người mới tiếp cận, ban vận hành sàn, nhà tổ chức sự kiện, nhân viên soát vé, quản trị viên và tự tin thuyết trình/demo trực tiếp trước hội đồng thẩm định.
+>
+> **Cập nhật 22/11/2026 (Bộ Tiện Ích 1-Chạm Windows & Live Re-Audit):**
+> - Bổ sung 2 file tiện ích chuẩn Windows ngay tại thư mục gốc:
+>   - `start-all.bat`: Khởi động 1-chạm Docker (Postgres/Kafka), kiểm tra cổng 5432, tự động build lại `.jar` nếu mã nguồn `.java`/`.sql` mới hơn file đóng gói, giải phóng cổng 8080/5173 nếu bị kẹt, mở Backend trong cửa sổ riêng `"EventFlow Backend (8080)"`, đợi `actuator/health` UP mới mở Frontend `"EventFlow Frontend (5173)"` và tự động mở trình duyệt `http://127.0.0.1:5173`.
+>   - `stop-all.bat`: Tắt gọn gàng toàn bộ tiến trình Backend, Frontend, đóng cửa sổ console và dừng Docker containers (`docker compose stop`) mà không xóa dữ liệu cơ sở dữ liệu.
 > - **15/15 mã lỗi ĐÃ ĐƯỢC KHẮC PHỤC HOÀN TOÀN (PASS 100%):**
 >   - `P0-1`: Broken Access Control `/admin` - chặn chuyển hướng về `/` và mở `AuthModal`, không leak dữ liệu, không cấp token demo.
 >   - `P0-2`: ResaleListingService SQL crash `t.seat_id` - `GET /api/events/{id}/resale-listings` trả về HTTP 200 OK.

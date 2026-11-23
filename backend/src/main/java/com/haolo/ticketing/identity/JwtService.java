@@ -17,8 +17,8 @@ public class JwtService {
     private final ObjectMapper mapper;
 
     public JwtService(
-        @Value("${demo.jwt.secret:EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise}") String secret,
-        @Value("${demo.jwt.expiration-seconds:900}") long expirationSeconds,
+        @Value("${jwt.secret:${JWT_SECRET:EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise}}") String secret,
+        @Value("${jwt.expiration-seconds:${JWT_EXPIRATION_SECONDS:900}}") long expirationSeconds,
         ObjectMapper mapper
     ) {
         this.secretKeyBytes = secret.getBytes(StandardCharsets.UTF_8);

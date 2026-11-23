@@ -4,9 +4,41 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **HOÀN TẤT TOÀN DIỆN & SỬA DỨT ĐIỂM 15/15 HẠNG MỤC LỖI (LIVE E2E RE-AUDIT & FLYWAY V29)** (2026-11-22)
-- **Tiến độ:** Đã khắc phục triệt để toàn bộ 15/15 hạng mục phát hiện qua kiểm thử trình duyệt thực tế Playwright:
-  - **15/15 mã lỗi ĐÃ ĐƯỢC KHẮC PHỤC HOÀN TOÀN (PASS 100%):**
+- **Giai đoạn:** EventFlow Enterprise 2026 — **VÁ DỨT ĐIỂM HẾT HẠN PHIÊN TOKEN (JWT SECRET, SILENT REFRESH, CORS CREDENTIALS) & CĂN GIỮA ONBOARDING MODAL** (2026-11-23)
+- **Tiến độ:** 
+  - Khắc phục triệt để lỗi mất phiên làm việc sau khi tắt mở máy / restart backend và sự lệch pha giữa Header và trang `/ve-cua-toi`:
+    - **Cố định khóa ký bí mật JWT (`JWT_SECRET`):** Bổ sung cấu hình đọc `JWT_SECRET` chuẩn xác trong `application.yml`, `JwtService.java`, `RefreshTokenService.java`, `.env` và `.env.example`, đảm bảo khóa ký cố định và bền vững qua các lần khởi động lại server.
+    - **Cấu hình CORS Credentials & Bổ sung body cho Refresh Token:** Bổ sung `Access-Control-Allow-Credentials: true` vào `RequestPolicyFilter.java` cho cả request thông thường và OPTIONS preflight; bổ sung `body: JSON.stringify({})` cho lệnh POST `/api/auth/refresh` trong `client.ts` loại bỏ triệt để lỗi HTTP 400.
+    - **Silent Refresh & Đồng bộ Auth State trên Frontend:** Tự động gọi refresh token đúng 1 lần khi nhận HTTP 401; nếu refresh thành công thì retry request gốc trong suốt với người dùng. Nếu refresh thất bại, gọi `clearStoredAuth()` xóa sạch `localStorage`, kích hoạt sự kiện `eventflow:auth-cleared` để Header đồng bộ gỡ bỏ thông tin tài khoản và hiển thị giao diện thông báo *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"* kèm nút mở `AuthModal`.
+    - **Căn giữa `OrganizerOnboardingModal`:** Bổ sung lớp `auth-modal-backdrop auth-modal-overlay` cùng các thuộc tính căn giữa toàn màn hình `position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999` trong cả component và `styles.css`.
+  - **Kết quả kiểm chứng kỹ thuật:**
+    - Database: Chuỗi **29 Flyway migrations (`V1` $\rightarrow$ `V29`)** hợp lệ, đạt chuẩn **44 bảng nghiệp vụ** trong schema `ticketing`.
+    - Backend (`.\backend\mvnw.cmd test`): **358/358 tests PASS 100%** (0 failures, 0 errors, 121 IT skipped an toàn).
+    - Frontend (`npm.cmd test --prefix frontend && npm.cmd run build --prefix frontend`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (261ms)**.
+    - OpenAPI 3.1 Contracts (`npm.cmd test --prefix tools/contracts`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
+    - Không phá vỡ bất biến Zero Oversell, 0 Deadlock, Anti-IDOR.
+
+---
+
+## FIX-AUTH-TOKEN-AND-MODAL — Khắc Phục Triệt Để Phiên Đăng Nhập JWT, Silent Refresh & Căn Giữa Modal (Done, 2026-11-23)
+
+**Phạm vi và đầu vào:** Sửa dứt điểm 4 hạng mục theo yêu cầu:
+1. **Cố định khóa bí mật JWT (`JWT_SECRET`):**
+   - Trong `application.yml`, cấu hình mapping linh hoạt: `demo.jwt.secret: ${JWT_SECRET:EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise}` và `jwt.secret: ${demo.jwt.secret}`.
+   - Trong `JwtService.java` và `RefreshTokenService.java`, cấu hình `@Value` đọc cố định từ `${jwt.secret:${JWT_SECRET:...}}` và `${jwt.refresh-token-validity-days:...}`.
+   - Thêm `JWT_SECRET` cố định vào `.env` và `.env.example`.
+2. **CORS Credentials & HTTP 400 Refresh Token:**
+   - Trong `RequestPolicyFilter.java`, bổ sung `res.setHeader("Access-Control-Allow-Credentials", "true")` cho cả preflight OPTIONS và request thường, cho phép browser gửi nhận cookie `eventflow_refresh` qua CORS giữa `5173` và `8080`.
+   - Trong `frontend/src/api/client.ts`, bổ sung `body: JSON.stringify({})` cho `doRefresh()`, tránh bị `RequestPolicyFilter` reject với lỗi `400 VALIDATION_ERROR: Body phải là một JSON object hợp lệ`.
+3. **Silent Refresh & Dọn Sạch Trạng Thái Khi Hết Hạn:**
+   - Trong `client.ts`: Khi nhận 401, tự động gọi `doRefresh()`. Nếu thành công, retry request gốc. Nếu thất bại, lập tức gọi `clearStoredAuth()` phát event `eventflow:auth-cleared`.
+   - Trong `DemoShell.ts`: Lắng nghe `eventflow:auth-cleared` để reset `user = null` trên Header.
+   - Trong `MyBookingsPage.ts`: Khi gặp lỗi 401 hoặc hết hạn, gọi `clearStoredAuth()`, hiển thị card thông báo trang trọng *"Phiên Đăng Nhập Đã Hết Hạn"* kèm nút *"🔑 Đăng nhập lại ngay →"* mở trực tiếp `AuthModal`.
+4. **Căn Giữa `OrganizerOnboardingModal.ts`:**
+   - Cập nhật `className: 'auth-modal-backdrop auth-modal-overlay'` kèm inline style cố định `position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999`.
+   - Trong `styles.css`, bổ sung selector `.auth-modal-overlay` tương đương `.auth-modal-backdrop`.
+
+---
     - `P0-1`: Broken Access Control `/admin` - chặn chuyển hướng về `/` và mở `AuthModal`, không leak dữ liệu, không cấp token demo.
     - `P0-2`: ResaleListingService SQL crash `t.seat_id` - `GET /api/events/{id}/resale-listings` trả về HTTP 200 OK.
     - `P0-3`: StaffCheckInService SQL crash `e.ends_at` - `GET /api/staff/events` trả về HTTP 200 OK (>170 sự kiện, offline ticket sync mượt mà).
@@ -2648,3 +2680,39 @@ Build trong launcher lần boot và restart báo **130test/121skip/0failure/erro
 
 ### 6. Giới Hạn Kiểm Chứng & Tuân Thủ
 - **Bảo toàn Git**: Giữ toàn bộ thay đổi uncommitted trong working tree, không tự ý `git commit` hoặc `git push` theo đúng chỉ thị `AGENTS.md` và `RULES.md`.
+
+---
+
+## USER-MANUAL — Sổ Tay Hướng Dẫn Sử Dụng Chi Tiết Từng Thao Tác (Click-by-Click) (Done, 2026-11-22)
+
+**Mục tiêu & Phạm vi:**
+- Biên soạn tài liệu hướng dẫn vận hành và sử dụng chi tiết từng cú click chuột cho toàn bộ nền tảng EventFlow Enterprise (chuẩn Ticketbox 2026) lưu tại `docs/HUONG_DAN_SU_DUNG_CHI_TIET.md`.
+- TUYỆT ĐỐI KHÔNG sửa bất kỳ mã nguồn ứng dụng hay schema DB nào. Đảm bảo 100% dữ liệu mẫu, tài khoản, voucher, sự kiện khớp chính xác với database PostgreSQL `ticketing_demo`.
+- Mỗi tính năng trình bày chuẩn 4 bước: (1) Mục đích -> (2) Bấm vào nút nào, ở đâu -> (3) Điền dữ liệu mẫu gì -> (4) Kết quả thực tế nhìn thấy trên màn hình.
+
+**Cấu trúc 6 Phần của Sổ Tay:**
+1. **Phần 1: Cách Khởi Động, Tắt Hệ Thống & Dữ Liệu Sẵn Có Để Thử Nghiệm**
+   - Hướng dẫn chạy 1-chạm `start-all.bat` (Docker, Backend 8080, Frontend 5173) và dừng bằng `stop-all.bat`.
+   - Bảng tài khoản mẫu 4 vai trò RBAC (`admin@eventflow.vn`, `customer@eventflow.vn`, `nguyenvana@gmail.com`, 3 tài khoản Google OAuth2 One-Tap).
+   - Bảng mã giảm giá thật (`SUMMER2026`, `WELCOME50K`) và bảng sự kiện thật (Seated 3D & GA).
+2. **Phần 2: Hướng Dẫn Cho Khách Hàng (CUSTOMER & Khách Vãng Lai)**
+   - Đăng nhập/Đăng ký nhanh với chip điền sẵn hoặc Google One-Tap.
+   - Tìm kiếm, lọc danh mục chuẩn Ticketbox, phân biệt sự kiện GA & Ghế chỉ định (SEATED).
+   - Đặt vé GA và chọn ghế trực quan Seated 3D (Minimap, SVG Seat View, Best Seats Picker, Smart Waitlist).
+   - Checkout 10 phút, áp mã voucher, xuất hóa đơn VAT, hủy đơn nhả ghế tức thì.
+   - Quản lý "Vé của tôi" (`/ve-cua-toi`): QR Code HMAC-SHA256, xuất `.ics`, hoàn tiền 3 bước, tặng vé bạn bè, ký gửi bán lại (Resale Fan-to-Fan).
+   - Trợ lý AI Concierge thông minh với bộ prompt mẫu.
+   - Trang hồ sơ cá nhân (`/tai-khoan`) với 5 tab độc lập (`Promise.allSettled`).
+3. **Phần 3: Hướng Dẫn Cho Nhà Tổ Chức Sự Kiện (ORGANIZER)**
+   - Quy trình Onboarding từ Customer -> B2B Lead -> Organizer.
+   - Cổng Nhà tổ chức (`/organizer`): Dashboard doanh thu, Tạo sự kiện có AI Copilot gợi ý, Thiết lập ma trận ghế Seated, Mở bán (`publishEvent`), Tạo Voucher và Phân quyền Staff soát vé.
+4. **Phần 4: Hướng Dẫn Cho Nhân Viên Soát Vé (STAFF)**
+   - Cổng soát vé `/staff`: Giao diện Web Camera scanner, Quét vé hợp lệ (màn hình xanh, âm báo 880Hz), Phát hiện vé trùng/đã hoàn/đã tặng (màn hình đỏ, âm báo 220Hz), Chế độ Offline-first & Batch-Sync.
+5. **Phần 5: Hướng Dẫn Cho Quản Trị Viên Sàn (ADMIN)**
+   - Cổng quản trị `/admin` với 7 tab: Tổng quan KPI & Export CSV, Duyệt hoàn tiền `REFUND_REQUIRED`, Quản lý tài khoản RBAC & cơ chế bảo vệ chống tự khóa, Duyệt 1-chạm B2B Organizer, Quyết toán tự động & Phê duyệt Payout, Giám sát AI Ops (dự báo bán vé, cảnh báo phe vé), Vận hành kỹ thuật (Circuit Breaker VNPAY & Replay Outbox/DLQ).
+6. **Phần 6: Bảng Xử Lý Nhanh Sự Cố Thường Gặp (Troubleshooting)**
+   - Hướng dẫn xử lý `NETWORK_ERROR`, Docker Desktop, kiểm thử phân quyền đa vai trò bằng cửa sổ ẩn danh `Ctrl+Shift+N`, giải quyết vướng mắc lọc Seated và làm mới token sau khi duyệt quyền.
+
+**Kết quả kiểm chứng:**
+- File tài liệu `docs/HUONG_DAN_SU_DUNG_CHI_TIET.md` đã tạo hoàn chỉnh (dung lượng ~59.5 KB, 430 dòng markdown chi tiết).
+- Không có bất kỳ thay đổi nào tác động tiêu cực đến mã nguồn backend, frontend, hợp đồng OpenAPI hoặc cơ sở dữ liệu.

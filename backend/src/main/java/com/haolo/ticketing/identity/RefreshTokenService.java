@@ -21,7 +21,7 @@ public class RefreshTokenService {
 
     public RefreshTokenService(
         JdbcTemplate jdbc,
-        @Value("${demo.jwt.refresh-token-validity-days:7}") long validityDays
+        @Value("${jwt.refresh-token-validity-days:${JWT_REFRESH_TOKEN_VALIDITY_DAYS:7}}") long validityDays
     ) {
         this.jdbc = jdbc;
         this.validityDays = validityDays;

@@ -132,15 +132,13 @@ export function DemoShell({ customer, admin, store }: { customer: Api; admin: Ad
 
   useEffect(() => {
     function onAuthCleared() {
-      if (!mockCustomer && !mockAdmin) {
-        setUser(null);
-      }
+      setUser(null);
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('eventflow:auth-cleared', onAuthCleared);
       return () => window.removeEventListener('eventflow:auth-cleared', onAuthCleared);
     }
-  }, [mockCustomer, mockAdmin]);
+  }, []);
 
   useEffect(() => {
     if (shouldBlockAdmin && typeof window !== 'undefined') {

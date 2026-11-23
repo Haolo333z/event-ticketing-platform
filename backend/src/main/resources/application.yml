@@ -41,6 +41,15 @@ expiry:
 operations:
   metrics:
     snapshot-ttl-ms: 1000
+demo:
+  jwt:
+    secret: ${JWT_SECRET:EventFlow-Secure-JWT-Token-Secret-Key-2026-Super-Secret-Key-256bit-Enterprise}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:900}
+    refresh-token-validity-days: ${JWT_REFRESH_TOKEN_VALIDITY_DAYS:7}
+jwt:
+  secret: ${demo.jwt.secret}
+  expiration-seconds: ${demo.jwt.expiration-seconds}
+  refresh-token-validity-days: ${demo.jwt.refresh-token-validity-days}
 logging:
   config: classpath:logback-spring.xml
   structured:

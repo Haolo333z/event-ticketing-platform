@@ -92,10 +92,31 @@ export function OrganizerOnboardingModal({
   const isApproved = statusData?.hasSubmitted && statusData.status === 'CONVERTED';
   const isRejected = statusData?.hasSubmitted && (statusData.status === 'REJECTED' || statusData.status === 'CLOSED');
 
-  return h('div', { className: 'auth-modal-overlay', onClick: onClose },
+  return h('div', {
+    className: 'auth-modal-backdrop auth-modal-overlay',
+    style: {
+      position: 'fixed',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'rgba(10, 15, 29, 0.75)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      zIndex: 9999,
+      padding: '16px'
+    },
+    onClick: onClose
+  },
     h('div', {
       className: 'auth-modal-card onboarding-modal-card',
-      style: { maxWidth: '560px', width: '90%' },
+      style: {
+        maxWidth: '560px',
+        width: '90%',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        margin: 'auto'
+      },
       onClick: (e: any) => e.stopPropagation()
     },
       h('div', { className: 'auth-modal-header' },

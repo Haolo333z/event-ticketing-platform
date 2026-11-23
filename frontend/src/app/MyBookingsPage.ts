@@ -1,5 +1,6 @@
 import { createElement as h, useState, useEffect } from 'react';
 import type { Api, Booking, User, Ticket, Event } from '../api/client.ts';
+import { ApiError, clearStoredAuth } from '../api/client.ts';
 import { QrCodeSvg } from './QrCodeSvg.ts';
 
 const labels: Record<string, string> = {
@@ -179,7 +180,12 @@ export function MyBookingsPage({
         // events catalog fallback
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Không tải được danh sách vé.');
+      if (err instanceof ApiError && (err.status === 401 || err.code === 'UNAUTHENTICATED')) {
+        clearStoredAuth();
+        setError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Không tải được danh sách vé.');
+      }
     } finally {
       setLoading(false);
     }
@@ -324,10 +330,32 @@ export function MyBookingsPage({
         )
       ) : loading ? h('div', { className: 'loading-state-box' },
         h('p', { role: 'status' }, 'Đang tải danh sách vé điện tử từ hệ thống…')
-      ) : error ? h('div', { role: 'alert', className: 'alert error' },
-        h('strong', null, 'Không thể tải danh sách vé'),
-        h('p', null, error),
-        h('button', { type: 'button', onClick: loadBookings, className: 'quiet' }, 'Thử lại')
+      ) : error ? (
+        (error.includes('hết hạn') || error.includes('Token không hợp lệ') || error.includes('UNAUTHENTICATED')) ? (
+          h('div', { className: 'unauth-notice-card center' },
+            h('div', { className: 'notice-icon' }, '🔒'),
+            h('h3', null, 'Phiên Đăng Nhập Đã Hết Hạn'),
+            h('p', null, 'Phiên làm việc của bạn đã hết hạn để đảm bảo an toàn. Vui lòng đăng nhập lại để tiếp tục quản lý vé điện tử.'),
+            h('div', { className: 'notice-actions' },
+              h('button', {
+                type: 'button',
+                className: 'hero-cta-coral',
+                onClick: onOpenAuth
+              }, '🔑 Đăng nhập lại ngay →'),
+              h('button', {
+                type: 'button',
+                className: 'hero-cta-secondary',
+                onClick: () => onNavigate('/dat-ve')
+              }, 'Khám phá sự kiện mở bán')
+            )
+          )
+        ) : (
+          h('div', { role: 'alert', className: 'alert error' },
+            h('strong', null, 'Không thể tải danh sách vé'),
+            h('p', null, error),
+            h('button', { type: 'button', onClick: loadBookings, className: 'quiet' }, 'Thử lại')
+          )
+        )
       ) : bookings.length === 0 ? h('div', { className: 'empty-tickets-card center' },
         h('div', { className: 'empty-icon' }, '🎫'),
         h('h3', null, 'Bạn chưa có vé sự kiện nào'),

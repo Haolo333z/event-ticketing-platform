@@ -793,7 +793,8 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
         const res=await fetcher(base+'/api/auth/refresh',{
           method:'POST',
           credentials:'include',
-          headers:{'Content-Type':'application/json'}
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({})
         });
         if(!res.ok){
           clearStoredAuth();
@@ -807,6 +808,7 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
         clearStoredAuth();
         return null;
       }catch{
+        clearStoredAuth();
         return null;
       }finally{
         activeRefreshPromise=null;
@@ -829,7 +831,13 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
       if(resolvedToken && !headers['Authorization'] && !headers['authorization']){
         headers['Authorization']='Bearer '+resolvedToken;
       }
-      let response=await fetcher(base+path,{...init,signal:controller.signal,headers});
+      const fetchOptions:RequestInit={
+        ...init,
+        credentials:init.credentials??'include',
+        signal:controller.signal,
+        headers
+      };
+      let response=await fetcher(base+path,fetchOptions);
 
       // 401 interceptor with token family refresh
       if(response.status===401&&!path.startsWith('/api/auth/login')&&!path.startsWith('/api/auth/register')&&!path.startsWith('/api/auth/refresh')){
@@ -839,30 +847,39 @@ export function demoTransport(base:string,fetcher:typeof fetch,token:string|null
             ...(init.headers as Record<string,string>|undefined),
             'Authorization':'Bearer '+refreshedToken
           };
-          response=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
-        }else if(!isPersonalEndpoint(path)){
-          // Stored token was expired or invalid and refresh failed (stored auth was cleared).
-          // Fallback retry using current tokenProvider() or clean anonymous headers for public endpoints only.
-          const fallbackToken=typeof token==='function'?token():null;
-          const retryHeaders:Record<string,string>={
-            ...(init.headers as Record<string,string>|undefined)
-          };
-          if(fallbackToken&&fallbackToken!==resolvedToken){
-            retryHeaders['Authorization']='Bearer '+fallbackToken;
-          }else{
-            delete retryHeaders['Authorization'];
-            delete retryHeaders['authorization'];
-          }
-          const retryResponse=await fetcher(base+path,{...init,signal:controller.signal,headers:retryHeaders});
-          if(retryResponse.ok||retryResponse.status!==401){
-            response=retryResponse;
+          response=await fetcher(base+path,{...fetchOptions,headers:retryHeaders});
+        }else{
+          clearStoredAuth();
+          if(!isPersonalEndpoint(path)){
+            // Stored token was expired or invalid and refresh failed (stored auth was cleared).
+            // Fallback retry using clean anonymous headers for public endpoints only.
+            const fallbackToken=typeof token==='function'?token():null;
+            const retryHeaders:Record<string,string>={
+              ...(init.headers as Record<string,string>|undefined)
+            };
+            if(fallbackToken&&fallbackToken!==resolvedToken){
+              retryHeaders['Authorization']='Bearer '+fallbackToken;
+            }else{
+              delete retryHeaders['Authorization'];
+              delete retryHeaders['authorization'];
+            }
+            const retryResponse=await fetcher(base+path,{...fetchOptions,headers:retryHeaders});
+            if(retryResponse.ok||retryResponse.status!==401){
+              response=retryResponse;
+            }
           }
         }
       }
 
       let body:Record<string,unknown>;
       try{body=await response.json();}catch{throw new ApiError('NETWORK_ERROR','Chưa xác định được kết quả. Hãy thử lại cùng yêu cầu.');}
-      if(!response.ok)throw new ApiError(String(body.code??'INTERNAL_ERROR'),String(body.message??'Không thể hoàn tất yêu cầu'),response.status,body.correlationId as string|undefined);
+      if(!response.ok){
+        if(response.status===401){
+          clearStoredAuth();
+          throw new ApiError('UNAUTHENTICATED','Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',401,body.correlationId as string|undefined);
+        }
+        throw new ApiError(String(body.code??'INTERNAL_ERROR'),String(body.message??'Không thể hoàn tất yêu cầu'),response.status,body.correlationId as string|undefined);
+      }
       return body as T;
     }catch(error){if(error instanceof ApiError)throw error;throw new ApiError('NETWORK_ERROR','Không nhận được phản hồi. Hãy thử lại cùng yêu cầu.');}
     finally{clearTimeout(timer);}
