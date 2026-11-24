@@ -157,8 +157,17 @@ export function MyBookingsPage({
     }
   }
 
+  const userRoles = (user?.roles && user.roles.length > 0) ? user.roles : (user?.role ? [user.role] : []);
+  const isCustomer = userRoles.includes('CUSTOMER');
+
   async function loadBookings() {
     if (!user) return;
+    if (!isCustomer) {
+      setBookings([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -192,7 +201,7 @@ export function MyBookingsPage({
   }
 
   useEffect(() => {
-    if (user) {
+    if (user && isCustomer) {
       void loadBookings();
     } else {
       setBookings([]);
@@ -201,7 +210,7 @@ export function MyBookingsPage({
       setTickets([]);
       setQrMap({});
     }
-  }, [user]);
+  }, [user, isCustomer]);
 
   // Load event details for selected booking
   useEffect(() => {
@@ -333,6 +342,22 @@ export function MyBookingsPage({
             className: 'hero-cta-secondary',
             onClick: () => onNavigate('/dat-ve')
           }, 'Khám phá sự kiện mở bán')
+        )
+      ) : !isCustomer ? h('div', { className: 'unauth-notice-card center' },
+        h('div', { className: 'notice-icon' }, '🛡️'),
+        h('h3', null, 'Tài Khoản Quản Trị Viên (ADMIN)'),
+        h('p', null, 'Tài khoản Quản trị viên không sở hữu vé cá nhân. Để quản lý và tra cứu toàn bộ đơn hàng, vé và dòng tiền của hệ thống, vui lòng truy cập Quản trị Sàn.'),
+        h('div', { className: 'notice-actions' },
+          h('button', {
+            type: 'button',
+            className: 'hero-cta-coral',
+            onClick: () => onNavigate('/admin')
+          }, '🛡️ Mở Trang Quản Trị Sàn (/admin) →'),
+          h('button', {
+            type: 'button',
+            className: 'hero-cta-secondary',
+            onClick: () => onNavigate('/')
+          }, 'Quay về Trang chủ')
         )
       ) : loading ? h('div', { className: 'loading-state-box' },
         h('p', { role: 'status' }, 'Đang tải danh sách vé điện tử từ hệ thống…')

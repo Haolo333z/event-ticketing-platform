@@ -127,6 +127,10 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   const[availability,setAvailability]=useState<Availability|null>(null);const[booking,setBooking]=useState<Booking|null>(null);
   const[history,setHistory]=useState<Booking[]>([]);const[error,setError]=useState<ApiError|null>(null);
   const[notice,setNotice]=useState('');const[busy,setBusy]=useState(false);const submitting=useRef(false);
+
+  const userRoles = user ? ((user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : [])) : [];
+  const isCustomer = userRoles.includes('CUSTOMER');
+  const shouldFetchHistory = (!embedded && user === undefined) || isCustomer;
   const[catalogVersion,setCatalogVersion]=useState(0);
   const[catalogFailed,setCatalogFailed]=useState(false),[detailLoading,setDetailLoading]=useState(false),[detailFailed,setDetailFailed]=useState(false);
   const[historyLoading,setHistoryLoading]=useState(true),[historyFailed,setHistoryFailed]=useState(false),[availabilityStale,setAvailabilityStale]=useState(false);
@@ -194,6 +198,10 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
       if(onRequireAuth)onRequireAuth(()=>void handleBuyResale(item));
       return;
     }
+    if(!isCustomer){
+      setResaleActionError('Tài khoản Quản trị viên không thể mua vé sang nhượng. Vui lòng sử dụng tài khoản Khách hàng.');
+      return;
+    }
     setActiveResalePurchase(item);
     setResaleActionBusy(true);
     setResaleActionError(null);
@@ -249,17 +257,40 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
   }
 
   function fail(value:unknown){setError(value instanceof ApiError?value:new ApiError('CLIENT_ERROR','Không thể tải dữ liệu. Hãy thử lại.'));}
-  async function historyRefresh(){setHistoryLoading(true);try{setHistory((await api.mine()).items);setHistoryFailed(false);}catch(value){setHistoryFailed(true);fail(value);}finally{setHistoryLoading(false);}}
+  async function historyRefresh(){
+    if (embedded && !isCustomer) {
+      setHistory([]);
+      setHistoryLoading(false);
+      setHistoryFailed(false);
+      return;
+    }
+    setHistoryLoading(true);
+    try{
+      setHistory((await api.mine()).items);
+      setHistoryFailed(false);
+    }catch(value){
+      setHistoryFailed(true);
+      fail(value);
+    }finally{
+      setHistoryLoading(false);
+    }
+  }
   useEffect(()=>{let active=true;setLoading(true);setCatalogFailed(false);api.events().then(data=>{if(active){setEvents(data.items);setError(null);}}).catch(value=>{if(active){setCatalogFailed(true);fail(value);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[api,catalogVersion]);
   useEffect(()=>{
-    if (!embedded || user) {
+    if (shouldFetchHistory) {
       void historyRefresh();
     } else {
       setHistory([]);
       setHistoryLoading(false);
       setHistoryFailed(false);
     }
-  },[api, embedded, user]);
+  },[api, embedded, user, shouldFetchHistory]);
+
+  useEffect(() => {
+    if (user && !isCustomer && error && (error.status === 403 || error.code === 'FORBIDDEN')) {
+      setError(null);
+    }
+  }, [user, isCustomer, error]);
   useEffect(()=>{let active=true;const payment=readPaymentAttempt(store);if(payment)api.booking(payment.bookingId).then(value=>{if(active)setBooking(value);}).catch(value=>{if(active)fail(value);});return()=>{active=false;};},[api,store]);
   useEffect(()=>{
     let active=true;setDetail(null);setAvailability(null);setDetailLoading(!!selected);setDetailFailed(false);setAvailabilityStale(false);
@@ -341,7 +372,12 @@ export function App({api,store,user,embedded=false,onRequireAuth,activeBookingId
     }
   },[activeBookingId]);
   async function executeBooking(){
-    if(submitting.current)return;submitting.current=true;setBusy(true);setError(null);setNotice('');let attempt=pending;
+    if(submitting.current)return;
+    if(user && !isCustomer){
+      setError(new ApiError('FORBIDDEN','Tài khoản Quản trị viên (ADMIN) không dùng để đặt vé. Vui lòng sử dụng tài khoản Khách hàng (CUSTOMER) để đặt vé.',403));
+      return;
+    }
+    submitting.current=true;setBusy(true);setError(null);setNotice('');let attempt=pending;
     try{
       if(!attempt){
         const mode=detail?.ticketTypes.find(t=>t.id===typeId)?.mode;

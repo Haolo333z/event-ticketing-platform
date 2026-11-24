@@ -94,16 +94,19 @@ export function AccountProfilePage({ api, user, onNavigate, onOpenOnboardingModa
       }) : Promise.resolve();
       tasks.push(pSessions);
 
-      // 4. Waitlists
-      const pWaitlists = api.v3?.myWaitlists ? api.v3.myWaitlists().then(wl => {
+      // 4. Waitlists (only fetch for customer)
+      const userRoles = (user?.roles && user.roles.length > 0) ? user.roles : (user?.role ? [user.role] : []);
+      const isCustomer = userRoles.includes('CUSTOMER');
+
+      const pWaitlists = (isCustomer && api.v3?.myWaitlists) ? api.v3.myWaitlists().then(wl => {
         if (wl?.items) setWaitlists(wl.items);
       }).catch(err => {
         console.warn('Could not load waitlists:', err);
       }) : Promise.resolve();
       tasks.push(pWaitlists);
 
-      // 5. Reminders
-      const pReminders = api.reminders?.list ? api.reminders.list().then(rm => {
+      // 5. Reminders (only fetch for customer)
+      const pReminders = (isCustomer && api.reminders?.list) ? api.reminders.list().then(rm => {
         if (rm?.items) setReminders(rm.items);
       }).catch(err => {
         console.warn('Could not load reminders:', err);

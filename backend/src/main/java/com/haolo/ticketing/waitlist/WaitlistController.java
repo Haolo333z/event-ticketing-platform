@@ -25,7 +25,7 @@ public class WaitlistController {
     }
 
     @PostMapping("/api/events/{eventId}/waitlist")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
     public WaitlistEntry joinWaitlist(
         @PathVariable UUID eventId,
         @AuthenticationPrincipal DemoPrincipal principal,
@@ -36,7 +36,7 @@ public class WaitlistController {
     }
 
     @PostMapping("/api/events/{eventId}/waitlist/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
     public Map<String, Object> cancelWaitlist(
         @PathVariable UUID eventId,
         @AuthenticationPrincipal DemoPrincipal principal,
@@ -47,7 +47,7 @@ public class WaitlistController {
     }
 
     @GetMapping("/api/me/waitlists")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
     public Map<String, Object> myWaitlists(@AuthenticationPrincipal DemoPrincipal principal) {
         if (principal == null) throw new ApiException(401, "UNAUTHENTICATED", "Cần đăng nhập");
         return Map.of("items", waitlistService.listMine(principal.accountId()));

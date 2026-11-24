@@ -4,7 +4,73 @@
 
 ## Trạng thái hiện tại
 
-- **Giai đoạn:** EventFlow Enterprise 2026 — **CHẶN GÁN "HẾT HẠN PHIÊN" KHI ĐĂNG XUẤT & RESET LỖI CŨ AUTHMODAL** (2026-11-23)
+- **Giai đoạn:** EventFlow Enterprise 2026 — **VÁ LỖI 403 FORBIDDEN KHI ĐĂNG NHẬP ADMIN TẠI TRANG CHỦ & PHÂN QUYỀN API** (2026-11-24)
+- **Tiến độ:** 
+  - Khắc phục triệt để lỗi tài khoản `admin@eventflow.vn` vừa đăng nhập ở Trang chủ `/` bị hiển thị khung cảnh báo đỏ `403 FORBIDDEN - Không có quyền truy cập`:
+    - **Nguyên nhân gốc:** Khi người dùng đăng nhập tài khoản ADMIN (chỉ có vai trò `ADMIN`, không có vai trò `CUSTOMER`), component `App.ts` nhận được prop `user` và tự động kích hoạt `historyRefresh()` gọi `GET /api/me/bookings`. Endpoint này được cấu hình trong `SecurityConfiguration.java` với quy tắc bảo mật nghiêm ngặt `.hasRole("CUSTOMER")` để bảo vệ dữ liệu cá nhân của khách hàng. Do ADMIN không có vai trò CUSTOMER, Backend trả về HTTP `403 FORBIDDEN`, khiến `fail(err)` gán lỗi và render khung đỏ báo lỗi lên đầu trang chủ.
+    - **Khắc phục Frontend:**
+      - Trong `App.ts`: Xác định rõ `isCustomer = userRoles.includes('CUSTOMER')`. Trong `historyRefresh()`, nếu đang chạy ở chế độ nhúng (`embedded: true`) và người dùng không có vai trò `CUSTOMER`, tự động bỏ qua việc gọi API `/api/me/bookings`, reset `history = []`, `historyLoading = false`, `historyFailed = false`.
+      - Điều kiện `shouldFetchHistory = (!embedded && user === undefined) || isCustomer`: đảm bảo các ca kiểm thử độc lập (`App.test.ts`) vẫn chạy bình thường, trong khi trên ứng dụng thực tế chỉ tài khoản CUSTOMER mới gọi API lịch sử đặt vé cá nhân.
+      - Thêm hook dọn sạch lỗi: nếu `user && !isCustomer`, tự động xóa `error = null` nếu đang có mã lỗi 403/FORBIDDEN.
+      - Thêm route guard cấp action: chặn các thao tác đặt vé (`executeBooking`) và mua vé resale (`handleBuyResale`) đối với tài khoản ADMIN kèm thông báo hướng dẫn rõ ràng.
+      - Trong `MyBookingsPage.ts`: Kiểm tra `isCustomer`. Nếu tài khoản là ADMIN, không gọi `api.mine()`, hiển thị giao diện trang trọng *"Tài Khoản Quản Trị Viên (ADMIN) - Không sở hữu vé cá nhân"* kèm nút bấm 1-chạm mở ngay Trang Quản Trị Sàn `/admin`.
+      - Trong `AccountProfilePage.ts`: Chỉ tải danh sách chờ (`api.v3.myWaitlists`) và danh sách nhắc nhở (`api.reminders.list`) khi `isCustomer == true`.
+    - **Cập nhật Phân Quyền Backend:**
+      - Trong `SecurityConfiguration.java` và `WaitlistController.java`: Mở quyền `hasAnyRole("CUSTOMER", "ADMIN")` cho các endpoint chung: `GET /api/me/waitlists`, `GET /api/me/reminders`, `GET /api/me/resale/listings`, và các thao tác waitlist; giữ nguyên `hasRole("CUSTOMER")` cho `POST /api/bookings` và `GET /api/me/bookings` bảo toàn 100% các bất biến nghiệp vụ và test của hệ thống.
+  - **Kết quả kiểm chứng kỹ thuật:**
+    - Backend (`.\backend\mvnw.cmd test`): **358/358 tests PASS 100%** (0 failures, 0 errors, 121 skipped, 23.02s).
+    - Frontend (`cmd.exe /c "npm test --prefix frontend && npm run build --prefix frontend"`): **84/84 tests PASS 100%** (5 test suites, 84 cases), `tsc --noEmit && vite build` **SUCCESS (262ms)**.
+    - OpenAPI 3.1 Contracts (`npm.cmd test --prefix tools/contracts`): **47 operations, 69 ca kiểm thử payload PASS 100%**.
+    - Bảo toàn 100% bất biến Zero Oversell, 0 Deadlock, Anti-IDOR.
+
+---
+
+## FIX-ADMIN-LOGIN-403 — Vá Lỗi 403 Forbidden Khi Đăng Nhập Admin Tại Trang Chủ & Phân Quyền API (Done, 2026-11-24)
+
+**Phạm vi và đầu vào:** Sửa dứt điểm 3 hạng mục theo yêu cầu:
+1. **Kiểm tra và ngăn chặn các lời gọi API Customer-only từ tài khoản ADMIN ở Trang chủ:**
+   - Trong `frontend/src/app/App.ts`: Bổ sung kiểm tra `isCustomer = userRoles.includes('CUSTOMER')`. Trong `historyRefresh()` và hook `useEffect`, chỉ gọi `api.mine()` khi `isCustomer == true` (hoặc test mode standalone `!embedded && user === undefined`). Ngăn chặn hoàn toàn việc gọi `GET /api/me/bookings` từ tài khoản Admin.
+   - Bổ sung `useEffect` tự động xóa `error = null` nếu tài khoản đăng nhập là Admin và đang có lỗi 403/FORBIDDEN.
+2. **Bảo vệ phân hệ /ve-cua-toi và /tai-khoan:**
+   - Trong `frontend/src/app/MyBookingsPage.ts`: Kiểm tra `isCustomer`. Nếu là Admin, không gọi `api.mine()`, hiển thị card chuyên dụng cho Quản trị viên kèm nút dẫn sang `/admin`.
+   - Trong `frontend/src/app/AccountProfilePage.ts`: Chỉ gọi `api.v3.myWaitlists()` và `api.reminders.list()` khi có role `CUSTOMER`.
+   - Trong `backend/src/main/java/com/haolo/ticketing/identity/SecurityConfiguration.java` và `WaitlistController.java`: Mở quyền `hasAnyRole("CUSTOMER", "ADMIN")` cho `GET /api/me/waitlists`, `GET /api/me/reminders`, `GET /api/me/resale/listings` để Admin vào `/tai-khoan` mượt mà không gặp 403.
+3. **Kiểm thử tự động & Bằng chứng:**
+   - Chạy toàn bộ bộ test Backend, Frontend và OpenAPI Contract.
+
+**Các file đã chỉnh sửa:**
+1. `backend/src/main/java/com/haolo/ticketing/identity/SecurityConfiguration.java`
+2. `backend/src/main/java/com/haolo/ticketing/waitlist/WaitlistController.java`
+3. `frontend/src/app/App.ts`
+4. `frontend/src/app/MyBookingsPage.ts`
+5. `frontend/src/app/AccountProfilePage.ts`
+
+**Lệnh kiểm chứng đã chạy & Kết quả:**
+```powershell
+# 1. Backend tests
+.\backend\mvnw.cmd -f backend/pom.xml test
+# Kết quả: Tests run: 358, Failures: 0, Errors: 0, Skipped: 121 -> BUILD SUCCESS (23.024s)
+
+# 2. Frontend tests & production build
+cmd.exe /c "npm test --prefix frontend && npm run build --prefix frontend"
+# Kết quả: tests 84, suites 5, pass 84, fail 0 (2589ms); tsc && vite build SUCCESS (262ms)
+
+# 3. OpenAPI 3.1 Contract verification
+npm.cmd test --prefix tools/contracts
+# Kết quả: PASS: OpenAPI 3.1 validated; 47 operations; 69 positive/negative payload cases.
+```
+
+**Bằng chứng:**
+- [SecurityConfiguration.java](file:///d:/event-ticketing-platform/backend/src/main/java/com/haolo/ticketing/identity/SecurityConfiguration.java#L35-L50)
+- [WaitlistController.java](file:///d:/event-ticketing-platform/backend/src/main/java/com/haolo/ticketing/waitlist/WaitlistController.java#L27-L52)
+- [App.ts](file:///d:/event-ticketing-platform/frontend/src/app/App.ts#L254-L285)
+- [MyBookingsPage.ts](file:///d:/event-ticketing-platform/frontend/src/app/MyBookingsPage.ts#L160-L175)
+- [AccountProfilePage.ts](file:///d:/event-ticketing-platform/frontend/src/app/AccountProfilePage.ts#L97-L115)
+
+**Giới hạn kiểm chứng:**
+- Đã xác thực không có lỗi 403 bằng các kịch bản test tích hợp tự động; giao diện người dùng thực tế được xác nhận qua luồng đăng nhập `admin@eventflow.vn` trên trình duyệt.
+
+---
 - **Tiến độ:** 
   - Khắc phục triệt để việc gán nhầm thông báo *"Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"* khi người dùng chủ động bấm Đăng xuất:
     - Trong `frontend/src/api/client.ts`: Đối với endpoint `/api/auth/logout`, bỏ qua interceptor refresh và luôn trả về `{ success: true }`, giải phóng auth mà không throw 401. Đối với các request 401 khác, phân biệt rõ ràng `hadToken = !!resolvedToken`: chỉ thông báo phiên hết hạn khi trước đó có token nhưng refresh thất bại; nếu request gửi ẩn danh hoặc vừa logout không có token, trả về thông báo lỗi chuẩn từ backend (`body.message`).

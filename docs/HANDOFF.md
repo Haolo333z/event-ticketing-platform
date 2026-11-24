@@ -2,6 +2,12 @@
 
 Chốt ngày **23/11/2026 (Asia/Saigon)** tại `D:\event-ticketing-platform`. Đây là snapshot bàn giao; lần làm tiếp phải kiểm tra lại Git và runtime. Đọc [RULES](RULES.md), [TASKS](TASKS.md), [PROGRESS](PROGRESS.md) trước khi sửa; hướng dẫn chạy đầy đủ ở [README](../README.md), [infra](../infra/README.md) và [runbook demo](DEMO_AND_RECOVERY.md).
 
+> **Cập nhật 24/11/2026 (Vá Lỗi 403 Forbidden Khi Đăng Nhập Admin Tại Trang Chủ & Phân Quyền API):**
+> - Ngăn chặn triệt để lỗi 403 đỏ trên Trang chủ `/`: `App.ts` kiểm tra `isCustomer = userRoles.includes('CUSTOMER')`, chỉ gọi `api.mine()` khi tài khoản có vai trò `CUSTOMER` (hoặc chế độ test standalone), không tự động gọi `GET /api/me/bookings` từ tài khoản ADMIN.
+> - Bổ sung hook tự động xóa `error = null` khi đăng nhập Admin, bảo vệ phân hệ `/ve-cua-toi` hiển thị card chuyên dụng Quản trị viên thay vì gọi API cá nhân.
+> - Mở quyền `hasAnyRole("CUSTOMER", "ADMIN")` trong `SecurityConfiguration.java` và `WaitlistController.java` cho các endpoint chung: `GET /api/me/waitlists`, `GET /api/me/reminders`, `GET /api/me/resale/listings` giúp Admin vào `/tai-khoan` mượt mà 100%.
+> - Chỉ số kiểm thử: **358/358 Backend JUnit 5 tests PASS 100%**, **84/84 Frontend Vitest tests PASS 100%**, **Vite build SUCCESS (262ms)**, **OpenAPI 3.1 Contracts PASS 100% (47 operations, 69 ca test)**.
+> 
 > **Cập nhật 23/11/2026 (Chặn Gán "Hết Hạn Phiên" Khi Đăng Xuất & Tự Động Xóa Lỗi AuthModal):**
 > - Khi người dùng chủ động bấm Đăng xuất (`logout()`): Bỏ qua refresh interceptor cho `/api/auth/logout`, xóa sạch auth và trả về thành công; phân biệt `hadToken = !!resolvedToken` khi gặp 401 (chỉ hiện *"Phiên đăng nhập đã hết hạn"* khi có token nhưng refresh thất bại, không gán cho anonymous/vừa logout); dọn sạch `gateNotice = ''` trên `DemoShell` và reset `error = null` trên `MyBookingsPage` để hiển thị đúng card *"Yêu Cầu Đăng Nhập"*.
 > - Tự động xóa thông báo lỗi cũ của `AuthModal.ts`: Bổ sung `useEffect([isOpen, initialTab])` tự động xóa sạch `error = null`, `loading = false`, `googleLoading = false` mỗi khi mở modal hoặc đổi tab; tự động xóa lỗi cũ khi người dùng gõ phím vào các ô input hoặc bấm submit `/api/auth/login`.
